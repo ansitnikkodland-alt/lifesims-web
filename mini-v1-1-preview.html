@@ -67,4 +67,39 @@ function validateMiniBackup(x){if(!x||typeof x!=='object'||Array.isArray(x))thro
 $('restore').onclick=async()=>{const input=$('restoreFile'),file=input.files&&input.files[0],status=$('restoreStatus'),button=$('restore');status.textContent='';if(!file){status.textContent='Сначала выбери JSON-файл';return}if(file.size>5*1024*1024){status.textContent='Файл больше 5 МБ';return}button.disabled=true;status.textContent='Проверяю файл…';try{let raw;try{raw=await file.text()}catch(e){throw Error('Не удалось прочитать выбранный файл. Выбери его повторно.')}let parsed;try{parsed=JSON.parse(raw)}catch(e){throw Error('Файл не является корректным JSON')}parsed=validateMiniBackup(parsed);status.textContent='Файл проверен: '+parsed.tasks.length+' дел, '+parsed.habits.length+' привычек, '+Object.keys(parsed.diary).length+' записей дневника. Ожидается подтверждение.';if(!confirm('Заменить все данные тестовой MINI v1.1? Сначала будет скачана резервная копия текущих данных.')){status.textContent='Восстановление отменено пользователем. Данные не изменены.';return}try{downloadBackup(state,'lifesims-mini-before-restore-'+day()+'.json')}catch(e){throw Error('Не удалось подготовить резервную копию текущих данных. Восстановление остановлено.')}const previous=state;try{const next={...defaults(),...parsed};localStorage.setItem(KEY,JSON.stringify(next));state=next;skillOptions();loadDiary();renderDiaryHistory();render();status.textContent='Восстановлено: '+state.tasks.length+' дел, '+state.habits.length+' привычек, '+Object.keys(state.diary).length+' записей дневника.'}catch(e){state=previous;try{localStorage.setItem(KEY,JSON.stringify(previous));render()}catch(_){}throw Error('Не удалось сохранить данные: '+(e.message||String(e)))}}catch(e){status.textContent='Восстановление не выполнено: '+(e.message||String(e))}finally{button.disabled=false}};
 $('backup').onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='lifesims-mini-preview-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1500)};
 $('date').textContent=new Intl.DateTimeFormat('ru-RU',{day:'numeric',month:'long'}).format(new Date());render();
-</script></body></html>
+</script>
+<script id="restore-fallback-v2">
+/* Independent restore handler: survives errors elsewhere in the app script. */
+(function(){
+'use strict';
+var button=document.getElementById('restore'),picker=document.getElementById('restoreFile'),status=document.getElementById('restoreStatus');
+if(!button||!picker||!status)return;
+status.textContent='Восстановление готово: выбери резервную копию JSON.';
+button.addEventListener('click',async function(event){
+event.preventDefault();event.stopImmediatePropagation();
+var file=picker.files&&picker.files[0];
+if(!file){status.textContent='Сначала выбери JSON-файл';return;}
+if(file.size>5*1024*1024){status.textContent='Файл больше 5 МБ';return;}
+button.disabled=true;status.textContent='Проверяю выбранный файл…';
+try{
+var data;
+try{data=JSON.parse(await file.text());}catch(e){throw Error('Не удалось прочитать JSON-файл');}
+if(!data||typeof data!=='object'||Array.isArray(data)||!Array.isArray(data.tasks)||!Array.isArray(data.habits)||!data.skills||typeof data.skills!=='object'||Array.isArray(data.skills))throw Error('Это не резервная копия MINI v1.1');
+if(typeof data.resource!=='number'||!Number.isFinite(data.resource)||data.resource<0||data.resource>100||typeof data.mood!=='string'||typeof data.condition!=='string')throw Error('Некорректные показатели в копии');
+if(data.diary===undefined)data.diary={};
+if(!data.diary||typeof data.diary!=='object'||Array.isArray(data.diary))throw Error('Некорректный дневник');
+if(data.tasks.length>10000||data.habits.length>10000||Object.keys(data.diary).length>10000)throw Error('Слишком много записей');
+for(var item of data.tasks.concat(data.habits)){if(!item||typeof item!=='object'||typeof (item.text||item.title)!=='string')throw Error('Некорректное дело или привычка');}
+for(var pair of Object.entries(data.skills)){if(!pair[0]||!Number.isFinite(pair[1])||pair[1]<0)throw Error('Некорректный навык');}
+for(var pair of Object.entries(data.diary)){var k=pair[0],v=pair[1];if(!/^\\d{4}-\\d{2}-\\d{2}$/.test(k)||!v||typeof v!=='object'||Array.isArray(v))throw Error('Некорректная запись дневника');var d=new Date(k+'T12:00:00Z');if(!Number.isFinite(d.getTime())||d.toISOString().slice(0,10)!==k)throw Error('Некорректная дата дневника');for(var field of ['sleepHours','dailySteps','totalCalories']){var n=v[field];if(n!==undefined&&n!==null&&n!==''&&(typeof n!=='number'||!Number.isFinite(n)||n<0||(field==='sleepHours'&&n>24)||(field==='dailySteps'&&!Number.isInteger(n))||(field==='totalCalories'&&!Number.isInteger(n))))throw Error('Некорректное значение '+field);}}
+status.textContent='Файл проверен. Ожидается подтверждение замены.';
+if(!window.confirm('Заменить данные тестовой MINI v1.1? Сначала скачай резервную копию текущих данных.')){status.textContent='Отменено. Данные не изменены.';return;}
+var key='lifesims-mini-v11-preview',before=localStorage.getItem(key);
+if(before!==null){var blob=new Blob([before],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='lifesims-mini-before-restore.json';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},3000);}
+try{localStorage.setItem(key,JSON.stringify(data));}catch(e){throw Error('Не удалось сохранить данные на устройстве: '+e.message);}
+status.textContent='Данные восстановлены. Перезагрузи страницу для отображения.';
+}catch(e){status.textContent='Восстановление не выполнено: '+(e.message||String(e));}finally{button.disabled=false;}
+},true);
+})();
+</script>
+</body></html>
