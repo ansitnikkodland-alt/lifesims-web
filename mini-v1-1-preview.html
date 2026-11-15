@@ -147,7 +147,18 @@ nav#tabs button.active{background:#e6c5df;color:#38253e}
 .hygiene-field input[type=range]{width:100%;padding:0;accent-color:#9ddfbd;cursor:pointer}
 .hygiene-field button{font-size:14px;padding:9px 12px;margin:5px 0}
 .hygiene-field .small{margin:5px 0;line-height:1.5}
-</style></head><body><main class="app"><header><div><h1>LifeSims <small>MINI v1.1</small></h1><p class="muted">Реконструкция интерфейса · данные на устройстве</p></div><span class="spark">✦</span></header><nav id="tabs"><button class="active" data-tab="home">Дом</button><button data-tab="tasks">Дела</button><button data-tab="habits">Привычки</button><button data-tab="skills">Навыки</button><button data-tab="diary">Дневник</button><button data-tab="data">Данные</button></nav><section id="home"><div class="card"><div class="line"><h2>Мой персонаж</h2><span id="date"></span></div><div class="room"><div class="wall"></div><div class="floor"></div><div class="room-stars" aria-hidden="true"></div><button type="button" class="room-shelf" id="roomShelf" aria-label="Полка: выбрать украшение"></button><button type="button" class="room-cabinet" id="roomCabinet" aria-label="Комод: разобрать вещи или сменить одежду"></button><button type="button" class="room-mirror" id="roomMirror" aria-label="Зеркало: изменить внешний вид">🪞</button><button type="button" class="room-washer" id="roomWasher" aria-label="Стиральная машина: постирать">🧺</button><button type="button" class="room-sink" id="roomSink" aria-label="Раковина: помыть посуду или раковину">🚰</button><div class="window" aria-hidden="true"><span></span></div><div class="wall-art" aria-hidden="true">✿</div><button type="button" class="plant" id="roomPlant" aria-label="Растение: ухаживать">🪴</button><div class="rug" aria-hidden="true"></div><button type="button" class="lamp" id="roomLamp" aria-label="Лампа: включить или выключить">💡</button><button class="crystal" id="crystal" title="Изменить ресурс">💎</button><button class="shower" id="shower" title="Принять душ">🚿</button><div class="sim" id="sim" role="button" tabindex="0" title="Изменить персонажа" aria-label="Персонаж: изменить вес, волосы или одежду">
+
+/* Voice command sheet: optional Web Speech input with explicit review. */
+.voice-panel{margin:10px 0;padding:14px 16px}
+.voice-panel h2{margin:0 0 8px}
+.voice-entry{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.voice-entry input{flex:1;min-width:150px}
+.voice-entry button{padding:10px 12px;min-height:42px}
+#voiceConfirm:not(:disabled){background:#6683e2}
+#voiceConfirm:disabled{opacity:.45;cursor:default}
+#voiceOpen{border:1px solid #e1bdde;background:#614a73;min-width:48px;min-height:48px;border-radius:50%;font-size:23px;padding:7px}
+#voicePreview{font-weight:650;color:#e6c9ff}
+</style></head><body><main class="app"><header><div><h1>LifeSims <small>MINI v1.1</small></h1><p class="muted">Реконструкция интерфейса · данные на устройстве</p></div><button type="button" id="voiceOpen" aria-label="Голосовой ввод дела или привычки" title="Голосовой ввод">🎙️</button></header><nav id="tabs"><button class="active" data-tab="home">Дом</button><button data-tab="tasks">Дела</button><button data-tab="habits">Привычки</button><button data-tab="skills">Навыки</button><button data-tab="diary">Дневник</button><button data-tab="data">Данные</button></nav><section id="voicePanel" class="card voice-panel hidden" aria-label="Голосовой и быстрый ввод"><h2>🎙️ Голосовой ввод</h2><p class="hint">Скажи «Добавь дело купить продукты», «Добавь привычку читать», «Найди уборка», «Выполни помыть посуду» или «Перенеси дело уборка на завтра».</p><div class="voice-entry"><input id="voiceText" maxlength="220" autocomplete="off" aria-label="Распознанная команда" placeholder="Скажи или введи задачу" type="text"><button type="button" id="voiceListen">🎙️ Говорить</button></div><div class="voice-entry"><button type="button" id="voicePrepare">Проверить команду</button><button type="button" id="voiceConfirm" disabled>Подтвердить</button><button type="button" id="voiceCancel">Закрыть</button></div><p class="small" id="voiceStatus" role="status">Ничего не будет создано или отмечено без подтверждения.</p><p class="small" id="voicePreview" aria-live="polite"></p><p class="small">Голос зависит от браузера; распознавание может передавать звук сервису браузера. Текстовый ввод работает без микрофона.</p></section><section id="home"><div class="card"><div class="line"><h2>Мой персонаж</h2><span id="date"></span></div><div class="room"><div class="wall"></div><div class="floor"></div><div class="room-stars" aria-hidden="true"></div><button type="button" class="room-shelf" id="roomShelf" aria-label="Полка: выбрать украшение"></button><button type="button" class="room-cabinet" id="roomCabinet" aria-label="Комод: разобрать вещи или сменить одежду"></button><button type="button" class="room-mirror" id="roomMirror" aria-label="Зеркало: изменить внешний вид">🪞</button><button type="button" class="room-washer" id="roomWasher" aria-label="Стиральная машина: постирать">🧺</button><button type="button" class="room-sink" id="roomSink" aria-label="Раковина: помыть посуду или раковину">🚰</button><div class="window" aria-hidden="true"><span></span></div><div class="wall-art" aria-hidden="true">✿</div><button type="button" class="plant" id="roomPlant" aria-label="Растение: ухаживать">🪴</button><div class="rug" aria-hidden="true"></div><button type="button" class="lamp" id="roomLamp" aria-label="Лампа: включить или выключить">💡</button><button class="crystal" id="crystal" title="Изменить ресурс">💎</button><button class="shower" id="shower" title="Принять душ">🚿</button><div class="sim" id="sim" role="button" tabindex="0" title="Изменить персонажа" aria-label="Персонаж: изменить вес, волосы или одежду">
 <svg class="avatar-svg" viewBox="0 0 160 320" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
 <defs>
   <linearGradient id="avatarSkin" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#ffe5ce"/><stop offset=".65" stop-color="#f4b99c"/><stop offset="1" stop-color="#d58d7d"/></linearGradient>
@@ -295,6 +306,124 @@ function validateHygieneFields(data){
 function validateMiniBackup(x){validateHygieneFields(x);if(!x||typeof x!=='object'||Array.isArray(x))throw Error('Неверная структура JSON');if(!Array.isArray(x.tasks)||!Array.isArray(x.habits)||!x.skills||typeof x.skills!=='object'||Array.isArray(x.skills)||(x.diary!==undefined&&(!x.diary||typeof x.diary!=='object'||Array.isArray(x.diary))))throw Error('Это не полная резервная копия MINI v1.1');if(x.diary===undefined)x={...x,diary:{}};x.lifeEvents=validateLifeEvents(x.lifeEvents);if(!Number.isFinite(x.resource)||x.resource<0||x.resource>100)throw Error('Некорректный ресурс');if(typeof x.mood!=='string'||typeof x.condition!=='string')throw Error('Некорректные показатели');if(x.tasks.length>10000||x.habits.length>10000||Object.keys(x.diary).length>10000)throw Error('Слишком много записей');for(const item of [...x.tasks,...x.habits])if(!item||typeof item!=='object'||typeof (item.text||item.title)!=='string')throw Error('Некорректное дело или привычка');for(const [k,v] of Object.entries(x.skills))if(!k||!Number.isFinite(v)||v<0)throw Error('Некорректный навык');for(const [k,v] of Object.entries(x.diary)){if(!/^\d{4}-\d{2}-\d{2}$/.test(k)||!v||typeof v!=='object'||Array.isArray(v))throw Error('Некорректная запись дневника (ключ: '+String(k).slice(0,40)+', тип: '+(v===null?'null':Array.isArray(v)?'массив':typeof v)+'). Данные не изменены.');const d=new Date(k+'T12:00:00Z');if(!Number.isFinite(d.getTime())||d.toISOString().slice(0,10)!==k)throw Error('Некорректная дата дневника: '+String(k).slice(0,40));for(const field of ['sleepHours','dailySteps','totalCalories']){const n=v[field];if(n!==undefined&&n!==null&&n!==''&&(typeof n!=='number'||!Number.isFinite(n)||n<0||(field==='sleepHours'&&n>24)||(field==='dailySteps'&&!Number.isInteger(n))||(field==='totalCalories'&&!Number.isInteger(n))))throw Error('Некорректное значение '+field)}}return x}
 $('restore').onclick=async()=>{const input=$('restoreFile'),file=input.files&&input.files[0],status=$('restoreStatus'),button=$('restore');status.textContent='';if(!file){status.textContent='Сначала выбери JSON-файл';return}if(file.size>5*1024*1024){status.textContent='Файл больше 5 МБ';return}button.disabled=true;status.textContent='Проверяю файл…';try{let raw;try{raw=await file.text()}catch(e){throw Error('Не удалось прочитать выбранный файл. Выбери его повторно.')}let parsed;try{parsed=JSON.parse(raw)}catch(e){throw Error('Файл не является корректным JSON')}parsed=validateMiniBackup(parsed);status.textContent='Файл проверен: '+parsed.tasks.length+' дел, '+parsed.habits.length+' привычек, '+Object.keys(parsed.diary).length+' записей дневника. Ожидается подтверждение.';if(!confirm('Заменить все данные тестовой MINI v1.1? Сначала будет скачана резервная копия текущих данных.')){status.textContent='Восстановление отменено пользователем. Данные не изменены.';return}try{downloadBackup(state,'lifesims-mini-before-restore-'+day()+'.json')}catch(e){throw Error('Не удалось подготовить резервную копию текущих данных. Восстановление остановлено.')}const previous=state;try{const next={...defaults(),...parsed};localStorage.setItem(KEY,JSON.stringify(next));state=next;skillOptions();loadDiary();renderDiaryHistory();render();status.textContent='Восстановлено: '+state.tasks.length+' дел, '+state.habits.length+' привычек, '+Object.keys(state.diary).length+' записей дневника.'}catch(e){state=previous;try{localStorage.setItem(KEY,JSON.stringify(previous));render()}catch(_){}throw Error('Не удалось сохранить данные: '+(e.message||String(e)))}}catch(e){status.textContent='Восстановление не выполнено: '+(e.message||String(e))}finally{button.disabled=false}};
 $('backup').onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='lifesims-mini-preview-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1500)};
+
+/* Quick voice/text commands: no writes until separate user confirmation. */
+(function initVoiceCommands(){
+ const open=$('voiceOpen'),panel=$('voicePanel'),field=$('voiceText'),status=$('voiceStatus'),preview=$('voicePreview'),
+       listen=$('voiceListen'),prepare=$('voicePrepare'),confirmButton=$('voiceConfirm'),close=$('voiceCancel');
+ if(!open||!panel||!field)return;
+ let draft=null,recognition=null;
+ const clean=s=>String(s||'').trim().replace(/\s+/g,' ');
+ const normalized=s=>clean(s).toLocaleLowerCase('ru-RU');
+ const titleOf=x=>String(x.text||x.title||'').trim();
+ const validDate=s=>/^\d{4}-\d{2}-\d{2}$/.test(s)&&Number.isFinite(Date.parse(s+'T12:00:00Z'))&&new Date(s+'T12:00:00Z').toISOString().slice(0,10)===s;
+ function resolveDate(s){
+  const v=normalized(s);
+  if(v==='сегодня')return day();
+  if(v==='завтра'||v==='послезавтра'){
+   const d=new Date();d.setDate(d.getDate()+(v==='завтра'?1:2));return d.toLocaleDateString('sv-SE');
+  }
+  if(validDate(v))return v;
+  throw Error('Назови дату ГГГГ-ММ-ДД, «завтра» или «послезавтра».');
+ }
+ function findExact(name,kind){
+  const needle=normalized(name),hits=[];
+  for(const k of (kind?[kind]:['task','habit'])){
+   const items=k==='task'?state.tasks:state.habits;
+   items.forEach((item,index)=>{if(normalized(titleOf(item))===needle)hits.push({kind:k,index,item})});
+  }
+  if(hits.length!==1)throw Error(hits.length?'Есть несколько одноимённых записей. Уточни название.':'Не найдено: «'+name+'».');
+  return hits[0];
+ }
+ function parse(input){
+  const text=clean(input);if(!text)throw Error('Сначала произнеси или введи команду.');
+  if(text.length>200)throw Error('Слишком длинная команда (максимум 200 символов).');
+  let m=text.match(/^(?:перенеси|перенести|перемести)\s+(?:дело|задачу|задача)\s+(.+?)\s+на\s+(\d{4}-\d{2}-\d{2}|сегодня|завтра|послезавтра)$/i);
+  if(m){const hit=findExact(m[1],'task'),date=resolveDate(m[2]);if(hit.item.frequency&&hit.item.frequency!=='once')throw Error('Перенос повторяющихся дел пока не поддерживается.');if(taskDone(hit.item))throw Error('Завершённое дело сначала нужно изменить в списке.');return {op:'move',kind:'task',index:hit.index,label:titleOf(hit.item),date,source:text,description:'Перенести дело «'+titleOf(hit.item)+'» на '+date};}
+  m=text.match(/^(?:создай|создать|добавь|добавить|запиши|записать)\s+(дело|задачу|задача|привычку|привычка)\s+(.+)$/i);
+  if(m){
+   const kind=/привычк/i.test(m[1])?'habit':'task';let label=clean(m[2]),date='';
+   if(kind==='task'){
+    const suffix=label.match(/^(.+?)\s+на\s+(\d{4}-\d{2}-\d{2}|сегодня|завтра|послезавтра)$/i);
+    if(suffix){label=clean(suffix[1]);date=resolveDate(suffix[2]);}
+   }
+   if(!label||label.length>160)throw Error('Уточни название (до 160 символов).');
+   if((kind==='task'?state.tasks:state.habits).some(t=>normalized(titleOf(t))===normalized(label)))throw Error('Такая запись уже существует. Проверь список.');
+   return {op:'create',kind,label,date,source:text,description:'Создать '+(kind==='task'?'дело':'ежедневную привычку')+' «'+label+'»'+(date?' на '+date:'')};
+  }
+  m=text.match(/^(?:выполни|выполнить|отметь|отметить|заверши|завершить)\s+(?:(дело|задачу|задача|привычку|привычка)\s+)?(.+)$/i);
+  if(m){
+   const k=m[1]?(/привычк/i.test(m[1])?'habit':'task'):null,hit=findExact(m[2],k);
+   if(hit.kind==='task'?taskDone(hit.item):hit.item.day===day())throw Error('Эта запись уже отмечена за текущий период. Повторного XP не будет.');
+   return {op:'complete',kind:hit.kind,index:hit.index,label:titleOf(hit.item),source:text,description:'Отметить выполненным: '+titleOf(hit.item)};
+  }
+  m=text.match(/^(?:найди|найти|покажи|показать)\s+(.+)$/i);
+  if(m){
+   const needle=normalized(m[1]),hits=[];
+   for(const k of ['task','habit']){(k==='task'?state.tasks:state.habits).forEach((item,index)=>{if(normalized(titleOf(item)).includes(needle))hits.push({kind:k,index,item})});}
+   if(hits.length===0)throw Error('Совпадений не найдено.');
+   if(hits.length>1)throw Error('Найдено '+hits.length+' совпадений. Уточни название для точного поиска.');
+   return {op:'find',kind:hits[0].kind,index:hits[0].index,label:titleOf(hits[0].item),source:text,description:'Показать '+(hits[0].kind==='task'?'дело':'привычку')+' «'+titleOf(hits[0].item)+'»'};
+  }
+  if(/^(?:перенеси|перенести|выполни|выполнить|удали|удалить|отмени|отменить|создай|создать|добавь|добавить|найди|найти)\b/i.test(text))throw Error('Не удалось разобрать команду. Используй пример выше.');
+  // As in a quick-add inbox: unprefixed text is offered as a new task, never auto-executed.
+  if(text.length>160)throw Error('Название должно быть не длиннее 160 символов.');
+  if(state.tasks.some(t=>normalized(titleOf(t))===normalized(text)))throw Error('Такое дело уже есть.');
+  return {op:'create',kind:'task',label:text,date:'',source:text,description:'Создать дело «'+text+'»'};
+ }
+ function clearDraft(){draft=null;confirmButton.disabled=true;preview.textContent='';}
+ function review(){clearDraft();try{draft=parse(field.value);preview.textContent='Будет выполнено: '+draft.description;confirmButton.textContent=draft.op==='find'?'Показать':'Подтвердить';confirmButton.disabled=false;status.textContent='Проверь распознанные параметры и нажми подтверждение.';}catch(err){status.textContent=err.message;}}
+ function showTab(id){const b=document.querySelector('#tabs button[data-tab="'+id+'"]');if(!b)throw Error('Раздел не найден.');b.click();}
+ function execute(d){
+  if(d.op==='create'){
+   if((d.kind==='task'?state.tasks:state.habits).some(t=>normalized(titleOf(t))===normalized(d.label)))throw Error('Запись уже существует.');
+   if(d.kind==='task'){state.tasks.push({text:d.label,project:'',skill:'',difficulty:2,physical:0,moodEffect:0,date:d.date||'',frequency:'once',donePeriod:'',done:false,minutes:0});}
+   else{const h={text:d.label,project:'',skill:'',difficulty:2,physical:0,moodEffect:0,type:'positive',frequency:'daily',day:''};if(bedHabitName.test(d.label)){if(state.habits.some(isBedHabit))throw Error('Привычка «Заправить кровать» уже существует.');h.actionId='make-bed';}state.habits.push(h);}
+   save();showTab(d.kind==='task'?'tasks':'habits');
+  }else if(d.op==='move'){
+   const item=state.tasks[d.index];
+   if(!item||normalized(titleOf(item))!==normalized(d.label)||taskDone(item)||item.frequency&&item.frequency!=='once')throw Error('Дело изменилось. Повтори команду.');
+   item.date=d.date;save();showTab('tasks');
+  }else{
+   const list=d.kind==='task'?state.tasks:state.habits,cur=list[d.index];
+   if(!cur||normalized(titleOf(cur))!==normalized(d.label))throw Error('Запись изменилась. Повтори команду.');
+   const tab=d.kind==='task'?'tasks':'habits';showTab(tab);
+   const row=$(d.kind+'List').children[d.index];
+   if(!row)throw Error('Не удалось найти запись на экране.');
+   if(d.op==='complete'){
+    if(d.kind==='task'?taskDone(cur):cur.day===day())throw Error('Уже отмечено. Повторного XP не будет.');
+    const b=row.querySelector('button');if(!b)throw Error('Кнопка отметки недоступна.');b.click();
+    if(!(d.kind==='task'?taskDone(cur):cur.day===day()))throw Error('Отметка не сохранена. Проверь запись.');
+   }else if(d.op==='find'){row.scrollIntoView({block:'nearest',behavior:'smooth'});}
+  }
+ }
+ open.onclick=()=>{panel.classList.remove('hidden');startListening();};
+ listen.onclick=()=>{panel.classList.remove('hidden');startListening();};
+ prepare.onclick=review;
+ field.addEventListener('input',clearDraft);
+ field.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();review();}});
+ close.onclick=()=>{if(recognition){try{recognition.abort()}catch(_){}}clearDraft();panel.classList.add('hidden');};
+ confirmButton.onclick=()=>{
+  if(!draft)return;
+  const toApply=draft;
+  if(field.value!==draft.source){clearDraft();status.textContent='Текст изменён. Проверь команду снова.';return;}
+  try{execute(toApply);status.textContent='Готово: '+toApply.description;field.value='';clearDraft();}
+  catch(e){clearDraft();status.textContent='Не выполнено: '+e.message;}
+ };
+ function startListening(){
+  const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!Speech){status.textContent='Этот браузер не поддерживает голосовое распознавание. Введи команду текстом.';field.focus();return;}
+  if(recognition){try{recognition.abort()}catch(_){}}
+  try{
+   recognition=new Speech();recognition.lang='ru-RU';recognition.interimResults=false;recognition.maxAlternatives=1;recognition.continuous=false;
+   recognition.onresult=e=>{const transcript=clean(e.results?.[0]?.[0]?.transcript);if(!transcript){status.textContent='Речь не распознана. Попробуй ещё раз.';return;}field.value=transcript;review();};
+   recognition.onerror=e=>{clearDraft();status.textContent='Распознавание не завершено ('+(e.error||'ошибка')+'). Можно ввести команду вручную.';};
+   recognition.onend=()=>{recognition=null;};
+   clearDraft();status.textContent='Слушаю…';recognition.start();
+  }catch(e){status.textContent='Микрофон не запущен: '+e.message+'. Используй текстовый ввод.';}
+ }
+})();
+
 $('date').textContent=new Intl.DateTimeFormat('ru-RU',{day:'numeric',month:'long'}).format(new Date());render();
 </script>
 <script id="restore-fallback-v2">
