@@ -252,7 +252,8 @@ if(!state.diary||typeof state.diary!=='object'||Array.isArray(state.diary))state
 if(!Number.isFinite(state.hygiene)||state.hygiene<0||state.hygiene>100)state.hygiene=null;
 if(!state.hygieneHistory||typeof state.hygieneHistory!=='object'||Array.isArray(state.hygieneHistory))state.hygieneHistory={};
 if(!Array.isArray(state.tasks))state.tasks=[];if(!Array.isArray(state.habits))state.habits=[];if(!state.skills||typeof state.skills!=='object'||Array.isArray(state.skills))state.skills=defaults().skills;
-const save=()=>{localStorage.setItem(KEY,JSON.stringify(state));render()},notify=t=>{$('notice').textContent=t},xp=d=>[0,2,5,10,20][Number(d)]||10;
+let lastPersistedSnapshot;try{lastPersistedSnapshot=localStorage.getItem(KEY)}catch(_){lastPersistedSnapshot=null}
+const save=()=>{try{const next=JSON.stringify(state);localStorage.setItem(KEY,next);lastPersistedSnapshot=next;render()}catch(error){if(lastPersistedSnapshot!==null){try{state={...defaults(),...JSON.parse(lastPersistedSnapshot)};render()}catch(_){}}alert('Не удалось сохранить изменения. Последнее сохранённое состояние восстановлено, если оно доступно. Экспортируй резервную копию.');throw error}},notify=t=>{$('notice').textContent=t},xp=d=>[0,2,5,10,20][Number(d)]||10;
 function skillOptions(){for(const id of ['taskSkill','habitSkill']){const el=$(id),current=el.value;el.replaceChildren();const blank=document.createElement('option');blank.value='';blank.textContent='Без навыка';el.append(blank);for(const name of Object.keys(state.skills)){const opt=document.createElement('option');opt.value=name;opt.textContent=name;el.append(opt)}el.value=Object.prototype.hasOwnProperty.call(state.skills,current)?current:''}}
 const bedHabitName=/^заправить\\s+(?:кровать|постель)$/i;
 function isBedHabit(h){return h.actionId==='make-bed'||(!h.actionId&&bedHabitName.test(String(h.text||h.title||'').trim()))}
