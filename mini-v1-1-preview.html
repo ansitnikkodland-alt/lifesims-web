@@ -365,7 +365,7 @@ $('backup').onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{typ
    if(hits.length>1)throw Error('Найдено '+hits.length+' совпадений. Уточни название для точного поиска.');
    return {op:'find',kind:hits[0].kind,index:hits[0].index,label:titleOf(hits[0].item),source:text,description:'Показать '+(hits[0].kind==='task'?'дело':'привычку')+' «'+titleOf(hits[0].item)+'»'};
   }
-  if(/^(?:перенеси|перенести|выполни|выполнить|удали|удалить|отмени|отменить|создай|создать|добавь|добавить|найди|найти)\b/i.test(text))throw Error('Не удалось разобрать команду. Используй пример выше.');
+  if(/^(?:перенеси|перенести|выполни|выполнить|удали|удалить|отмени|отменить|создай|создать|добавь|добавить|найди|найти)(?=\s|$)/i.test(text))throw Error('Не удалось разобрать команду. Используй пример выше.');
   // As in a quick-add inbox: unprefixed text is offered as a new task, never auto-executed.
   if(text.length>160)throw Error('Название должно быть не длиннее 160 символов.');
   if(state.tasks.some(t=>normalized(titleOf(t))===normalized(text)))throw Error('Такое дело уже есть.');
