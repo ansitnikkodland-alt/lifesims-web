@@ -1,0 +1,893 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#101521"><title>LifeSims — каре, очки, вес · 16.11</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#101521;color:#f6f6ff;font:16px system-ui,-apple-system,sans-serif}.app{max-width:620px;margin:auto;padding:20px 16px 35px}header{display:flex;align-items:center;justify-content:space-between}h1{font-size:28px;margin:0}h1 small{font-size:13px;color:#9da8bf}header p,.muted{color:#aab4c8}.spark{font-size:33px}nav{display:flex;gap:8px;overflow-x:auto;padding:12px 0 8px;scrollbar-width:thin}button,select,input{font:inherit;color:#fff;border:1px solid #52617d;background:#303c58;border-radius:13px;padding:12px;cursor:pointer}nav button{white-space:nowrap;font-size:18px;border:0;padding:14px 17px}nav button.active{background:#637bf2}.card{background:#20283a;border:1px solid #37445e;border-radius:24px;padding:20px;margin:16px 0}h2{font-size:20px;margin:6px 0 16px}.line{display:flex;align-items:center;justify-content:space-between;gap:12px}.room{position:relative;width:100%;aspect-ratio:1.23;border-radius:24px;overflow:hidden;border:3px solid #687993;background:#9d8c89;isolation:isolate}.wall{position:absolute;inset:0;background:#697b94;clip-path:polygon(0 0,100% 0,100% 9%,47% 50%,0 50%)}.floor{position:absolute;inset:0;background:repeating-linear-gradient(106deg,transparent 0 48px,#78696970 49px 52px);clip-path:polygon(0 50%,47% 50%,100% 9%,100% 100%,0 100%)}.crystal{position:absolute;left:43%;top:7%;font-size:54px;filter:drop-shadow(0 0 12px #50e7df);border:0;background:transparent;padding:0;z-index:5}.sim{position:absolute;left:61%;top:39%;height:43%;width:15%;display:flex;flex-direction:column;align-items:center;filter:drop-shadow(5px 7px 3px #0005);z-index:3;cursor:pointer}.hair{position:relative;width:57%;height:34%;background:#26252a;border-radius:48% 48% 30% 30%;display:flex;align-items:center;justify-content:center;font-size:25px}.body{width:66%;height:38%;background:#7855e5;border-radius:13px 13px 4px 4px}.legs{display:flex;width:55%;height:28%;gap:3px}.legs i{flex:1;background:#777b84;border-radius:0 0 5px 5px}.bed{position:absolute;left:7%;bottom:11%;font-size:74px;transform:scaleX(-1);z-index:3;border:0;background:none;padding:0}.shower{position:absolute;right:6%;top:10%;font-size:65px;z-index:3;border:0;background:none;padding:0;transform:rotate(-25deg)}.hint{font-size:14px;line-height:1.5;margin:6px 0;color:#b0bacd}.stat{font-size:40px;font-weight:750;margin:8px 0}.bar{height:9px;background:#49454a;border:1px solid #8a8a8a;border-radius:10px;overflow:hidden}.bar>div{height:100%;background:#a5b5ff;width:70%}.fields{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{background:#2d3954;border-radius:16px;padding:12px}.field label{display:block;color:#c0c9db;font-size:14px;margin-bottom:8px}.field select{width:100%;background:#141d2d}.hidden{display:none}.action{width:100%;margin:6px 0}.notice{color:#a6f3dd;min-height:24px}.small{font-size:13px;color:#aab4c8}#actionMenu{background:#303c58;border-radius:14px;padding:12px;margin-top:10px}#actionMenu h3{font-size:16px;margin:0 0 9px}#actionMenu button{margin:3px 5px 3px 0;background:#566bd0}.sim.busy{animation:sim-action .7s ease-in-out 3}@keyframes sim-action{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}ul{padding-left:22px}li{margin:10px 0}
+.resource-control{background:#303c58;border:1px solid #566586;border-radius:15px;padding:14px;margin:12px 0}.resource-control label{display:flex;justify-content:space-between;align-items:center;font-weight:600;margin-bottom:8px}.resource-control input[type=range]{width:100%;height:32px;padding:0;accent-color:#8ca4ff;cursor:pointer}.resource-control .marks{display:flex;justify-content:space-between;color:#b5c1d7;font-size:12px}.resource-control .controls{display:flex;gap:8px;justify-content:flex-end;margin-top:10px}.resource-control button{padding:8px 14px}.resource-control button.primary{background:#637bf2;border-color:#637bf2}.editor{display:grid;gap:12px;margin:12px 0 18px}.editor label{display:grid;gap:6px;font-size:14px;color:#c7d1e6}.editor input,.editor select,.editor textarea{width:100%;min-width:0;background:#151f31;border:1px solid #566583;border-radius:11px;padding:11px;color:#fff;font:inherit}.editor-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}.primary-btn{background:#637bf2;border-color:#637bf2}.entry{background:#2b3650;border-radius:14px;padding:12px;margin:9px 0;display:flex;gap:10px;align-items:flex-start}.entry-info{flex:1;min-width:0}.entry-info strong{display:block;overflow-wrap:anywhere}.entry-info small{display:block;color:#b7c4d9;margin-top:4px}.entry button{padding:8px 10px;flex:none}.entry.done strong{text-decoration:line-through;opacity:.7}.empty{color:#9fadc8;font-size:14px;padding:8px 0}@media(max-width:360px){.editor-grid{grid-template-columns:1fr}}.editor{display:grid;gap:12px;margin-bottom:20px}.editor label{display:grid;gap:5px;color:#c4cde0;font-size:14px}.editor input,.editor select{width:100%;min-width:0;background:#141d2d}.editor button{background:#637bf2}.item{list-style:none;border-bottom:1px solid #47516a;padding:12px 0}.item small{display:block;color:#acb9d1;line-height:1.5;margin:6px 0}.item button{padding:7px 10px;margin:4px}.item.done strong{text-decoration:line-through;opacity:.6}#taskList,#habitList,#skillList{padding-left:0}.diary-day{display:flex;gap:10px;align-items:center;justify-content:space-between;background:#2b3650;border-radius:12px;padding:10px;margin:8px 0}.diary-day button{flex-shrink:0}.diary-day span{font-size:13px;color:#c5d0e4;overflow-wrap:anywhere}.diary-day strong{display:block;color:#fff;font-size:14px}.diary-calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:5px;margin:12px 0 20px}.diary-calendar button{padding:8px 0;min-width:0;font-size:14px}.diary-calendar button.saved{background:#415b8a;border-color:#a7baff}.diary-calendar button.selected{outline:2px solid #d6e4ff;outline-offset:1px}.diary-calendar .weekday{text-align:center;font-size:12px;color:#c5d0e4;padding:5px 0}.diary-calendar .empty{min-height:32px}
+/* Room refresh: decorative layers only, existing controls and saved data unchanged */
+.room{aspect-ratio:1.18;border:3px solid #e9b9df;background:linear-gradient(150deg,#e8b4ba,#f4d9b5 55%,#bd91ad);box-shadow:inset 0 0 0 2px #fff7,0 12px 30px #17132755}
+.room .wall{background:linear-gradient(145deg,#f8c5d8 0%,#e7b8e9 47%,#c6b7f5 100%);clip-path:polygon(0 0,100% 0,100% 15%,49% 52%,0 52%)}
+.room .wall:after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,#fff2 0 2px,transparent 2px 35px);opacity:.35}
+.room .floor{background:repeating-linear-gradient(115deg,#ffffff20 0 2px,transparent 3px 40px),linear-gradient(155deg,#e6b78c,#d29a83 65%,#b88083);clip-path:polygon(0 52%,49% 52%,100% 15%,100% 100%,0 100%)}
+.room .window{position:absolute;left:11%;top:11%;width:29%;height:32%;border:7px solid #fff4ee;border-radius:44% 44% 8px 8px;background:linear-gradient(#86c8f2,#c9ecf6 65%,#f9d6e3);box-shadow:0 5px 0 #c48fb1,0 0 0 2px #ae7f9c;z-index:1;overflow:hidden}
+.room .window:before{content:"";position:absolute;left:48%;top:0;height:100%;width:5px;background:#fff4ee}
+.room .window:after{content:"";position:absolute;left:0;top:53%;height:5px;width:100%;background:#fff4ee}
+.room .wall-art{position:absolute;right:24%;top:10%;z-index:1;color:#b46494;background:#fff3df;border:5px solid #e7a3a5;border-radius:9px;padding:1px 11px;font-size:31px;transform:rotate(7deg);box-shadow:2px 4px 0 #98677a66}
+.room .rug{position:absolute;left:26%;bottom:9%;width:58%;height:25%;border-radius:50%;background:radial-gradient(ellipse,#fff5d3 0 35%,#ef99ac 36% 49%,#f9d8bb 50% 66%,#fff0df 67%);box-shadow:0 6px 10px #855a6555;transform:rotate(-12deg);z-index:1;pointer-events:none}
+.room .plant{position:absolute;right:6%;bottom:17%;font-size:47px;z-index:2;filter:drop-shadow(3px 5px 2px #60414c55);pointer-events:none}
+.room .lamp{position:absolute;right:9%;top:25%;font-size:29px;z-index:2;filter:drop-shadow(0 0 9px #fff3a9);pointer-events:none}
+.room .bed{left:5%;bottom:11%;font-size:clamp(53px,13vw,83px);filter:drop-shadow(3px 7px 3px #8b557788);transition:transform .2s ease;transform:scaleX(-1)}
+.room .bed:active{transform:scaleX(-1) scale(.94)}
+.room .shower{right:4%;top:6%;font-size:clamp(42px,10vw,65px);filter:drop-shadow(0 4px 4px #86598a77)}
+.room .crystal{left:45%;top:6%;filter:drop-shadow(0 0 13px #fff4e0)}
+.room .sim{left:57%;top:40%;filter:drop-shadow(4px 7px 3px #63426366)}
+.room .sim .body{background:linear-gradient(120deg,#f38ca9,#bb76d9);border-radius:15px 15px 5px 5px}
+.room .sim .legs i{background:linear-gradient(#7f79b6,#5b6a9d)}
+.room button:focus-visible{outline:3px solid #fff;outline-offset:3px}
+@media(prefers-reduced-motion:reduce){.room .bed{transition:none}}
+.room .sim .body{transform:scaleX(var(--body-scale,1));transform-origin:center center;transition:transform .25s ease}
+/* Room v2: richer illustrated interior; presentation only, no storage/schema changes. */
+.room{background:#e9c6c9;border-color:#f9d7ea;box-shadow:0 15px 35px #100d2750,inset 0 0 0 3px #fff8}
+.room .wall{background:linear-gradient(135deg,#ffe4d5 0%,#f5bdda 42%,#b9a7e8 100%)}
+.room .floor{background:repeating-linear-gradient(113deg,#fff5 0 2px,transparent 2px 46px),linear-gradient(155deg,#f4d3a7,#d9a18b 65%,#b27b83)}
+.room .window{box-shadow:0 6px 0 #b986a5,0 0 0 3px #fff9,0 0 25px #fff9}
+.room .window span:before{content:"☁";position:absolute;left:12%;top:12%;color:#fff;font-size:25px;text-shadow:24px 14px 0 #fff9}
+.room .window span:after{content:"";position:absolute;bottom:0;left:0;width:100%;height:26%;background:linear-gradient(160deg,#9dbdb2,#8cb5a7);clip-path:polygon(0 80%,30% 10%,57% 65%,80% 12%,100% 60%,100% 100%,0 100%)}
+.room .wall-art{box-shadow:3px 5px 0 #98677a66,0 0 0 3px #fff6}
+.room .sim{transition:filter .2s ease;outline-offset:5px;border-radius:20px}
+.room .sim:focus-visible{outline:3px solid #fff}
+.room .sim .hair{background:linear-gradient(135deg,#433443,#201c31);box-shadow:inset -5px -2px 0 #100d2540}
+.room .sim .body{background:linear-gradient(125deg,#ffb4cc,#cb7bda 60%,#a876d7);box-shadow:inset -5px 0 0 #633d7b33}
+.room .sim .legs i{background:linear-gradient(100deg,#8581bf,#4e5c93)}
+.room .rug{background:radial-gradient(ellipse,#fff8e5 0 32%,#ff9eb5 33% 45%,#f9d9c0 46% 63%,#fff1e6 64%);box-shadow:0 6px 12px #855a6566}
+.room .plant{right:3%;bottom:19%;font-size:clamp(33px,9vw,53px)}
+.room .lamp{right:11%;top:27%;filter:drop-shadow(0 0 15px #fff5b9)}
+.room .bed,.room .shower,.room .crystal{touch-action:manipulation}
+.room .room-shelf{position:absolute;right:5%;top:47%;width:24%;height:5px;background:#9d6288;border-radius:3px;z-index:2;box-shadow:0 4px 0 #724c6d55;pointer-events:none}
+.room .room-shelf:before{content:"📚";position:absolute;left:9%;bottom:3px;font-size:clamp(18px,5vw,30px)}
+.room .room-shelf:after{content:"🕯️";position:absolute;right:2%;bottom:3px;font-size:clamp(17px,4vw,27px)}
+.room .room-stars{position:absolute;inset:0;z-index:1;pointer-events:none;background:radial-gradient(circle at 47% 16%,#fff9 0 2px,transparent 3px),radial-gradient(circle at 75% 6%,#fff8 0 2px,transparent 3px),radial-gradient(circle at 8% 47%,#fff8 0 2px,transparent 3px)}
+@media(max-width:380px){.room .wall-art{font-size:22px;padding:1px 7px}.room .window{border-width:5px}.room .sim{left:57%}}
+@media(prefers-reduced-motion:reduce){.room .sim,.room .sim .body{transition:none}}
+
+/* Room appearance presets: cosmetic, isolated from progress and backups. */
+.room[data-style="mint"]{border-color:#b3f4e1;background:#b7d9cf}
+.room[data-style="mint"] .wall{background:linear-gradient(135deg,#d6fff0,#a9e6d5 52%,#a5b8e8)}
+.room[data-style="mint"] .floor{background:repeating-linear-gradient(113deg,#fff5 0 2px,transparent 2px 46px),linear-gradient(155deg,#f4dfb9,#c6b59b 65%,#91b6b0)}
+.room[data-style="mint"] .rug{background:radial-gradient(ellipse,#fff9e9 0 32%,#91d8c4 33% 45%,#d4f4df 46% 63%,#fff5e9 64%)}
+.room[data-style="sunset"]{border-color:#ffd3b0;background:#e7b8a3}
+.room[data-style="sunset"] .wall{background:linear-gradient(135deg,#ffe7c5,#ffc2aa 48%,#c5a4e8)}
+.room[data-style="sunset"] .floor{background:repeating-linear-gradient(113deg,#fff5 0 2px,transparent 2px 46px),linear-gradient(155deg,#f6d2a2,#d69d80 65%,#b77d77)}
+.room[data-style="sunset"] .rug{background:radial-gradient(ellipse,#fff7db 0 32%,#f4ad77 33% 45%,#f9d3ad 46% 63%,#fff1e3 64%)}
+.room-customizer{display:flex;flex-wrap:wrap;align-items:center;gap:7px;margin:12px 0 0}
+.room-customizer span{font-size:13px;color:#d2d9e9;margin-right:4px}
+.room-customizer button{padding:8px 11px;font-size:13px;border-radius:12px}
+.room-customizer button[aria-pressed="true"]{background:#637bf2;border-color:#d6dcff}
+.room .room-cabinet{position:absolute;left:3%;bottom:37%;width:22%;height:12%;z-index:2;pointer-events:none;border-radius:5px 5px 2px 2px;background:linear-gradient(110deg,#e8b27f,#b87967);box-shadow:3px 5px 0 #805c5966,inset 0 3px 0 #ffedca}
+.room .room-cabinet:before{content:"";position:absolute;top:42%;left:4%;width:92%;height:3px;background:#f4d2a5}
+.room .room-cabinet:after{content:"✦  ✦";position:absolute;inset:8% 0 0;text-align:center;font-size:clamp(10px,3vw,17px);color:#fff0cb;letter-spacing:4px}
+
+/* Interactive decor: local cosmetic state, no XP and no progress mutations. */
+.room .lamp,.room .plant,.room .room-shelf,.room .room-cabinet{pointer-events:auto;cursor:pointer;touch-action:manipulation;border:0}
+.room button.lamp,.room button.plant,.room button.room-shelf,.room button.room-cabinet{padding:0}
+.room .lamp,.room .plant{background:transparent}
+.room .room-shelf{display:block}
+.room .room-cabinet{display:block}
+.room .lamp:focus-visible,.room .plant:focus-visible,.room .room-shelf:focus-visible,.room .room-cabinet:focus-visible{outline:3px solid #fff;outline-offset:4px}
+.room[data-lamp="off"] .lamp{filter:grayscale(.9) brightness(.6)}
+.room[data-lamp="on"] .lamp{filter:drop-shadow(0 0 17px #fff0a0)}
+.room[data-plant="bloom"] .plant{filter:drop-shadow(0 0 9px #fff7b4)}
+.room[data-plant="bloom"] .plant:after{content:"✨";font-size:16px;position:absolute;top:-10px;right:-8px}
+.room[data-shelf="open"] .room-shelf:after{content:"🧸"}
+.room[data-cabinet="open"] .room-cabinet{background:linear-gradient(110deg,#f0c59d,#c48977)}
+.room[data-cabinet="open"] .room-cabinet:after{content:"🧦";font-size:clamp(12px,4vw,20px);letter-spacing:0}
+.room[data-lamp="off"] .room-stars{opacity:.45}
+
+/* Functional furniture, avoiding decorative fake actions. */
+.room .room-mirror,.room .room-washer,.room .room-sink{position:absolute;z-index:3;background:#fff9;border:2px solid #f7e7f5;border-radius:12px;padding:2px;font-size:clamp(19px,6vw,32px);cursor:pointer;touch-action:manipulation;box-shadow:2px 4px 6px #63426355}
+.room .room-mirror{left:29%;top:12%}.room .room-washer{right:3%;bottom:7%}.room .room-sink{left:5%;bottom:4%}
+.room .room-mirror:focus-visible,.room .room-washer:focus-visible,.room .room-sink:focus-visible{outline:3px solid white;outline-offset:2px}
+.room .room-cabinet:after{content:"👚";letter-spacing:0}
+.room .room-cabinet:before{content:"";position:absolute;top:42%;left:4%;width:92%;height:3px;background:#f4d2a5}
+.room[data-outfit="blue"] .sim .body{background:linear-gradient(120deg,#8dc9ff,#6775d6)}
+.room[data-outfit="green"] .sim .body{background:linear-gradient(120deg,#b4e4a6,#61b6a6)}
+.room[data-outfit="pink"] .sim .body{background:linear-gradient(120deg,#ffb4cc,#cb7bda)}
+.room[data-hair="light"] .sim .hair{background:linear-gradient(120deg,#d8a56c,#9b683e)}
+.room[data-hair="dark"] .sim .hair{background:linear-gradient(120deg,#433443,#201c31)}
+
+/* Mobile portrait room layout, deliberately preserves all existing game controls. */
+.room .rug{left:21%;bottom:9%;width:66%;height:27%;border-radius:3px;transform:rotate(-9deg);z-index:1;pointer-events:none;background:radial-gradient(ellipse at center,#f7e6c8 0 13%,#8f5670 14% 19%,#e5bb9b 20% 25%,transparent 26%),repeating-linear-gradient(45deg,#9e617b22 0 7px,#f9e4c522 8px 15px),linear-gradient(135deg,#7d405f,#a96a82 50%,#77415f);border:7px double #f5d7ad;box-shadow:0 7px 12px #40293e66,inset 0 0 0 5px #82536d,inset 0 0 0 8px #f1d0a5}
+.room .rug:before{content:"";position:absolute;inset:9px;border:2px solid #f4d4a3;box-shadow:inset 0 0 0 4px #8b4d6c}
+.room .rug:after{content:"";position:absolute;inset:30% 30%;border:3px double #f4d4a3;border-radius:50%}
+@media(max-width:700px){
+body{background:#231b2a}
+.app{max-width:540px;padding:8px 10px calc(100px + env(safe-area-inset-bottom))}
+header{padding:8px 9px}header h1{font-size:22px}header p{font-size:12px;margin:4px 0}
+nav#tabs{position:fixed;bottom:0;left:0;right:0;z-index:40;background:#fff0f3f5;backdrop-filter:blur(16px);border-top:1px solid #f7d9e6;display:flex;gap:2px;padding:7px 5px calc(7px + env(safe-area-inset-bottom));overflow-x:auto;justify-content:flex-start;box-shadow:0 -8px 20px #24172b44}
+nav#tabs button{flex:1;min-width:65px;padding:10px 5px;font-size:12px;color:#4b354c;border-radius:12px;background:transparent;white-space:normal}
+nav#tabs button.active{background:#e6c5df;color:#38253e}
+#home>.card:first-child{padding:8px;background:transparent;border:0;margin:4px 0}
+#home>.card:first-child>.line{padding:4px 9px}
+.room{aspect-ratio:9/15;max-height:calc(100dvh - 210px);min-height:400px;border-radius:19px;border:3px solid #efd3de}
+.room .wall{clip-path:polygon(0 0,100% 0,100% 62%,0 62%)}
+.room .floor{clip-path:polygon(0 62%,100% 62%,100% 100%,0 100%)}
+.room .window{top:12%;left:8%;width:34%;height:23%}
+.room .wall-art{top:11%;right:10%}
+.room .sim{left:48%;top:46%;width:24%;height:34%}
+.room .bed{left:4%;bottom:16%;font-size:clamp(55px,16vw,85px)}
+.room .rug{left:20%;bottom:10%;width:73%;height:24%}
+.room .room-cabinet{left:4%;bottom:41%;width:27%;height:10%}
+.room .room-mirror{left:57%;top:21%}
+.room .room-shelf{right:8%;top:39%}
+.room .room-washer{right:6%;bottom:8%}
+.room .room-sink{left:5%;bottom:7%}
+.room .plant{right:5%;bottom:28%}
+.room .lamp{right:8%;top:34%}
+.room .shower{right:6%;top:5%;font-size:clamp(36px,10vw,56px)}
+.room .crystal{left:44%;top:6%;font-size:clamp(36px,10vw,54px)}
+#actionMenu{position:relative;z-index:8}
+}
+
+/* Avatar v3: anatomically legible SVG, responsive, preserves wardrobe + weight state. */
+.room .sim{display:block;filter:drop-shadow(3px 8px 4px #38273877);touch-action:manipulation}
+.room .sim .avatar-svg{width:100%;height:100%;display:block;overflow:visible;filter:none}
+.room .sim .avatar-torso,.room .sim .avatar-hips{transform:scaleX(var(--body-scale,1));transform-box:fill-box;transform-origin:center center;transition:transform .25s ease}
+.room .sim .body{fill:var(--avatar-top,#e8a6be);width:auto;height:auto;background:none;border-radius:0;transform:none;transition:fill .2s ease}
+.room[data-outfit="pink"]{--avatar-top:#e8a6be}
+.room[data-outfit="blue"]{--avatar-top:#86bce8}
+.room[data-outfit="green"]{--avatar-top:#8dcaa8}
+.room[data-hair="light"] .sim #avatarHairShadow stop:first-child{stop-color:#d2a46a}
+.room[data-hair="light"] .sim #avatarHairShadow stop:last-child{stop-color:#9a693d}
+.room .sim:focus-visible{outline:3px solid #fff;outline-offset:4px}
+@media(max-width:700px){.room .sim{left:43%;top:39%;width:29%;height:43%;z-index:4}}
+@media(prefers-reduced-motion:reduce){.room .sim .avatar-torso,.room .sim .avatar-hips{transition:none}}
+
+/* Hygiene: explicit manual score; never invent dated values. */
+.hygiene-field{grid-column:1/-1}
+.hygiene-field label{display:block}
+.hygiene-field input[type=range]{width:100%;padding:0;accent-color:#9ddfbd;cursor:pointer}
+.hygiene-field button{font-size:14px;padding:9px 12px;margin:5px 0}
+.hygiene-field .small{margin:5px 0;line-height:1.5}
+
+/* Voice command sheet: optional Web Speech input with explicit review. */
+.voice-panel{margin:10px 0;padding:14px 16px}
+.voice-panel h2{margin:0 0 8px}
+.voice-entry{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.voice-entry input{flex:1;min-width:150px}
+.voice-entry button{padding:10px 12px;min-height:42px}
+#voiceConfirm:not(:disabled){background:#6683e2}
+#voiceConfirm:disabled{opacity:.45;cursor:default}
+#voiceOpen{border:1px solid #e1bdde;background:#614a73;min-width:48px;min-height:48px;border-radius:50%;font-size:23px;padding:7px}
+#voicePreview{font-weight:650;color:#e6c9ff}
+
+/* Faceted SVG crystal, accessible palette driven by three recorded state values. */
+/* Place plumbob on the avatar's centerline, just above its head. */
+.room .crystal{left:57.5%!important;top:20%!important;width:clamp(36px,10vw,54px)!important;height:clamp(66px,18vw,92px)!important;z-index:8}
+
+.room .crystal{left:50%!important;top:2%!important;transform:translateX(-50%);width:clamp(56px,16vw,88px)!important;height:clamp(66px,19vw,100px)!important;z-index:8;animation:plumbobFloat 3s ease-in-out infinite}
+@keyframes plumbobFloat{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-8px)}}
+@media(prefers-reduced-motion:reduce){.room .crystal{animation:none}}
+
+.room .crystal{width:clamp(44px,12vw,70px);height:clamp(48px,13vw,75px);line-height:0;display:grid;place-items:center;padding:0 3px;filter:drop-shadow(0 1px 5px var(--gem-glow,#7ccde9));transition:filter .2s ease}
+.room .crystal .resource-gem{display:block;width:100%;height:100%;overflow:visible}
+.room .crystal{--gem-light:#c9efff;--gem-base:#56bde3;--gem-deep:#196aa7;--gem-glow:#4ea8de}
+.room .crystal[data-level="high"]{--gem-light:#e2ffe1;--gem-base:#46d3a2;--gem-deep:#137b70;--gem-glow:#5bf5b4}
+.room .crystal[data-level="medium"]{--gem-light:#c9efff;--gem-base:#59bbf0;--gem-deep:#2064c1;--gem-glow:#62caff}
+.room .crystal[data-level="low"]{--gem-light:#fff3b5;--gem-base:#eeb345;--gem-deep:#a9681a;--gem-glow:#ffce5a}
+.room .crystal[data-level="critical"]{--gem-light:#ffcccc;--gem-base:#ee6371;--gem-deep:#a52d54;--gem-glow:#ff7282}
+.room .crystal[data-level="unknown"]{--gem-light:#e1e2ea;--gem-base:#999cae;--gem-deep:#5e6279;--gem-glow:#b3b4c4}
+.room .crystal .gem-outline{fill:var(--gem-base);stroke:#fff;stroke-opacity:.65;stroke-width:1.8}
+.room .crystal .gem-top{fill:var(--gem-light)}
+.room .crystal .gem-left{fill:var(--gem-base)}
+.room .crystal .gem-center{fill:var(--gem-light);opacity:.9}
+.room .crystal .gem-right{fill:var(--gem-deep)}
+.room .crystal .gem-highlight{fill:#fff;opacity:.28}
+#crystalStatus{background:#32293e;border:1px solid #725c84;border-radius:12px;padding:9px 12px;color:#efe4f8}
+@media(prefers-reduced-motion:reduce){.room .crystal{transition:none}}
+
+/* UX: wall tap edits style; microphone floats above mobile bottom navigation. */
+.room .wall{cursor:pointer;pointer-events:auto;touch-action:manipulation;z-index:0}
+.room .wall:focus-visible{outline:3px solid #fff;outline-offset:-6px}
+.room .floor{pointer-events:none}
+#voiceOpen{position:fixed;right:17px;bottom:18px;z-index:45;display:grid;place-items:center;width:57px;height:57px;padding:0;border-radius:50%;box-shadow:0 6px 17px #130b226e;background:#5e4789;color:#fff;font-size:26px;touch-action:manipulation}
+#voicePanel{position:fixed;right:16px;bottom:82px;z-index:44;width:min(440px,calc(100vw - 32px));max-height:calc(100dvh - 125px);overflow-y:auto;margin:0;box-shadow:0 8px 40px #12091bcc;border:1px solid #876f9b}
+body.voice-open #voiceOpen{visibility:hidden}
+@media(max-width:700px){
+#voiceOpen{right:14px;bottom:calc(82px + env(safe-area-inset-bottom));width:54px;height:54px}
+#voicePanel{right:12px;left:12px;bottom:calc(78px + env(safe-area-inset-bottom));width:auto;max-height:calc(100dvh - 115px)}
+}
+
+.room .crystal{left:57.5%!important;top:20%!important;width:clamp(36px,10vw,54px)!important;height:clamp(66px,18vw,92px)!important;z-index:8}
+.diary-calendar button{min-height:55px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;overflow:hidden}.diary-calendar .calendar-item{font-size:9px;line-height:1.15;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#d3b9ff}.diary-calendar button strong{font-size:13px}
+.event-form{display:grid;gap:12px;margin-top:12px}.event-form label{display:grid;gap:5px;font-size:14px}.event-form input,.event-form select{width:100%;box-sizing:border-box;min-height:42px;padding:9px;border-radius:10px}.event-form .event-check{display:flex;align-items:center;gap:9px}.event-form .event-check input{width:20px;min-height:20px}.event-form [hidden]{display:none!important}.event-actions{display:flex;gap:8px;flex-wrap:wrap}
+
+/* Classic isometric life-sim inspired room: CSS-only visual upgrade; interactive objects preserved. */
+.room{aspect-ratio:1.12;border:5px solid #756b60;border-radius:8px;background:#b5a58d;box-shadow:0 12px 0 #594b43,0 19px 28px #0005;overflow:hidden}
+.room .wall{background:linear-gradient(145deg,#e7d8bb,#d5c49f 60%,#ac9b80);clip-path:polygon(0 0,100% 0,100% 18%,49% 52%,0 52%);box-shadow:inset 0 0 30px #76644755}
+.room .wall:after{background:repeating-linear-gradient(90deg,#806e4a19 0 2px,transparent 2px 27px);opacity:.8}
+.room .floor{clip-path:polygon(0 52%,49% 52%,100% 18%,100% 100%,0 100%);background:repeating-linear-gradient(31deg,transparent 0 38px,#7c5e4150 39px 41px),repeating-linear-gradient(149deg,transparent 0 38px,#7c5e4140 39px 41px),linear-gradient(145deg,#d9b98c,#b58a66)}
+.room .window{border-radius:2px;border:6px solid #806449;background:linear-gradient(#7da9c4,#c6d7ca);box-shadow:3px 5px 0 #54483e}
+.room .window:before,.room .window:after{background:#806449}
+.room .rug{border-radius:4px!important;box-shadow:3px 6px 1px #0004!important}
+.room .sim{filter:drop-shadow(7px 9px 2px #352b2b77)!important}
+.room .avatar-svg{filter:contrast(1.08) saturate(.86)}
+.room .bed,.room .room-washer,.room .room-cabinet,.room .room-shelf,.room .room-sink{filter:drop-shadow(5px 7px 2px #0006)}
+.room .wall-art{border-radius:1px;background:#d4c09a;border-color:#715d47;color:#635041}
+.room .crystal{filter:drop-shadow(0 2px 4px #0007)!important}
+.room .classic-scene{position:absolute;inset:0;width:100%;height:100%;z-index:1;pointer-events:none}.room .wall,.room .floor{opacity:0}.room .rug{opacity:0}.room .bed,.room .room-cabinet,.room .room-washer,.room .shower{opacity:.02;z-index:5}.room .sim{z-index:6!important}.room .crystal{z-index:7!important}
+/* Avatar first: classic sprite-like presentation and visible scale upgrade. */
+.room .sim{left:43%!important;top:35%!important;width:30%!important;height:52%!important;filter:drop-shadow(6px 9px 3px #241b1b88)!important;transform:skewY(-1deg)}
+.room .avatar-svg{width:100%;height:100%;filter:contrast(1.14) saturate(.9) drop-shadow(1px 1px 0 #4c38455c)!important}
+.room .crystal{left:57.5%!important;top:21%!important;transform:translateX(-50%)!important}
+/* New sprite art replaces the old front-facing SVG; preserve interactive character container. */
+.room .sim{left:42%!important;top:34%!important;width:31%!important;height:54%!important;transform:none!important;filter:drop-shadow(5px 8px 4px #21192470)!important}
+.room .sim .avatar-svg{filter:none!important;image-rendering:auto}
+.room .crystal{left:57.5%!important;top:19%!important}
+.room .sim{z-index:30!important}.room .crystal{z-index:31!important}
+/* Character v2: visual baseline at 70 kg; SVG groups respond to recorded weight. */
+.room .sim .avatar-torso{transform:scaleX(var(--body-scale,1.13))!important;transform-box:fill-box;transform-origin:center center}
+.room .sim .avatar-face-volume{transform:scaleX(var(--face-scale,1.08));transform-box:fill-box;transform-origin:center center}
+.room .sim{left:42%!important;top:34%!important;width:31%!important;height:54%!important}
+</style></head><body><main class="app"><header><div><h1>LifeSims <small>КАРЕ + ОЧКИ · 16.11</small></h1><p class="muted">Реконструкция интерфейса · данные на устройстве</p></div></header><nav id="tabs"><button class="active" data-tab="home">Дом</button><button data-tab="tasks">Дела</button><button data-tab="habits">Привычки</button><button data-tab="skills">Навыки</button><button data-tab="diary">Дневник</button><button data-tab="data">Данные</button></nav><button type="button" id="voiceOpen" aria-label="Голосовой ввод дела или привычки" title="Голосовой ввод">🎙️</button><section id="voicePanel" class="card voice-panel hidden" aria-label="Голосовой и быстрый ввод"><h2>🎙️ Голосовой ввод</h2><p class="hint">Скажи «Добавь дело купить продукты», «Добавь привычку читать», «Найди уборка», «Выполни помыть посуду» или «Перенеси дело уборка на завтра».</p><div class="voice-entry"><input id="voiceText" maxlength="220" autocomplete="off" aria-label="Распознанная команда" placeholder="Скажи или введи задачу" type="text"><button type="button" id="voiceListen">🎙️ Говорить</button></div><div class="voice-entry"><button type="button" id="voicePrepare">Проверить команду</button><button type="button" id="voiceConfirm" disabled>Подтвердить</button><button type="button" id="voiceCancel">Закрыть</button></div><p class="small" id="voiceStatus" role="status">Ничего не будет создано или отмечено без подтверждения.</p><p class="small" id="voicePreview" aria-live="polite"></p><p class="small">Голос зависит от браузера; распознавание может передавать звук сервису браузера. Текстовый ввод работает без микрофона.</p></section><section id="home"><div class="card"><div class="line"><h2>Мой персонаж</h2><span id="date"></span></div><div class="room"><div class="wall" role="button" tabindex="0" aria-label="Стены: изменить оформление комнаты" title="Нажми для оформления комнаты"></div><div class="floor"></div><svg class="classic-scene" viewBox="0 0 600 500" preserveAspectRatio="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+<defs><pattern id="tilesClassic" width="50" height="34" patternUnits="userSpaceOnUse"><path d="M0 0H50M0 0V34" stroke="#765b42" stroke-opacity=".35" fill="none"/></pattern></defs>
+<!-- two angular wallpapered walls and a true diamond-like floor plane -->
+<path d="M0 0H600V102L295 259 0 257Z" fill="#b7a27d" stroke="#6b5b49" stroke-width="4"/>
+<path d="M0 0H295V259L0 257Z" fill="#d5c29c"/>
+<path d="M295 0H600V102L295 259Z" fill="#b9a37f"/>
+<path d="M0 257L295 259 600 102V500H0Z" fill="#a57b54"/>
+<path d="M0 257L295 259 600 102V500H0Z" fill="url(#tilesClassic)"/>
+<path d="M0 257L295 259 600 102" fill="none" stroke="#5b4838" stroke-width="5"/>
+<!-- low, patterned woven carpet -->
+<path d="M158 372L350 293 531 373 340 475Z" fill="#75443b" stroke="#4d302b" stroke-width="8"/>
+<path d="M190 375L350 310 500 373 339 451Z" fill="#b48a60" stroke="#e3c39b" stroke-width="5"/>
+<path d="M225 375L350 326 469 375 340 434Z" fill="#9c5145" stroke="#63443b" stroke-width="4"/>
+<!-- bed with visible height, wood base and pillows -->
+<path d="M35 332L175 275 301 336 159 406Z" fill="#664633" stroke="#32291f" stroke-width="5"/>
+<path d="M35 319L175 259 301 320 159 391Z" fill="#e4d1ad" stroke="#654c3d" stroke-width="5"/>
+<path d="M48 318L175 267 285 320 159 377Z" fill="#8a9a8b"/>
+<path d="M55 313L112 289 165 314 109 337Z" fill="#f1e8d8" stroke="#9b8e7c" stroke-width="3"/>
+<path d="M35 332V349L159 416V406ZM159 406V416L301 349V336Z" fill="#69412e"/>
+<!-- tall wooden cabinet -->
+<path d="M29 177L125 145 180 169 84 205Z" fill="#bd895b" stroke="#573d2b" stroke-width="4"/>
+<path d="M29 177V261L84 286V205Z" fill="#805338" stroke="#573d2b" stroke-width="4"/>
+<path d="M84 205L180 169V248L84 286Z" fill="#a67348" stroke="#573d2b" stroke-width="4"/>
+<path d="M94 225L167 196V235L94 265Z" fill="none" stroke="#63432e" stroke-width="3"/>
+<circle cx="127" cy="237" r="3" fill="#e5c17a"/>
+<!-- compact washer -->
+<path d="M460 382L523 352 577 375 514 407Z" fill="#dce1d9" stroke="#667477" stroke-width="4"/>
+<path d="M460 382V457L514 481V407Z" fill="#a7b3b4" stroke="#667477" stroke-width="4"/>
+<path d="M514 407L577 375V451L514 481Z" fill="#d3dad6" stroke="#667477" stroke-width="4"/>
+<ellipse cx="543" cy="433" rx="20" ry="24" fill="#425c65" stroke="#f4f4e8" stroke-width="6"/>
+<ellipse cx="543" cy="433" rx="12" ry="15" fill="#7295a3"/>
+<!-- shower cubicle -->
+<path d="M470 105L554 67 589 87 508 128Z" fill="#a9d6d8" fill-opacity=".65" stroke="#718e91" stroke-width="5"/>
+<path d="M470 105V254L508 277V128Z" fill="#b9e4e8" fill-opacity=".5" stroke="#718e91" stroke-width="4"/>
+<path d="M508 128L589 87V241L508 277Z" fill="#9fd5de" fill-opacity=".4" stroke="#718e91" stroke-width="4"/>
+<path d="M550 116V161" stroke="#5c7072" stroke-width="6"/><path d="M534 160Q550 148 566 160" fill="none" stroke="#596e70" stroke-width="6"/>
+</svg><div class="room-stars" aria-hidden="true"></div><button type="button" class="room-shelf" id="roomShelf" aria-label="Полка: выбрать украшение"></button><button type="button" class="room-cabinet" id="roomCabinet" aria-label="Комод: разобрать вещи или сменить одежду"></button><button type="button" class="room-mirror" id="roomMirror" aria-label="Зеркало: изменить внешний вид">🪞</button><button type="button" class="room-washer" id="roomWasher" aria-label="Стиральная машина: постирать">🧺</button><button type="button" class="room-sink" id="roomSink" aria-label="Раковина: помыть посуду или раковину">🚰</button><button class="window" id="roomWindow" type="button" aria-label="Окно: мероприятия" title="Мероприятия"><span></span></button><div class="wall-art" aria-hidden="true">✿</div><button type="button" class="plant" id="roomPlant" aria-label="Растение: ухаживать">🪴</button><div class="rug" aria-hidden="true"></div><button type="button" class="lamp" id="roomLamp" aria-label="Лампа: включить или выключить">💡</button><button class="crystal" id="crystal" type="button" title="Сводный ресурс: самочувствие + настроение + гигиена" aria-label="Сводный ресурс персонажа">
+<svg viewBox="0 0 100 160" class="resource-gem" aria-hidden="true" focusable="false">
+<path d="M50 2 89 44 75 111 50 158 25 111 11 44Z" fill="var(--gem-base)" stroke="var(--gem-light)" stroke-width="2.2"/>
+<path d="M50 2 11 44 50 57Z" fill="var(--gem-light)"/>
+<path d="M50 2 89 44 50 57Z" fill="var(--gem-base)"/>
+<path d="M11 44 50 57 50 158 25 111Z" fill="var(--gem-base)"/>
+<path d="M89 44 50 57 50 158 75 111Z" fill="var(--gem-deep)"/>
+<path d="M50 57 25 111 50 158 75 111Z" fill="var(--gem-light)" opacity=".48"/>
+<path d="M50 2V158M11 44 50 57 89 44M25 111 50 57 75 111" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="1.5"/>
+</svg>
+</button><button class="shower" id="shower" title="Принять душ">🚿</button><div class="sim" id="sim" role="button" tabindex="0" title="Изменить персонажа" aria-label="Персонаж: изменить вес, волосы или одежду">
+<svg class="avatar-svg" viewBox="0 0 180 340" xmlns="http://www.w3.org/2000/svg" aria-label="Новый статичный персонаж, трёхчетвертной ракурс">
+<defs>
+<linearGradient id="simSkin26" x1="0" y1="0" x2="1" y2=".5"><stop stop-color="#f5c6a8"/><stop offset=".45" stop-color="#e8ae90"/><stop offset="1" stop-color="#bd7c68"/></linearGradient>
+<linearGradient id="simHair26" x1="0" y1="0" x2="1" y2=".6"><stop stop-color="#715449"/><stop offset=".35" stop-color="#47302e"/><stop offset=".8" stop-color="#2a2029"/><stop offset="1" stop-color="#18161d"/></linearGradient>
+<linearGradient id="simShirt26" x1="0" y1="0" x2="1" y2=".35"><stop stop-color="#e4c5ba"/><stop offset=".35" stop-color="#c99494"/><stop offset=".8" stop-color="#946f83"/><stop offset="1" stop-color="#694d6e"/></linearGradient>
+<linearGradient id="simTrousers26" x1="0" y1="0" x2="1" y2=".5"><stop stop-color="#827d90"/><stop offset=".4" stop-color="#57576e"/><stop offset="1" stop-color="#353b55"/></linearGradient>
+<linearGradient id="simShoe26" x1="0" y1="0" x2="1" y2=".5"><stop stop-color="#49343a"/><stop offset="1" stop-color="#1c1c29"/></linearGradient>
+<radialGradient id="simLight26" cx=".22" cy=".23" r=".95"><stop stop-color="#fff7e7" stop-opacity=".5"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+</defs>
+<!-- Fully replaced character drawing: three-quarter standing game sprite, grounded feet -->
+<ellipse cx="93" cy="326" rx="49" ry="8" fill="#241b22" opacity=".4"/>
+<!-- short layered bob: visible volume, nape-length, no long hanging strands -->
+<path d="M59 48 Q49 18 77 10 Q100 -2 123 18 Q139 32 132 61 L137 91 Q129 110 112 107 L65 106 Q49 95 55 76Z" fill="url(#simHair26)" stroke="#30232a" stroke-width="2"/>
+<!-- rear hair mass -->
+
+<!-- far leg -->
+<path d="M93 191 Q107 192 120 184 L126 247 L127 304 Q121 316 107 315 L99 306 L94 247Z" fill="url(#simTrousers26)" stroke="#282d43" stroke-width="2"/>
+<path d="M110 300 Q121 300 128 305 L136 317 Q135 324 123 326 L103 324 Q97 321 103 311Z" fill="url(#simShoe26)" stroke="#25212a" stroke-width="2"/>
+<!-- far arm behind torso -->
+<path d="M117 111 Q134 114 140 137 L145 186 Q149 200 142 207 Q137 212 132 205 L128 192 L120 154 L109 129Z" fill="url(#simSkin26)" stroke="#985f58" stroke-width="2"/>
+<path d="M116 108 Q133 111 137 131 L137 150 Q127 155 119 151 L109 128Z" fill="url(#simShirt26)" stroke="#775667" stroke-width="2"/>
+<!-- near leg -->
+<path d="M66 190 Q83 198 103 192 L98 251 L92 309 Q82 318 67 309 L64 258 L61 217Z" fill="url(#simTrousers26)" stroke="#30354d" stroke-width="2"/>
+<path d="M70 211 Q72 247 71 291" fill="none" stroke="#c4bac2" stroke-opacity=".28" stroke-width="3"/>
+<path d="M66 302 Q81 303 93 310 L98 321 Q94 329 82 328 L60 327 Q51 324 58 314Z" fill="url(#simShoe26)" stroke="#26222c" stroke-width="2"/>
+<!-- torso with asymmetric 3D highlights -->
+<path class="body avatar-torso" d="M70 104 Q82 98 99 101 Q117 104 124 123 Q126 146 116 163 L121 191 Q98 204 63 190 L65 166 Q58 146 61 125 Q62 111 70 104Z" fill="url(#simShirt26)" stroke="#684e62" stroke-width="2.5"/>
+<path d="M68 116 Q65 137 72 164 L70 187" fill="none" stroke="#ffe0d3" stroke-opacity=".42" stroke-width="5"/>
+<path d="M114 121 Q121 145 111 166 L115 188" fill="none" stroke="#3c2b49" stroke-opacity=".42" stroke-width="8"/>
+<path d="M65 190 Q94 202 120 190" fill="none" stroke="#4c3d53" stroke-width="3"/>
+<!-- near arm with natural elbow bend -->
+<path d="M64 111 Q49 109 43 132 Q36 156 38 181 L40 198 Q44 209 53 204 Q59 200 55 190 L55 171 L65 145Z" fill="url(#simSkin26)" stroke="#9d655e" stroke-width="2"/>
+<path d="M62 108 Q47 110 44 130 L42 150 Q50 156 60 153 L69 125Z" fill="url(#simShirt26)" stroke="#795b6b" stroke-width="2"/>
+<path d="M41 191 Q39 200 46 205 Q51 209 55 200 L53 190" fill="url(#simSkin26)" stroke="#a06c5e" stroke-width="1.5"/>
+<!-- neck -->
+<path d="M79 90 L78 108 Q86 120 100 112 L103 94Z" fill="url(#simSkin26)" stroke="#ad7d69" stroke-width="1.5"/>
+<path d="M78 107 Q88 116 101 108" fill="none" stroke="#f5d1bc" stroke-width="3" opacity=".65"/>
+<!-- ears and face, 3/4 perspective -->
+<path d="M64 59 Q60 53 56 61 Q53 71 62 77 L66 75" fill="#dba38c" stroke="#9e695c" stroke-width="1.5"/>
+<path d="M115 58 Q121 55 122 64 Q121 71 116 74" fill="#bd8576" stroke="#9e695c" stroke-width="1.5"/>
+<path d="M65 44 Q69 24 94 24 Q114 26 117 49 L116 74 Q111 94 94 101 Q79 103 69 89 Q64 79 65 44Z" fill="url(#simSkin26)" stroke="#a36c60" stroke-width="2"/>
+<path d="M69 45 Q72 30 91 28 Q107 29 113 45 L112 73 Q108 91 95 97 Q79 99 72 86Z" fill="url(#simLight26)"/>
+<!-- fuller cheeks and softer jaw at the initial 70 kg reference -->
+<g class="avatar-face-volume">
+<path d="M67 71 Q62 84 76 95 Q87 105 99 99 Q112 95 116 78 Q111 89 102 91 Q89 99 78 90Z" fill="#d69a86" opacity=".64"/>
+<ellipse cx="76" cy="79" rx="10" ry="10" fill="#efb39a" opacity=".36"/>
+<ellipse cx="108" cy="78" rx="8" ry="10" fill="#c48a79" opacity=".26"/>
+</g>
+<!-- realistic subtle nose and brows, single pair -->
+<path d="M73 59 Q80 55 86 57 M98 57 Q104 53 110 56" fill="none" stroke="#503b3c" stroke-width="2.6" stroke-linecap="round"/>
+<path d="M74 65 Q80 62 86 65 M99 64 Q105 61 111 64" fill="none" stroke="#4a3940" stroke-width="1.5" stroke-linecap="round"/>
+<ellipse cx="81" cy="65" rx="2.3" ry="2.8" fill="#302c36"/><ellipse cx="105" cy="64" rx="2.1" ry="2.8" fill="#302c36"/>
+<circle cx="81.6" cy="64" r=".7" fill="#fff"/><circle cx="105.6" cy="63" r=".7" fill="#fff"/>
+<path d="M95 66 Q93 76 97 78 L100 77" fill="none" stroke="#a36e61" stroke-width="1.8" stroke-linecap="round"/>
+<path d="M87 86 Q96 90 103 84 Q97 94 88 88Z" fill="#a45f69" opacity=".85"/>
+<path d="M76 78 Q81 81 86 78" fill="none" stroke="#c77b73" stroke-opacity=".25" stroke-width="3"/>
+<!-- slim glasses with clear lenses; one frame around each eye -->
+<g class="avatar-glasses" fill="none" stroke="#44353b" stroke-width="2.6" stroke-linejoin="round">
+<path d="M70 60 Q78 56 88 60 L88 70 Q79 76 71 69Z M96 59 Q106 55 114 59 L113 69 Q105 75 97 69Z"/>
+<path d="M88 62 Q92 60 97 62 M70 62 L64 60 M114 61 L119 59"/>
+</g>
+<path d="M73 61 Q78 59 85 61 M99 60 Q105 58 111 60" fill="none" stroke="#fff" stroke-opacity=".38" stroke-width="1"/>
+<!-- hair: swept side part, layered side strands -->
+<path d="M61 59 Q56 35 70 22 Q83 8 104 17 Q124 20 127 47 L117 63 Q114 46 105 37 Q89 44 73 40 Q70 52 61 59Z" fill="url(#simHair26)" stroke="#2b2228" stroke-width="2"/>
+<path d="M73 27 Q86 15 104 23 Q90 24 80 39 Q75 47 65 57" fill="#75514a" opacity=".53"/>
+<path d="M61 44 Q55 69 58 90 Q63 104 74 97 L73 80 Q66 66 68 55Z" fill="url(#simHair26)" stroke="#2a2028" stroke-width="1.5"/>
+<path d="M119 43 Q132 65 128 88 Q122 103 111 97 L112 79 Q119 68 114 54Z" fill="url(#simHair26)" stroke="#231c26" stroke-width="1.5"/>
+<path d="M63 59 Q60 76 65 92 M120 53 Q126 74 123 91" fill="none" stroke="#b08a7c" stroke-opacity=".26" stroke-width="2.4"/>
+<!-- cloth seam and final lighting -->
+<path d="M77 116 Q92 121 106 114" fill="none" stroke="#e8b8ac" stroke-opacity=".65" stroke-width="2"/>
+</svg></div><button class="bed" id="bed" title="Отдохнуть">🛏️</button></div><p class="hint">Нажми на свободную часть стены, чтобы изменить оформление. На предметы — для действий. Изометрическая 2D-комната в классической игровой стилистике.</p><p id="crystalStatus" class="hint" role="status" aria-live="polite">Ресурс по состоянию пока не рассчитан.</p><p id="weightStatus" class="hint" role="status">Вес пока не записан.</p><div id="actionMenu" class="hidden" aria-label="Действия с предметом"></div><div class="notice" id="notice" role="status"></div></div><div class="card"><div class="line"><div><h2>Игровая энергия</h2><div class="stat" id="resource">70 / 100</div></div><button id="change">Изменить</button></div><div id="resourceControl" class="resource-control hidden"><label for="resourceSlider">Ресурс <output id="resourceValue">70 / 100</output></label><input type="range" id="resourceSlider" min="0" max="100" step="1" value="70"><div class="marks"><span>0</span><span>50</span><span>100</span></div><div class="controls"><button id="cancelResource">Отмена</button><button id="applyResource" class="primary">Сохранить</button></div></div><div class="bar"><div id="fill"></div></div><p class="hint">Игровая энергия изменяется вручную и действиями комнаты. Цвет кристалла определяется отдельно — самочувствием, настроением и гигиеной.</p></div><div class="fields"><div class="field"><label for="mood">Настроение</label><select id="mood"><option>Спокойное</option><option>Нормальное</option><option>Возбуждённое</option><option>Радостное</option><option>Грустное</option><option>Тревожное</option><option>Раздражённое</option></select></div><div class="field"><label for="condition">Самочувствие</label><select id="condition"><option>Нормальное</option><option>Хорошее</option><option>Усталость</option><option>Плохое</option></select></div><div class="field hygiene-field"><label for="hygieneSlider">Гигиена · <output id="hygieneValue">Не указана</output></label><input id="hygieneSlider" type="range" min="0" max="100" step="5" value="50" aria-label="Гигиена, ручная игровая оценка от 0 до 100"><button type="button" id="saveHygiene">Сохранить</button><p class="small" id="hygieneHistoryStatus">Истории замеров пока нет.</p></div></div><div class="card"><h2>Сегодня</h2><p id="today">Дел выполнено: 0 / 0. Привычек отмечено сегодня: 0.</p></div></section><section id="tasks" class="hidden"><div class="card"><h2>Новое дело</h2><div class="editor"><label>Название<input id="taskInput" placeholder="Что сделать?"></label><label>Проект<input id="taskProject" placeholder="Необязательно"></label><label>Навык<select id="taskSkill"></select></label><label>Сложность<select id="taskDifficulty"><option value="1">Тривиальная</option><option value="2">Лёгкая</option><option value="3" selected>Средняя</option><option value="4">Сложная</option></select></label><label>Планируемое время, минут<input id="taskMinutes" type="number" min="0" placeholder="Необязательно"></label><label>Периодичность<select id="taskFrequency"><option value="once">Однократно</option><option value="daily">Ежедневно</option><option value="weekly">Еженедельно</option><option value="monthly">Ежемесячно</option></select></label><label>Срок<input id="taskDate" type="date"></label><label>Влияние на состояние<select id="taskPhysical"><option value="0">Нейтральное</option><option value="1">Положительное</option><option value="-1">Отрицательное</option></select></label><label>Влияние на настроение<select id="taskMood"><option value="0">Нейтральное</option><option value="1">Положительное</option><option value="-1">Отрицательное</option></select></label><button id="addTask">Добавить дело</button></div><h2>Мои дела</h2><ul id="taskList"></ul></div></section><section id="habits" class="hidden"><div class="card"><h2>Новая привычка</h2><div class="editor"><label>Название<input id="habitInput" placeholder="Что отслеживать?"></label><label>Проект<input id="habitProject" placeholder="Необязательно"></label><label>Навык<select id="habitSkill"></select></label><label>Тип<select id="habitType"><option value="positive">Полезная</option><option value="negative">Нежелательная</option></select></label><label>Периодичность<select id="habitFrequency"><option value="daily">Ежедневно</option><option value="weekly">Еженедельно</option><option value="custom">По необходимости</option></select></label><label>Сложность<select id="habitDifficulty"><option value="1">Тривиальная</option><option value="2">Лёгкая</option><option value="3" selected>Средняя</option><option value="4">Сложная</option></select></label><label>Влияние на состояние<select id="habitPhysical"><option value="0">Нейтральное</option><option value="1">Положительное</option><option value="-1">Отрицательное</option></select></label><label>Влияние на настроение<select id="habitMood"><option value="0">Нейтральное</option><option value="1">Положительное</option><option value="-1">Отрицательное</option></select></label><button id="addHabit">Добавить привычку</button></div><h2>Мои привычки</h2><ul id="habitList"></ul></div></section><section id="skills" class="hidden"><div class="card"><h2>Навыки</h2><div class="editor"><label>Новый навык<input id="skillInput" placeholder="Например: Кулинария"></label><button id="addSkill">Добавить навык</button></div><ul id="skillList"></ul></div></section><section id="diary" class="hidden"><div class="card"><h2>Дневник состояния</h2><p class="hint">Ручной ввод. Данные хранятся только в браузере этого устройства; автоматических интеграций нет.</p><div class="editor"><label>Дата<input id="diaryDate" type="date"></label><label>Сон, часов<input id="sleepHours" type="number" min="0" max="24" step="0.25" placeholder="Например, 7.5"></label><label>Шаги за день<input id="dailySteps" type="number" min="0" step="1" placeholder="Например, 10000"></label><label>ОБЩИЙ расход калорий за день, ккал<input id="totalCalories" type="number" min="0" step="1" placeholder="Не только активные калории"></label><label>Настроение за день<select id="diaryMood"><option value="">Не отмечать</option><option value="Отличное">Отличное</option><option value="Хорошее">Хорошее</option><option value="Спокойное">Спокойное</option><option value="Тревожное">Тревожное</option><option value="Подавленное">Подавленное</option></select></label><label>Физическое состояние за день<select id="diaryCondition"><option value="">Не отмечать</option><option value="Отличное">Отличное</option><option value="Нормальное">Нормальное</option><option value="Усталость">Усталость</option><option value="Плохое">Плохое</option></select></label><label>Лекарства — отметка приёма<input id="medicationNote" placeholder="Только личная запись, без рекомендаций"></label><label>Питание<input id="foodNote" placeholder="Что ела, без обязательного подсчёта"></label><label>Цикл<select id="cycleStatus"><option value="">Не отмечать</option><option value="period">Менструация</option><option value="other">Другая отметка</option></select></label><label>Заметка<input id="diaryNote" placeholder="Самочувствие, симптомы и другое"></label><button id="reuseDiary" type="button" hidden>Подставить предыдущие значения</button><p class="small">Предыдущие значения — только подсказки. Сон, шаги, калории и лекарства не считаются измеренными или принятыми сегодня до твоего подтверждения и сохранения.</p><button id="saveDiary">Сохранить запись</button><button id="deleteDiary">Удалить запись за дату</button></div><p id="diaryStatus" class="small" role="status"></p><h3>Сводка за последние 7 дней</h3><p class="small">Средние значения только по дням с заполненным показателем. Дни без записей не считаются нулевыми.</p><div id="diaryWeekSummary" class="diary-day" role="status"></div><h3>История выполнений и отмен</h3><div class="line" style="flex-wrap:wrap"><label for="lifeEventPeriod">Период истории</label><select id="lifeEventPeriod" aria-label="Период истории"><option value="day">День</option><option value="week">Неделя</option><option value="month" selected>Месяц</option><option value="all">Всё время</option></select><input id="lifeEventDate" type="date" aria-label="Опорная дата истории"></div><p id="lifeEventSummary" class="small" role="status"></p><p id="lifePeriodMetrics" class="small" role="status"></p><div id="lifeEvents" aria-label="История дел и привычек"></div><h3>Календарь записей</h3><p class="small">Отмечены только даты с сохранёнными записями. Пустой день не означает пропуск привычек или отсутствие активности.</p><div class="line"><button id="calendarPrev" type="button" aria-label="Предыдущий месяц">←</button><strong id="calendarMonth" aria-live="polite"></strong><button id="calendarNext" type="button" aria-label="Следующий месяц">→</button></div><div id="diaryCalendar" class="diary-calendar" aria-label="Календарь дневника, дел и мероприятий"></div><div id="calendarAgenda" class="card" aria-live="polite"></div><h3>Сохранённые дни</h3><p class="small">Нажми на дату, чтобы открыть запись. Список показывает только сохранённые дни.</p><div id="diaryHistory" aria-label="История дневника"></div></div></section><section id="data" class="hidden"><div class="card"><h2>Резервная копия</h2><p class="hint">Это отдельная тестовая версия. Она не изменяет данные основной игры.</p><button id="backup">Скачать JSON</button><button id="exportDiaryCsv" type="button">Экспорт дневника CSV</button><p class="small">CSV содержит записи дневника, включая личные заметки. Файл сохраняется только на устройстве; не отправляй его посторонним.</p><p class="small">Восстановление из основной игры здесь намеренно отключено до проверки совместимости.</p><hr><h2>Восстановление тестовой версии</h2><p class="hint">Поддерживаются только резервные копии MINI v1.1. Перед заменой текущих данных будет автоматически скачана их копия.</p><input id="restoreFile" type="file" accept=".json,application/json" aria-label="Выбрать резервную копию MINI v1.1"><button id="restore" type="button">Проверить и восстановить</button><p id="restoreStatus" role="status" aria-live="polite" class="small"></p></div></section><p class="small">Тестовая реконструкция MINI v1.1 по скриншоту. Данные Oura, Health Connect, Calendar и ZenMoney не подключены.</p></main><script>
+'use strict';
+const KEY='lifesims-mini-v11-preview';
+const defaults=()=>({resource:70,hygiene:null,hygieneUpdatedAt:null,hygieneHistory:{},events:[],mood:'Спокойное',condition:'Нормальное',tasks:[],habits:[],skills:{'Здоровье':0,'Имидж':0,'Экономика':0,'Дисциплина':0,'Психология':0,'Психотерапия':0,'Программирование':0}});
+const $=id=>document.getElementById(id),day=()=>new Date().toLocaleDateString('sv-SE'),week=()=>{const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-(d.getDay()+6)%7);return d.toLocaleDateString('sv-SE')},period=f=>f==='daily'?day():f==='weekly'?week():f==='monthly'?day().slice(0,7):'once',taskDone=t=>t.frequency&&t.frequency!=='once'?t.donePeriod===period(t.frequency):!!t.done;
+let state,storageReadOnly=false,storageRecoveryRaw=null;
+try{
+  const raw=localStorage.getItem(KEY);
+  if(raw===null){state=defaults()}
+  else{
+    const parsed=JSON.parse(raw);
+    if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw Error('Некорректный формат сохранения');
+    state={...defaults(),...parsed};
+  }
+}catch(error){
+  storageReadOnly=true;
+  try{storageRecoveryRaw=localStorage.getItem(KEY)}catch(_){}
+  state=defaults();
+  alert('Сохранение LifeSims не удалось прочитать. Запись заблокирована, чтобы не затереть данные. Не изменяй прогресс до восстановления из резервной копии.');
+}
+if(!state.diary||typeof state.diary!=='object'||Array.isArray(state.diary))state.diary={};
+if(!Number.isFinite(state.hygiene)||state.hygiene<0||state.hygiene>100)state.hygiene=null;
+if(!state.hygieneHistory||typeof state.hygieneHistory!=='object'||Array.isArray(state.hygieneHistory))state.hygieneHistory={};
+if(!Array.isArray(state.events))state.events=[];
+if(!Array.isArray(state.tasks))state.tasks=[];if(!Array.isArray(state.habits))state.habits=[];if(!state.skills||typeof state.skills!=='object'||Array.isArray(state.skills))state.skills=defaults().skills;
+let lastPersistedSnapshot;try{lastPersistedSnapshot=localStorage.getItem(KEY)}catch(_){lastPersistedSnapshot=null}
+const save=()=>{if(storageReadOnly)throw Error('Сохранение заблокировано: требуется восстановление данных');try{const next=JSON.stringify(state);localStorage.setItem(KEY,next);if(localStorage.getItem(KEY)!==next)throw Error('Проверка записи не пройдена');lastPersistedSnapshot=next}catch(error){if(lastPersistedSnapshot!==null){try{state={...defaults(),...JSON.parse(lastPersistedSnapshot)};render()}catch(_){}}alert('Не удалось сохранить изменения. Последнее сохранённое состояние восстановлено, если оно доступно. Экспортируй резервную копию.');throw error}render()},notify=t=>{$('notice').textContent=t},xp=d=>[0,2,5,10,20][Number(d)]||10;
+function skillOptions(){for(const id of ['taskSkill','habitSkill']){const el=$(id),current=el.value;el.replaceChildren();const blank=document.createElement('option');blank.value='';blank.textContent='Без навыка';el.append(blank);for(const name of Object.keys(state.skills)){const opt=document.createElement('option');opt.value=name;opt.textContent=name;el.append(opt)}el.value=Object.prototype.hasOwnProperty.call(state.skills,current)?current:''}}
+const bedHabitName=/^заправить\\s+(?:кровать|постель)$/i;
+function isBedHabit(h){return h.actionId==='make-bed'||(!h.actionId&&bedHabitName.test(String(h.text||h.title||'').trim()))}
+function appendLifeEvent(kind,label,completed,delta){if(!Array.isArray(state.lifeEvents))state.lifeEvents=[];if(state.lifeEvents.length>=10000)throw Error('Достигнут лимит истории: сначала экспортируй резервную копию');state.lifeEvents.push({date:day(),at:new Date().toISOString(),kind,label:String(label||'').slice(0,200),action:completed?'completed':'undone',xpDelta:Number.isFinite(delta)?delta:0})}
+function renderLifeEvents(){
+const host=$('lifeEvents'),summary=$('lifeEventSummary');if(!host)return;
+host.replaceChildren();const events=Array.isArray(state.lifeEvents)?state.lifeEvents:[],mode=$('lifeEventPeriod')?.value||'month',ref=$('lifeEventDate')?.value||day();
+const anchor=/^\d{4}-\d{2}-\d{2}$/.test(ref)?ref:day();
+const d=new Date(anchor+'T12:00:00'),weekStart=new Date(d);weekStart.setDate(d.getDate()-(d.getDay()+6)%7);
+const localDateKey=value=>[value.getFullYear(),String(value.getMonth()+1).padStart(2,'0'),String(value.getDate()).padStart(2,'0')].join('-');
+const first=localDateKey(weekStart),weekEnd=new Date(weekStart);weekEnd.setDate(weekStart.getDate()+6);
+const last=localDateKey(weekEnd);
+const visible=events.filter(e=>e&&typeof e.date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(e.date)&&(mode==='all'||mode==='day'&&e.date===anchor||mode==='month'&&e.date.slice(0,7)===anchor.slice(0,7)||mode==='week'&&e.date>=first&&e.date<=last));
+const done=visible.filter(e=>e.action==='completed').length,undone=visible.filter(e=>e.action==='undone').length;
+if(summary)summary.textContent='Записано событий: '+visible.length+' · выполнено: '+done+' · отменено: '+undone+'. Отсутствие записи не считается пропуском.';
+const metrics=$('lifePeriodMetrics');
+if(metrics){
+ const diary=state.diary&&typeof state.diary==='object'&&!Array.isArray(state.diary)?state.diary:{};
+ const selected=Object.entries(diary).filter(([date,entry])=>/^\d{4}-\d{2}-\d{2}$/.test(date)&&entry&&typeof entry==='object'&&!Array.isArray(entry)&&(mode==='all'||mode==='day'&&date===anchor||mode==='month'&&date.slice(0,7)===anchor.slice(0,7)||mode==='week'&&date>=first&&date<=last));
+ const average=(field,unit,digits)=>{const values=selected.map(([,entry])=>entry[field]).filter(v=>typeof v==='number'&&Number.isFinite(v)&&v>=0);return values.length?(values.reduce((a,b)=>a+b,0)/values.length).toLocaleString('ru-RU',{maximumFractionDigits:digits})+' '+unit+' ('+values.length+' дн.)':'нет записей'};
+ const weights=state.weightHistory&&typeof state.weightHistory==='object'&&!Array.isArray(state.weightHistory)?state.weightHistory:{};
+ const weightEntries=Object.entries(weights).filter(([date,value])=>/^\d{4}-\d{2}-\d{2}$/.test(date)&&typeof value==='number'&&Number.isFinite(value)&&value>=20&&value<=400&&(mode==='all'||mode==='day'&&date===anchor||mode==='month'&&date.slice(0,7)===anchor.slice(0,7)||mode==='week'&&date>=first&&date<=last)).sort(([a],[b])=>a.localeCompare(b));
+ const weightSummary=weightEntries.length?'вес: '+weightEntries[weightEntries.length-1][1].toLocaleString('ru-RU')+' кг ('+weightEntries[weightEntries.length-1][0]+'), записей: '+weightEntries.length:'вес: нет записей';
+ const countField=field=>{const counts=new Map();for(const [,entry] of selected){const value=entry[field];if(typeof value==='string'&&value.trim()){const label=value.trim().slice(0,80);counts.set(label,(counts.get(label)||0)+1)}}return counts.size?[...counts].map(([label,count])=>label+' ('+count+')').join(', '):'нет записей'};
+ const xpTotal=visible.reduce((total,event)=>total+(typeof event.xpDelta==='number'&&Number.isFinite(event.xpDelta)?event.xpDelta:0),0);
+ metrics.textContent='Дневник за период: '+selected.length+' дн. · сон: '+average('sleepHours','ч',1)+' · шаги: '+average('dailySteps','',0)+' · общий расход калорий: '+average('totalCalories','ккал',0)+' · '+weightSummary+' · настроение: '+countField('mood')+' · состояние: '+countField('condition')+' · изменение XP по записанным событиям: '+(xpTotal>0?'+':'')+xpTotal+'. Средние только по записанным дням; XP не являются общим балансом.';
+}
+if(!visible.length){host.textContent='В выбранном периоде событий нет. Прошлые события не восстанавливаются задним числом.';return}
+for(const e of visible.slice().sort((a,b)=>String(b.at).localeCompare(String(a.at))).slice(0,200)){const row=document.createElement('p');row.className='small';row.textContent=e.date+' · '+(e.kind==='habit'?'Привычка: ':'Дело: ')+String(e.label||'Без названия')+' — '+(e.action==='completed'?'выполнено':'отменено')+(e.xpDelta?' · XP '+(e.xpDelta>0?'+':'')+e.xpDelta:'');host.append(row)}
+}
+$('lifeEventDate').value=day();$('lifeEventDate').addEventListener('change',renderLifeEvents);$('lifeEventPeriod').addEventListener('change',renderLifeEvents);
+function setHabitCompleted(h,complete){if(Array.isArray(state.lifeEvents)&&state.lifeEvents.length>=10000)throw Error('История заполнена. Экспортируй резервную копию; отметка и XP не изменены.');const p=day(),done=h.day===p;if(done===complete)return false;const eligible=h.skill&&Object.prototype.hasOwnProperty.call(state.skills,h.skill)&&h.type!=='negative',beforeXP=eligible?Number(state.skills[h.skill]||0):0;if(complete){h.day=p;if(h.rewardedDay!==p&&h.type!=='negative'){if(eligible)state.skills[h.skill]=Math.max(0,Number(state.skills[h.skill]||0)+xp(h.difficulty));h.rewardedDay=p}}else{h.day='';if(h.rewardedDay===p){if(eligible)state.skills[h.skill]=Math.max(0,Number(state.skills[h.skill]||0)-xp(h.difficulty));h.rewardedDay=''}}appendLifeEvent('habit',h.text||h.title,complete,eligible?Number(state.skills[h.skill]||0)-beforeXP:0);save();return true}
+function completeBedHabit(){if(Array.isArray(state.lifeEvents)&&state.lifeEvents.length>=10000)throw Error('История заполнена. Экспортируй резервную копию; привычка не изменена.');let h=state.habits.find(isBedHabit);if(!h){h={text:'Заправить кровать',actionId:'make-bed',type:'positive',frequency:'daily',difficulty:2,skill:'',day:''};state.habits.push(h)}if(h.day===day()){save();notify('Кровать уже заправлена сегодня. Привычка отмечена.');return}setHabitCompleted(h,true);notify('Заправить кровать: привычка отмечена. XP начисляется только один раз за день.')}
+function isWeightTask(item){return /^(замер|измерение|взвешивание) веса$/i.test(String(item.text||item.title||'').trim())}
+function weightHistory(){if(!state.weightHistory||typeof state.weightHistory!=='object'||Array.isArray(state.weightHistory))state.weightHistory={};return state.weightHistory}
+function recordWeightForTask(item){const history=weightHistory(),current=history[day()],prior=Object.keys(history).filter(k=>k<=day()).sort().reverse()[0];const suggested=current??(prior?history[prior]:'');const raw=prompt('Вес сегодня, кг (число). Отмена — не отмечать дело.',String(suggested).replace('.',','));if(raw===null)return false;const normalized=raw.trim().replace(',','.');if(!/^\d+(?:\.\d{1,2})?$/.test(normalized)){alert('Введи вес числом, например 59,5');return false}const value=Number(normalized);if(!Number.isFinite(value)||value<20||value>400){alert('Проверь вес в кг (20–400)');return false}history[day()]=value;return true}
+function renderWeight(){const history=weightHistory(),keys=Object.keys(history).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)&&k<=day()&&Number.isFinite(history[k])&&history[k]>=20&&history[k]<=400).sort(),last=keys[keys.length-1],previous=keys[keys.length-2],label=$('weightStatus'),sim=$('sim');if(!label||!sim)return;if(!last){label.textContent='Вес пока не записан. Изменение фигуры появится после двух измерений.';sim.style.setProperty('--body-scale','1.13');sim.style.setProperty('--face-scale','1.08');return}const change=previous?history[last]-history[previous]:0;const weight=history[last];const scale=Math.max(.84,Math.min(1.3,1.13+(weight-70)*.012));sim.style.setProperty('--body-scale',String(scale));sim.style.setProperty('--face-scale',String(Math.max(.9,Math.min(1.2,1.08+(weight-70)*.008))));label.textContent='Последний вес: '+history[last].toLocaleString('ru-RU')+' кг ('+last+'). '+(previous?'Изменение относительно '+previous+': '+(change>0?'+':'')+change.toFixed(1)+' кг.':'Для сравнения нужен второй замер.')+' Фигура меняется условно, не по медицинской модели.'}
+function render(){renderWeight();renderHygiene();renderCrystal();state.resource=Math.max(0,Math.min(100,Number(state.resource)||0));$('resource').textContent=state.resource+' / 100';$('fill').style.width=state.resource+'%';$('mood').value=state.mood;$('condition').value=state.condition;$('today').textContent='Дел выполнено: '+state.tasks.filter(taskDone).length+' / '+state.tasks.length+'. Привычек отмечено сегодня: '+state.habits.filter(h=>h.day===day()).length+'.';skillOptions();$('bed').setAttribute('aria-label',state.habits.some(h=>isBedHabit(h)&&h.day===day())?'Кровать: заправлена сегодня':'Кровать: открыть действия');
+for(const kind of ['task','habit']){const list=$(kind+'List'),items=kind==='task'?state.tasks:state.habits;list.replaceChildren();items.forEach((item,i)=>{const li=document.createElement('li');li.className='item';const done=kind==='task'?taskDone(item):item.day===day();if(done)li.classList.add('done');const title=document.createElement('strong');title.textContent=item.text||item.title||'Без названия';const details=document.createElement('small');details.textContent=[item.project&&'Проект: '+item.project,item.skill&&'Навык: '+item.skill,item.difficulty&&'Сложность: '+item.difficulty,item.frequency&&'Частота: '+({once:'однократно',daily:'ежедневно',weekly:'еженедельно',monthly:'ежемесячно'}[item.frequency]||item.frequency),item.date&&'Срок: '+item.date].filter(Boolean).join(' · ');const toggle=document.createElement('button');toggle.textContent=done?'Снять отметку':'Выполнено';toggle.onclick=()=>{if(kind==='task'&&Array.isArray(state.lifeEvents)&&state.lifeEvents.length>=10000){alert('История заполнена. Экспортируй резервную копию; отметка и XP не изменены.');return}if(kind==='task'&&isWeightTask(item)&&!done){if(!recordWeightForTask(item))return;}const eligible=item.skill&&Object.prototype.hasOwnProperty.call(state.skills,item.skill)&&item.type!=='negative',beforeXP=eligible?Number(state.skills[item.skill]||0):0;const adjust=(delta)=>{if(eligible)state.skills[item.skill]=Math.max(0,Number(state.skills[item.skill]||0)+delta*xp(item.difficulty))};if(kind==='task'){if(item.frequency&&item.frequency!=='once'){const p=period(item.frequency);if(done){item.donePeriod='';if(item.rewardedPeriod===p){adjust(-1);item.rewardedPeriod=''}}else{item.donePeriod=p;if(item.rewardedPeriod!==p){adjust(1);item.rewardedPeriod=p}}}else{item.done=!done;if(done){if(item.rewardedOnce){adjust(-1);item.rewardedOnce=false}}else if(!item.rewardedOnce){adjust(1);item.rewardedOnce=true}}}else{setHabitCompleted(item,!done);return}appendLifeEvent('task',item.text||item.title,!done,eligible?Number(state.skills[item.skill]||0)-beforeXP:0);save()};const remove=document.createElement('button');remove.textContent='Удалить';remove.onclick=()=>{if(confirm('Удалить «'+title.textContent+'»?')){items.splice(i,1);save()}};const edit=document.createElement('button');edit.textContent='Изменить';edit.onclick=()=>{if(!items.includes(item)){alert('Запись больше не найдена');return}const name=prompt('Название',item.text||item.title||'');if(name===null)return;const cleanName=name.trim();if(!cleanName||cleanName.length>200){alert('Название: от 1 до 200 символов');return}const project=prompt('Проект (можно оставить пустым)',item.project||'');if(project===null)return;const skill=prompt('Навык (существующий навык для XP; можно оставить пустым)',item.skill||'');if(skill===null)return;const difficulty=prompt('Сложность от 1 до 5',String(item.difficulty||2));if(difficulty===null)return;const date=prompt('Дата ГГГГ-ММ-ДД (пусто — без даты)',item.date||'');if(date===null)return;const frequency=prompt(kind==='habit'?'Повтор: daily, weekly, custom':'Повтор: once, daily, weekly, monthly',item.frequency||(kind==='habit'?'daily':'once'));if(frequency===null)return;const d=Number(difficulty);if(project.length>100||skill.length>100||!Number.isInteger(d)||d<1||d>5||!(kind==='habit'?['daily','weekly','custom']:['once','daily','weekly','monthly']).includes(frequency)||date&&(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date+'T12:00:00Z'))||new Date(date+'T12:00:00Z').toISOString().slice(0,10)!==date)){alert('Проверь параметры. Ничего не изменено.');return}const hasReward=kind==='task'?Boolean(item.rewardedOnce||item.rewardedPeriod):Boolean(item.rewardedDay);
+if(hasReward&&(item.skill!==skill.trim()||Number(item.difficulty||2)!==d||item.frequency!==frequency)){alert('У записи уже есть начисленные XP. Для сохранности истории сначала сними отметку выполнения, затем измени навык, сложность или повторение.');return}
+if(!confirm('Сохранить изменения в «'+cleanName+'»?'))return;item.text=cleanName;item.project=project.trim();item.skill=skill.trim();item.difficulty=d;item.date=date;item.frequency=frequency;save()};li.append(title,details,edit,toggle,remove);list.append(li)})}
+const list=$('skillList');list.replaceChildren();for(const [name,value] of Object.entries(state.skills)){const li=document.createElement('li');li.className='item';const span=document.createElement('strong');span.textContent=name+' · '+value+' XP';li.append(span);list.append(li)}}
+function change(){const panel=$('resourceControl');$('resourceSlider').value=state.resource;$('resourceValue').textContent=state.resource+' / 100';panel.classList.remove('hidden');panel.scrollIntoView({block:'nearest',behavior:'smooth'})}
+$('change').onclick=change;
+$('crystal').onclick=()=>{$('crystalStatus').scrollIntoView({block:'nearest',behavior:'smooth'});notify('Цвет кристалла: самочувствие, настроение и гигиена. Игровая энергия настраивается отдельно.');};
+$('resourceSlider').oninput=e=>{$('resourceValue').textContent=e.target.value+' / 100'};
+$('cancelResource').onclick=()=>{$('resourceControl').classList.add('hidden')};
+$('applyResource').onclick=()=>{state.resource=Number($('resourceSlider').value);save();$('resourceControl').classList.add('hidden');notify('Ресурс изменён вручную')};
+
+// Room chores use the same task toggle as the task list, preventing duplicate XP.
+window.lifeSimsRoomChore=function(label){
+var name=String(label||'').trim();if(!name)return false;
+var index=state.tasks.findIndex(function(t){return String(t.text||t.title||'').trim().toLocaleLowerCase('ru')===name.toLocaleLowerCase('ru')});
+if(index<0){state.tasks.push({text:name,project:'Дом',skill:'',difficulty:2,physical:0,moodEffect:0,frequency:'daily',donePeriod:'',done:false});save();index=state.tasks.length-1}
+var task=state.tasks[index];if(taskDone(task)){notify('«'+name+'» уже отмечено в текущем периоде. XP повторно не начисляется.');return true}
+var row=$('taskList').children[index],button=row&&row.querySelector('button');if(!button)throw Error('Кнопка дела не найдена');button.click();notify('Отмечено дело «'+name+'».');return true;
+};
+
+
+/* Visual-only composite; historical values and manual game energy remain unchanged. */
+const crystalMoodScores=Object.freeze({'Радостное':90,'Спокойное':70,'Нормальное':65,'Возбуждённое':80,'Грустное':30,'Тревожное':35,'Раздражённое':30});
+const crystalConditionScores=Object.freeze({'Хорошее':90,'Нормальное':70,'Усталость':40,'Плохое':15});
+function effectiveHygiene(input,now=Date.now()){
+ const value=input.hygiene;
+ if(!Number.isInteger(value)||value<0||value>100)return null;
+ const timestamp=input.hygieneUpdatedAt;
+ if(typeof timestamp!=='string')return value; // legacy backup: no invented starting time
+ const started=Date.parse(timestamp);
+ if(!Number.isFinite(started)||started>now)return value;
+ return Math.max(0,Math.round(value*(1-(now-started)/172800000)));
+}
+function calculateCrystalResource(input){
+ const mood=Object.prototype.hasOwnProperty.call(crystalMoodScores,input.mood)?crystalMoodScores[input.mood]:null;
+ const condition=Object.prototype.hasOwnProperty.call(crystalConditionScores,input.condition)?crystalConditionScores[input.condition]:null;
+ const hygiene=effectiveHygiene(input);
+ const parts=[mood,condition,hygiene].filter(v=>v!==null);
+ const score=parts.length?Math.round(parts.reduce((a,b)=>a+b,0)/parts.length):null;
+ return {score,mood,condition,hygiene,level:score===null?'unknown':score>=80?'high':score>=60?'medium':score>=40?'low':'critical'};
+}
+function renderCrystal(){
+ const gem=$('crystal'),label=$('crystalStatus');
+ if(!gem||!label)return;
+ const current=calculateCrystalResource(state),score=current.score;
+ const title=score===null?'Сводный ресурс: нет данных':'Сводный ресурс: '+score+'/100';
+ const levels={high:'зелёный',medium:'синий',low:'жёлтый',critical:'красный',unknown:'серый'};
+ gem.dataset.level=current.level;
+ gem.setAttribute('aria-label',title+', цвет '+levels[current.level]+'. Подробнее о расчёте ниже.');
+ gem.title=title;
+ label.textContent=title+' · '+(current.condition===null?'самочувствие не указано':'самочувствие '+current.condition)+', '+(current.mood===null?'настроение не указано':'настроение '+current.mood)+', '+(current.hygiene===null?'гигиена не указана и не учитывается':'гигиена '+current.hygiene)+'. Формула: среднее имеющихся значений. Цвет — игровая оценка, не медицинский показатель.';
+}
+function renderHygiene(){
+ const slider=$('hygieneSlider'),out=$('hygieneValue'),summary=$('hygieneHistoryStatus');
+ if(!slider||!out||!summary)return;
+ const current=effectiveHygiene(state),recorded=current!==null;
+ if(recorded&&document.activeElement!==slider)slider.value=String(current);
+ out.textContent=recorded?String(current)+' / 100'+(state.hygieneUpdatedAt?' · уменьшается за 48 ч':' · старое значение без времени'):'Не указана';
+ const hist=state.hygieneHistory&&typeof state.hygieneHistory==='object'?state.hygieneHistory:{};
+ const dates=Object.keys(hist).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)&&Number.isFinite(hist[k])&&hist[k]>=0&&hist[k]<=100).sort();
+ summary.textContent=dates.length?'Последняя запись: '+dates[dates.length-1]+' · '+hist[dates[dates.length-1]]+'/100. Всего дней: '+dates.length+'.':'Нет записей; значения за прошлые дни не создаются автоматически.';
+}
+// Refresh displayed hygiene and crystal without writing synthetic history entries.
+setInterval(()=>{if(!document.hidden){renderHygiene();renderCrystal()}},60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){renderHygiene();renderCrystal()}});
+function saveHygieneScore(value){
+ if(!Number.isInteger(value)||value<0||value>100)throw Error('Гигиена должна быть от 0 до 100');
+ state.hygiene=value;state.hygieneUpdatedAt=new Date().toISOString();state.hygieneHistory[day()]=value;save();notify('Гигиена: '+value+'/100. Сохранено за '+day()+'.');
+}
+$('hygieneSlider').addEventListener('input',function(){ $('hygieneValue').textContent=this.value+' / 100 · не сохранено'; });
+$('saveHygiene').onclick=()=>saveHygieneScore(Number($('hygieneSlider').value));
+function showActions(title,actions){const menu=$('actionMenu');menu.replaceChildren();const h=document.createElement('h3');h.textContent=title;menu.append(h);for(const [label,delta] of actions){const b=document.createElement('button');b.textContent=label;b.onclick=()=>{if(title==='Кровать'&&label==='Заправить кровать'){completeBedHabit();menu.classList.add('hidden');return}if(title==='Душ'&&label==='Принять душ'){if(!confirm('Подтверди, что душ действительно принят. Установить игровую гигиену 100/100?'))return;saveHygieneScore(100);menu.classList.add('hidden');return}state.resource=Math.max(0,Math.min(100,state.resource+delta));save();menu.classList.add('hidden');const sim=$('sim');sim.classList.remove('busy');void sim.offsetWidth;sim.classList.add('busy');notify(label+': игровое действие. Ресурс '+(delta>=0?'+':'')+delta+'. Реальное выполнение не подтверждено.')};menu.append(b)}menu.classList.remove('hidden');menu.scrollIntoView({block:'nearest',behavior:'smooth'})}
+function addSleepFromBed(){
+ const date=prompt('Дата сна (ГГГГ-ММ-ДД). Можно изменить прошлую запись.',day());
+ if(date===null)return;
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date+'T12:00:00Z'))||new Date(date+'T12:00:00Z').toISOString().slice(0,10)!==date){alert('Некорректная дата сна');return}
+ const previous=state.diary[date];
+ if(previous!==undefined&&(previous===null||typeof previous!=='object'||Array.isArray(previous))){alert('Запись за эту дату повреждена. Сохранение отменено.');return}
+ const raw=prompt('Сколько часов сна за '+date+'? Например, 7,5.',previous?.sleepHours??'');
+ if(raw===null)return;
+ const normalized=raw.trim().replace(',','.');
+ if(!/^(?:\d{1,2})(?:\.\d{1,2})?$/.test(normalized)||Number(normalized)>24){alert('Укажи часы сна от 0 до 24, например 7,5');return}
+ const hours=Number(normalized);
+ if(!confirm('Сохранить сон: '+date+', '+hours+' ч? Другие данные за день останутся без изменений.'))return;
+ const record={...(previous||{}),sleepHours:hours,source:'manual',savedAt:new Date().toISOString()};
+ state.diary[date]=record;
+ try{save();if($('diaryDate').value===date)loadDiary();renderDiaryHistory();notify('Сон за '+date+': '+hours+' ч. Записано вручную. XP не начисляются.')}catch(e){alert('Не удалось сохранить сон: '+(e.message||String(e)))}
+}
+function eventEditor(existing=null,initialDate=null){
+ const menu=$('actionMenu');menu.replaceChildren();
+ const heading=document.createElement('h3');heading.textContent=existing?'Редактировать мероприятие':'Новое мероприятие';menu.append(heading);
+ const form=document.createElement('form');form.className='event-form';
+ const field=(label,type,value,required=false)=>{
+  const wrap=document.createElement('label');wrap.textContent=label;
+  const input=document.createElement('input');input.type=type;input.value=value||'';input.required=required;
+  wrap.append(input);form.append(wrap);return input;
+ };
+ const title=field('Название','text',existing?.title||'',true);title.maxLength=160;
+ const start=field('Начало','datetime-local',existing?.startsAt||(initialDate||day())+'T12:00',true);
+ const hasEnd=document.createElement('label');hasEnd.className='event-check';
+ const endToggle=document.createElement('input');endToggle.type='checkbox';endToggle.checked=!!existing?.endsAt;
+ hasEnd.append(endToggle,document.createTextNode(' Указать окончание'));form.append(hasEnd);
+ const end=field('Окончание','datetime-local',existing?.endsAt||'');
+ const endWrap=end.parentElement;endWrap.hidden=!endToggle.checked;end.disabled=!endToggle.checked;
+ endToggle.onchange=()=>{endWrap.hidden=!endToggle.checked;end.disabled=!endToggle.checked;if(endToggle.checked&&!end.value)end.value=start.value};
+ const repeatWrap=document.createElement('label');repeatWrap.textContent='Повторение';
+ const repeat=document.createElement('select');
+ for(const [value,label] of [['none','Не повторять'],['daily','Каждый день'],['weekly','Каждую неделю'],['monthly','Каждый месяц'],['yearly','Каждый год']]){
+  const option=document.createElement('option');option.value=value;option.textContent=label;repeat.append(option)
+ }
+ repeat.value=existing?.repeat||'none';repeatWrap.append(repeat);form.append(repeatWrap);
+ const error=document.createElement('p');error.className='small';error.setAttribute('role','alert');form.append(error);
+ const actions=document.createElement('div');actions.className='event-actions';
+ const submit=document.createElement('button');submit.type='submit';submit.textContent='Сохранить';
+ const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Отмена';cancel.onclick=manageRoomEvents;
+ actions.append(submit,cancel);
+ if(existing){const remove=document.createElement('button');remove.type='button';remove.textContent='Удалить';remove.onclick=()=>{
+  if(!confirm('Удалить мероприятие «'+existing.title+'»?'))return;
+  const i=state.events.indexOf(existing);if(i<0){error.textContent='Запись не найдена';return}
+  const previous=state.events.slice();state.events.splice(i,1);
+  try{save();manageRoomEvents();renderDiaryCalendar()}catch(e){state.events=previous;error.textContent='Не удалось удалить: '+e.message}
+ };actions.append(remove)}
+ form.append(actions);
+ form.onsubmit=ev=>{
+  ev.preventDefault();error.textContent='';
+  const name=title.value.trim(),startsAt=start.value,endsAt=endToggle.checked?end.value||null:null;
+  if(!name||name.length>160){error.textContent='Название: от 1 до 160 символов';return}
+  if(!validEventLocalTime(startsAt)){error.textContent='Проверь дату и время начала';return}
+  if(endToggle.checked&&(!endsAt||!validEventLocalTime(endsAt)||endsAt<=startsAt)){error.textContent='Окончание должно быть позже начала';return}
+  if(!existing&&state.events.length>=1000){error.textContent='Достигнут лимит мероприятий';return}
+  const record={...(existing||{}),title:name,startsAt,endsAt,repeat:repeat.value};
+  const old=state.events.slice(),i=existing?state.events.indexOf(existing):-1;
+  if(existing&&i<0){error.textContent='Запись не найдена';return}
+  if(existing)state.events[i]=record;else state.events.push(record);
+  try{save();manageRoomEvents();renderDiaryCalendar()}catch(e){state.events=old;error.textContent='Не удалось сохранить: '+e.message}
+ };
+ menu.append(form);menu.classList.remove('hidden');menu.scrollIntoView({block:'nearest',behavior:'smooth'});title.focus();
+}
+function manageRoomEvents(){
+ const menu=$('actionMenu');menu.replaceChildren();
+ const heading=document.createElement('h3');heading.textContent='Мероприятия · локально';menu.append(heading);
+ const info=document.createElement('p');info.className='small';info.textContent='Без синхронизации с Google Календарём. Данные входят в JSON-копию.';menu.append(info);
+ const add=document.createElement('button');add.type='button';add.textContent='＋ Новое мероприятие';add.onclick=()=>eventEditor();menu.append(add);
+ for(const e of state.events.slice().sort((a,b)=>a.startsAt.localeCompare(b.startsAt)).slice(0,100)){
+  const button=document.createElement('button');button.type='button';
+  button.textContent=e.startsAt.replace('T',' ')+(e.endsAt?' — '+e.endsAt.replace('T',' '):'')+' · '+e.title+(e.repeat&&e.repeat!=='none'?' ↻':'');
+  button.onclick=()=>eventEditor(e);menu.append(button)
+ }
+ menu.classList.remove('hidden');menu.scrollIntoView({block:'nearest',behavior:'smooth'});
+}
+
+$('roomWindow').onclick=manageRoomEvents;
+$('bed').onclick=()=>{showActions('Кровать',[['Отдохнуть',8],['Заправить кровать',2],['Сменить бельё',3]]);const menu=$('actionMenu'),button=document.createElement('button');button.type='button';button.textContent='Добавить сон';button.onclick=()=>{menu.classList.add('hidden');addSleepFromBed()};menu.append(button)};
+
+$('shower').onclick=()=>showActions('Душ',[['Принять душ',6],['Помыть душ',3]]);
+function editCharacterWeight(){const history=weightHistory(),dates=Object.keys(history).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)&&Number.isFinite(history[k])).sort(),last=dates[dates.length-1];const date=prompt('Дата замера (ГГГГ-ММ-ДД). Можно исправить прошлую запись.',last||day());if(date===null)return;if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date+'T12:00:00Z'))||new Date(date+'T12:00:00Z').toISOString().slice(0,10)!==date){alert('Некорректная дата');return}const raw=prompt('Вес на '+date+', кг. Отмена — без изменений.',history[date]===undefined?'':String(history[date]).replace('.',','));if(raw===null)return;const normalized=raw.trim().replace(',','.');if(!/^\d+(?:\.\d{1,2})?$/.test(normalized)||!Number.isFinite(Number(normalized))||Number(normalized)<20||Number(normalized)>400){alert('Введи вес от 20 до 400 кг, например 59,5');return}history[date]=Number(normalized);try{save();notify('Вес за '+date+' сохранён: '+normalized+' кг. Задачи и XP не изменены.')}catch(e){alert('Не удалось сохранить вес: '+(e.message||String(e)))}}
+$('sim').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('sim').click()}};
+$('sim').onclick=()=>{showActions('Персонаж',[['Отдохнуть',4],['Привести себя в порядок',3]]);const menu=$('actionMenu'),button=document.createElement('button');button.type='button';button.textContent='Изменить вес / историю замеров';button.onclick=()=>{editCharacterWeight();menu.classList.add('hidden')};menu.append(button)};
+for(const id of ['mood','condition'])$(id).onchange=e=>{state[id]=e.target.value;save()};
+$('tabs').onclick=e=>{const b=e.target.closest('button[data-tab]');if(!b)return;document.querySelectorAll('#tabs button').forEach(x=>x.classList.toggle('active',x===b));for(const id of ['home','tasks','habits','skills','diary','data'])$(id).classList.toggle('hidden',id!==b.dataset.tab)};
+for(const kind of ['task','habit']){$('add'+kind[0].toUpperCase()+kind.slice(1)).onclick=()=>{const title=$(kind+'Input').value.trim();if(!title)return alert('Укажи название');const item={text:title,project:$(kind+'Project').value.trim(),skill:$(kind+'Skill').value,difficulty:Number($(kind+'Difficulty').value),physical:Number($(kind+'Physical').value),moodEffect:Number($(kind+'Mood').value)};if(kind==='task'){item.date=$('taskDate').value;item.frequency=$('taskFrequency').value;item.donePeriod='';item.minutes=Number($('taskMinutes').value)||0;item.done=false;state.tasks.push(item)}else{item.type=$('habitType').value;item.frequency=$('habitFrequency').value;item.day='';if(bedHabitName.test(title)&&state.habits.some(isBedHabit)){alert('Привычка «Заправить кровать» уже есть. Используй её или действие с кроватью.');return}if(bedHabitName.test(title))item.actionId='make-bed';state.habits.push(item)}$(kind+'Input').value='';save()}}
+$('addSkill').onclick=()=>{const name=$('skillInput').value.trim();if(!name)return alert('Укажи название навыка');if(Object.keys(state.skills).some(x=>x.toLocaleLowerCase('ru')===name.toLocaleLowerCase('ru')))return alert('Такой навык уже есть');state.skills[name]=0;$('skillInput').value='';save()};
+for(const id of ['medicationNote','foodNote','diaryNote']){const input=$(id),list=document.createElement('datalist');list.id='suggest-'+id;document.body.append(list);input.setAttribute('list',list.id)}
+$('reuseDiary').onclick=()=>{const date=$('diaryDate').value;if(state.diary[date])return;const previous=previousDiaryEntry(date);if(!previous)return;for(const id of diaryFields){const value=previous.record[id];if(value!==undefined&&value!==null)$(id).value=value} $('diaryStatus').textContent='Значения из '+previous.date+' подставлены для редактирования. Это не сегодняшние измерения или приём лекарств. Проверь и нажми «Сохранить запись», если они верны.'};
+const diaryFields=['sleepHours','dailySteps','totalCalories','diaryMood','diaryCondition','medicationNote','foodNote','cycleStatus','diaryNote'];function previousDiaryEntry(date){const keys=Object.keys(state.diary).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)&&k<date&&state.diary[k]&&typeof state.diary[k]==='object').sort().reverse();return keys.length?{date:keys[0],record:state.diary[keys[0]]}:null}
+function offerPreviousDiary(){const date=$('diaryDate').value,previous=previousDiaryEntry(date),existing=Object.prototype.hasOwnProperty.call(state.diary,date),button=$('reuseDiary');button.hidden=existing||!previous;button.textContent=previous?'Подставить значения из '+previous.date:'Подставить прошлую запись';for(const id of ['medicationNote','foodNote','diaryNote']){const input=$(id),list=$('suggest-'+id);if(!list)continue;list.replaceChildren();const seen=new Set();for(const key of Object.keys(state.diary).filter(k=>k<date).sort().reverse()){const v=state.diary[key]?.[id];if(typeof v==='string'&&v.trim()&&!seen.has(v)){seen.add(v);const option=document.createElement('option');option.value=v;list.append(option);if(seen.size>=8)break}}}return previous}
+function loadDiary(){const entry=state.diary[$('diaryDate').value]||{};for(const id of diaryFields)$(id).value=entry[id]??'';const previous=offerPreviousDiary();$('diaryStatus').textContent=entry.savedAt?'Запись за эту дату загружена':previous?'За эту дату записи нет. Можно выбрать прежние значения или подставить их кнопкой. Сохранение только вручную.':'За эту дату записи пока нет'}$('diaryDate').value=day();$('diaryDate').onchange=()=>{calendarCursor=$('diaryDate').value.slice(0,7)||calendarCursor;$('lifeEventDate').value=$('diaryDate').value;$('lifeEventPeriod').value='day';loadDiary();renderLifeEvents();renderDiaryCalendar();renderDiaryWeekSummary()};$('saveDiary').onclick=()=>{const date=$('diaryDate').value;if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date+'T12:00:00Z'))||new Date(date+'T12:00:00Z').toISOString().slice(0,10)!==date)return alert('Выбери корректную дату');const record={};for(const id of diaryFields){const v=$(id).value.trim();if(['sleepHours','dailySteps','totalCalories'].includes(id)){if(v!==''){const n=Number(v);if(!Number.isFinite(n)||n<0||(id==='sleepHours'&&n>24)||((id==='dailySteps'||id==='totalCalories')&&!Number.isInteger(n)))return alert('Проверь значение: '+id);record[id]=n}else record[id]=null}else record[id]=v}record.source='manual';record.savedAt=new Date().toISOString();state.diary[date]=record;save();renderDiaryHistory();$('diaryStatus').textContent='Запись сохранена локально за '+date};$('deleteDiary').onclick=()=>{const date=$('diaryDate').value;if(!Object.prototype.hasOwnProperty.call(state.diary,date))return;if(!confirm('Удалить запись за '+date+'?'))return;delete state.diary[date];save();loadDiary();renderDiaryHistory()};let calendarCursor=day().slice(0,7);loadDiary();renderDiaryHistory();
+function renderDiaryWeekSummary(){const host=$('diaryWeekSummary');if(!host)return;const dates=[];const selected=$('diaryDate')?.value||day();const valid=/^\d{4}-\d{2}-\d{2}$/.test(selected)&&Number.isFinite(Date.parse(selected+'T12:00:00Z'))&&new Date(selected+'T12:00:00Z').toISOString().slice(0,10)===selected;const anchor=new Date((valid?selected:day())+'T12:00:00');for(let i=6;i>=0;i--){const d=new Date(anchor.getFullYear(),anchor.getMonth(),anchor.getDate()-i,12);dates.push([d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-'))}const records=dates.map(k=>state.diary[k]).filter(v=>v&&typeof v==='object'&&!Array.isArray(v));const average=(key,unit,decimals)=>{const values=records.map(r=>r[key]).filter(v=>typeof v==='number'&&Number.isFinite(v)&&v>=0);if(!values.length)return 'нет данных';return (values.reduce((a,b)=>a+b,0)/values.length).toLocaleString('ru-RU',{maximumFractionDigits:decimals})+' '+unit+' ('+values.length+' дн.)'};host.textContent='Заполнено дней: '+records.length+' из 7. Сон: '+average('sleepHours','ч',1)+'. Шаги: '+average('dailySteps','шагов',0)+'. Общий расход: '+average('totalCalories','ккал',0)+'.';}
+
+function eventOccursOn(e,date){
+ if(!e||!validEventLocalTime(e.startsAt)||date<e.startsAt.slice(0,10))return false;
+ const start=e.startsAt.slice(0,10),repeat=e.repeat||'none';
+ if(repeat==='none')return date===start;
+ const a=new Date(start+'T12:00:00Z'),b=new Date(date+'T12:00:00Z');
+ const days=Math.round((b-a)/86400000);
+ if(repeat==='daily')return days>=0;
+ if(repeat==='weekly')return days>=0&&days%7===0;
+ const ad=Number(start.slice(8)),bd=Number(date.slice(8));
+ if(repeat==='monthly')return ad===bd;
+ if(repeat==='yearly')return start.slice(5)===date.slice(5);
+ return false;
+}
+function calendarItems(date){
+ const items=[];
+ for(const e of state.events||[])if(eventOccursOn(e,date))items.push({type:'event',title:e.title,time:e.startsAt.slice(11),end:e.endsAt?e.endsAt.slice(11):'',repeat:e.repeat||'none'});
+ for(const t of state.tasks||[])if(t.date===date)items.push({type:'task',title:t.text||t.title||'Дело',time:'',end:'',repeat:'none'});
+ return items;
+}
+function renderCalendarAgenda(date){
+ const host=$('calendarAgenda');if(!host)return;
+ host.replaceChildren();
+ const h=document.createElement('h3');h.textContent='План на '+date;host.append(h);
+ const create=document.createElement('button');create.type='button';create.textContent='＋ Мероприятие на этот день';create.onclick=()=>eventEditor(null,date);host.append(create);
+ const items=calendarItems(date);
+ if(!items.length){const p=document.createElement('p');p.className='small';p.textContent='Нет запланированных дел и мероприятий на эту дату';host.append(p);return}
+ for(const item of items){const p=document.createElement('p');p.className='small';p.textContent=(item.type==='event'?'📅 ':'☑ ') +(item.time?item.time+(item.end?'–'+item.end:'')+' · ':'')+item.title+(item.repeat!=='none'?' ↻':'');host.append(p)}
+}
+function renderDiaryCalendar(){
+ const host=$('diaryCalendar');if(!host)return;
+ const [year,month]=calendarCursor.split('-').map(Number),first=new Date(year,month-1,1),count=new Date(year,month,0).getDate();
+ $('calendarMonth').textContent=first.toLocaleDateString('ru-RU',{month:'long',year:'numeric'});
+ host.replaceChildren();
+ for(const name of ['Пн','Вт','Ср','Чт','Пт','Сб','Вс']){const cell=document.createElement('span');cell.className='weekday';cell.textContent=name;host.append(cell)}
+ for(let i=0;i<(first.getDay()+6)%7;i++){const cell=document.createElement('span');cell.className='empty';host.append(cell)}
+ for(let n=1;n<=count;n++){
+  const date=calendarCursor+'-'+String(n).padStart(2,'0'),saved=Object.prototype.hasOwnProperty.call(state.diary,date),items=calendarItems(date);
+  const b=document.createElement('button');b.type='button';b.className=(saved?'saved ':'')+($('diaryDate').value===date?'selected':'');
+  const number=document.createElement('strong');number.textContent=String(n);b.append(number);
+  for(const item of items.slice(0,2)){const label=document.createElement('span');label.className='calendar-item';label.textContent=(item.type==='event'?'● ':'• ')+item.title;b.append(label)}
+  if(items.length>2){const extra=document.createElement('span');extra.className='calendar-item';extra.textContent='+'+(items.length-2);b.append(extra)}
+  b.setAttribute('aria-label',date+(saved?', дневник сохранён':'')+', запланировано: '+items.length);
+  b.onclick=()=>{$('diaryDate').value=date;$('lifeEventDate').value=date;$('lifeEventPeriod').value='day';loadDiary();renderLifeEvents();renderDiaryCalendar();renderDiaryWeekSummary()};
+  host.append(b)
+ }
+ renderCalendarAgenda($('diaryDate').value||day());
+}
+function moveDiaryCalendar(delta){const [year,month]=calendarCursor.split('-').map(Number),d=new Date(year,month-1+delta,1);calendarCursor=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0');renderDiaryCalendar()}
+$('calendarPrev').onclick=()=>moveDiaryCalendar(-1);$('calendarNext').onclick=()=>moveDiaryCalendar(1);
+function renderDiaryHistory(){renderLifeEvents();renderDiaryCalendar();renderDiaryWeekSummary();const host=$('diaryHistory');host.replaceChildren();const dates=Object.keys(state.diary).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)&&state.diary[k]&&typeof state.diary[k]==='object').sort().reverse();if(!dates.length){const p=document.createElement('p');p.className='small';p.textContent='Пока нет сохранённых записей';host.append(p);return}for(const date of dates){const record=state.diary[date],row=document.createElement('div');row.className='diary-day';const info=document.createElement('span'),title=document.createElement('strong');title.textContent=date;const summary=document.createElement('span');const parts=[record.source==='manual'?'Введено вручную':'Источник не указан'];if(record.sleepHours!==null&&record.sleepHours!==undefined)parts.push('Сон: '+record.sleepHours+' ч');if(record.dailySteps!==null&&record.dailySteps!==undefined)parts.push('Шаги: '+record.dailySteps);if(record.totalCalories!==null&&record.totalCalories!==undefined)parts.push('Общие ккал: '+record.totalCalories);if(record.diaryMood)parts.push('Настроение: '+record.diaryMood);if(record.diaryCondition)parts.push('Состояние: '+record.diaryCondition);summary.textContent=parts.join(' · ')||'Текстовая запись';info.append(title,summary);const open=document.createElement('button');open.textContent='Открыть';open.onclick=()=>{$('diaryDate').value=date;$('lifeEventDate').value=date;$('lifeEventPeriod').value='day';loadDiary();renderLifeEvents();renderDiaryCalendar();renderDiaryWeekSummary();$('diaryDate').scrollIntoView({block:'center',behavior:'smooth'})};row.append(info,open);host.append(row)}}
+function csvCell(value){let v=value===null||value===undefined?'':String(value);if(/^[\s]*[=+@-]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'}
+$('exportDiaryCsv').onclick=()=>{const columns=['date','sleepHours','dailySteps','totalCalories','diaryMood','diaryCondition','medicationNote','foodNote','cycleStatus','diaryNote','source'];const rows=[columns.map(csvCell).join(',')];for(const date of Object.keys(state.diary||{}).sort()){const entry=state.diary[date];if(!entry||typeof entry!=='object')continue;rows.push(columns.map(k=>csvCell(k==='date'?date:k==='source'?(entry.source||'unknown'):entry[k])).join(','))}const blob=new Blob(['\uFEFF'+rows.join('\r\n')],{type:'text/csv;charset=utf-8'});const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='lifesims-diary-'+day()+'.csv';a.click();setTimeout(()=>URL.revokeObjectURL(url),1500)};
+function downloadBackup(snapshot,name){const blob=new Blob([JSON.stringify(snapshot,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1500)}
+function validateLifeEvents(events){if(events===undefined)return [];if(!Array.isArray(events)||events.length>10000)throw Error('Некорректная история событий');for(const e of events){if(!e||typeof e!=='object'||Array.isArray(e)||typeof e.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(e.date)||!Number.isFinite(Date.parse(e.date+'T12:00:00Z'))||new Date(e.date+'T12:00:00Z').toISOString().slice(0,10)!==e.date||typeof e.at!=='string'||!Number.isFinite(Date.parse(e.at))||!['task','habit'].includes(e.kind)||typeof e.label!=='string'||e.label.length>200||!['completed','undone'].includes(e.action)||!Number.isFinite(e.xpDelta))throw Error('Некорректное событие истории: '+String(e?.date||'без даты').slice(0,20))}return events}
+function validateHygieneFields(data){
+ if(data.hygieneUpdatedAt!==undefined&&data.hygieneUpdatedAt!==null&&(typeof data.hygieneUpdatedAt!=='string'||!Number.isFinite(Date.parse(data.hygieneUpdatedAt))||Date.parse(data.hygieneUpdatedAt)>Date.now()+300000))throw Error('Некорректное время гигиены в копии');
+ if(data.hygiene!==undefined&&data.hygiene!==null&&(!Number.isInteger(data.hygiene)||data.hygiene<0||data.hygiene>100))throw Error('Некорректная гигиена в копии');
+ if(data.hygieneHistory!==undefined){
+ if(!data.hygieneHistory||typeof data.hygieneHistory!=='object'||Array.isArray(data.hygieneHistory)||Object.keys(data.hygieneHistory).length>10000)throw Error('Некорректная история гигиены');
+ for(const [date,val] of Object.entries(data.hygieneHistory)){
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date+'T12:00:00Z'))||new Date(date+'T12:00:00Z').toISOString().slice(0,10)!==date||!Number.isInteger(val)||val<0||val>100)throw Error('Некорректная запись гигиены: '+date);
+ }}
+}
+function validEventLocalTime(v){
+ if(typeof v!=='string'||!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(v))return false;
+ const date=v.slice(0,10),hour=Number(v.slice(11,13)),minute=Number(v.slice(14,16));
+ const parsed=new Date(date+'T12:00:00Z');
+ return Number.isFinite(parsed.getTime())&&parsed.toISOString().slice(0,10)===date&&hour<=23&&minute<=59;
+}
+function validateMiniBackup(x){
+ if(!x||typeof x!=='object'||Array.isArray(x))throw Error('Неверная структура JSON');
+ validateHygieneFields(x);
+ if(x.events!==undefined){
+  if(!Array.isArray(x.events)||x.events.length>1000)throw Error('Некорректные мероприятия');
+  for(const e of x.events){
+   if(!e||typeof e!=='object'||Array.isArray(e)||typeof e.title!=='string'||!e.title.trim()||e.title.length>160||!validEventLocalTime(e.startsAt))throw Error('Некорректное мероприятие');
+   if(e.endsAt!==undefined&&e.endsAt!==null&&(!validEventLocalTime(e.endsAt)||e.endsAt<=e.startsAt))throw Error('Некорректное окончание мероприятия');
+   if(e.repeat!==undefined&&!['none','daily','weekly','monthly','yearly'].includes(e.repeat))throw Error('Некорректный повтор мероприятия');
+  }
+ }
+ if(!x||typeof x!=='object'||Array.isArray(x))throw Error('Неверная структура JSON');if(!Array.isArray(x.tasks)||!Array.isArray(x.habits)||!x.skills||typeof x.skills!=='object'||Array.isArray(x.skills)||(x.diary!==undefined&&(!x.diary||typeof x.diary!=='object'||Array.isArray(x.diary))))throw Error('Это не полная резервная копия MINI v1.1');if(x.diary===undefined)x={...x,diary:{}};x.lifeEvents=validateLifeEvents(x.lifeEvents);if(!Number.isFinite(x.resource)||x.resource<0||x.resource>100)throw Error('Некорректный ресурс');if(typeof x.mood!=='string'||typeof x.condition!=='string')throw Error('Некорректные показатели');if(x.tasks.length>10000||x.habits.length>10000||Object.keys(x.diary).length>10000)throw Error('Слишком много записей');for(const item of [...x.tasks,...x.habits])if(!item||typeof item!=='object'||typeof (item.text||item.title)!=='string')throw Error('Некорректное дело или привычка');for(const [k,v] of Object.entries(x.skills))if(!k||!Number.isFinite(v)||v<0)throw Error('Некорректный навык');for(const [k,v] of Object.entries(x.diary)){if(!/^\d{4}-\d{2}-\d{2}$/.test(k)||!v||typeof v!=='object'||Array.isArray(v))throw Error('Некорректная запись дневника (ключ: '+String(k).slice(0,40)+', тип: '+(v===null?'null':Array.isArray(v)?'массив':typeof v)+'). Данные не изменены.');const d=new Date(k+'T12:00:00Z');if(!Number.isFinite(d.getTime())||d.toISOString().slice(0,10)!==k)throw Error('Некорректная дата дневника: '+String(k).slice(0,40));for(const field of ['sleepHours','dailySteps','totalCalories']){const n=v[field];if(n!==undefined&&n!==null&&n!==''&&(typeof n!=='number'||!Number.isFinite(n)||n<0||(field==='sleepHours'&&n>24)||(field==='dailySteps'&&!Number.isInteger(n))||(field==='totalCalories'&&!Number.isInteger(n))))throw Error('Некорректное значение '+field)}}return x}
+$('restore').onclick=async()=>{const input=$('restoreFile'),file=input.files&&input.files[0],status=$('restoreStatus'),button=$('restore');status.textContent='';if(!file){status.textContent='Сначала выбери JSON-файл';return}if(file.size>5*1024*1024){status.textContent='Файл больше 5 МБ';return}button.disabled=true;status.textContent='Проверяю файл…';try{let raw;try{raw=await file.text()}catch(e){throw Error('Не удалось прочитать выбранный файл. Выбери его повторно.')}let parsed;try{parsed=JSON.parse(raw)}catch(e){throw Error('Файл не является корректным JSON')}parsed=validateMiniBackup(parsed);status.textContent='Файл проверен: '+parsed.tasks.length+' дел, '+parsed.habits.length+' привычек, '+Object.keys(parsed.diary).length+' записей дневника. Ожидается подтверждение.';if(!confirm('Заменить все данные тестовой MINI v1.1? Сначала будет скачана резервная копия текущих данных.')){status.textContent='Восстановление отменено пользователем. Данные не изменены.';return}try{downloadBackup(state,'lifesims-mini-before-restore-'+day()+'.json')}catch(e){throw Error('Не удалось подготовить резервную копию текущих данных. Восстановление остановлено.')}const previous=state;try{const next={...defaults(),...parsed};localStorage.setItem(KEY,JSON.stringify(next));state=next;skillOptions();loadDiary();renderDiaryHistory();render();status.textContent='Восстановлено: '+state.tasks.length+' дел, '+state.habits.length+' привычек, '+Object.keys(state.diary).length+' записей дневника.'}catch(e){state=previous;try{localStorage.setItem(KEY,JSON.stringify(previous));render()}catch(_){}throw Error('Не удалось сохранить данные: '+(e.message||String(e)))}}catch(e){status.textContent='Восстановление не выполнено: '+(e.message||String(e))}finally{button.disabled=false}};
+$('backup').onclick=()=>{const blob=new Blob([JSON.stringify(state,null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='lifesims-mini-preview-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1500)};
+
+/* Quick voice/text commands: no writes until separate user confirmation. */
+(function initVoiceCommands(){
+ const open=$('voiceOpen'),panel=$('voicePanel'),field=$('voiceText'),status=$('voiceStatus'),preview=$('voicePreview'),
+       listen=$('voiceListen'),prepare=$('voicePrepare'),confirmButton=$('voiceConfirm'),close=$('voiceCancel');
+ if(!open||!panel||!field)return;
+ let draft=null,recognition=null;
+ const clean=s=>String(s||'').trim().replace(/\s+/g,' ');
+ const normalized=s=>clean(s).toLocaleLowerCase('ru-RU');
+ const titleOf=x=>String(x.text||x.title||'').trim();
+ const validDate=s=>/^\d{4}-\d{2}-\d{2}$/.test(s)&&Number.isFinite(Date.parse(s+'T12:00:00Z'))&&new Date(s+'T12:00:00Z').toISOString().slice(0,10)===s;
+ function resolveDate(s){
+  const v=normalized(s);
+  if(v==='сегодня')return day();
+  if(v==='завтра'||v==='послезавтра'){
+   const d=new Date();d.setDate(d.getDate()+(v==='завтра'?1:2));return d.toLocaleDateString('sv-SE');
+  }
+  if(validDate(v))return v;
+  throw Error('Назови дату ГГГГ-ММ-ДД, «завтра» или «послезавтра».');
+ }
+ function findExact(name,kind){
+  const needle=normalized(name),hits=[];
+  for(const k of (kind?[kind]:['task','habit'])){
+   const items=k==='task'?state.tasks:state.habits;
+   items.forEach((item,index)=>{if(normalized(titleOf(item))===needle)hits.push({kind:k,index,item})});
+  }
+  if(hits.length!==1)throw Error(hits.length?'Есть несколько одноимённых записей. Уточни название.':'Не найдено: «'+name+'».');
+  return hits[0];
+ }
+ function parse(input){
+  const text=clean(input);if(!text)throw Error('Сначала произнеси или введи команду.');
+  if(text.length>200)throw Error('Слишком длинная команда (максимум 200 символов).');
+  let m=text.match(/^(?:перенеси|перенести|перемести)\s+(?:дело|задачу|задача)\s+(.+?)\s+на\s+(\d{4}-\d{2}-\d{2}|сегодня|завтра|послезавтра)$/i);
+  if(m){const hit=findExact(m[1],'task'),date=resolveDate(m[2]);if(hit.item.frequency&&hit.item.frequency!=='once')throw Error('Перенос повторяющихся дел пока не поддерживается.');if(taskDone(hit.item))throw Error('Завершённое дело сначала нужно изменить в списке.');return {op:'move',kind:'task',index:hit.index,label:titleOf(hit.item),date,source:text,description:'Перенести дело «'+titleOf(hit.item)+'» на '+date};}
+  m=text.match(/^(?:создай|создать|добавь|добавить|запиши|записать)\s+(дело|задачу|задача|привычку|привычка)\s+(.+)$/i);
+  if(m){
+   const kind=/привычк/i.test(m[1])?'habit':'task';let label=clean(m[2]),date='';
+   if(kind==='task'){
+    const suffix=label.match(/^(.+?)\s+на\s+(\d{4}-\d{2}-\d{2}|сегодня|завтра|послезавтра)$/i);
+    if(suffix){label=clean(suffix[1]);date=resolveDate(suffix[2]);}
+   }
+   if(!label||label.length>160)throw Error('Уточни название (до 160 символов).');
+   if((kind==='task'?state.tasks:state.habits).some(t=>normalized(titleOf(t))===normalized(label)))throw Error('Такая запись уже существует. Проверь список.');
+   return {op:'create',kind,label,date,source:text,description:'Создать '+(kind==='task'?'дело':'ежедневную привычку')+' «'+label+'»'+(date?' на '+date:'')};
+  }
+  m=text.match(/^(?:выполни|выполнить|отметь|отметить|заверши|завершить)\s+(?:(дело|задачу|задача|привычку|привычка)\s+)?(.+)$/i);
+  if(m){
+   const k=m[1]?(/привычк/i.test(m[1])?'habit':'task'):null,hit=findExact(m[2],k);
+   if(hit.kind==='task'?taskDone(hit.item):hit.item.day===day())throw Error('Эта запись уже отмечена за текущий период. Повторного XP не будет.');
+   return {op:'complete',kind:hit.kind,index:hit.index,label:titleOf(hit.item),source:text,description:'Отметить выполненным: '+titleOf(hit.item)};
+  }
+  m=text.match(/^(?:найди|найти|покажи|показать)\s+(.+)$/i);
+  if(m){
+   const needle=normalized(m[1]),hits=[];
+   for(const k of ['task','habit']){(k==='task'?state.tasks:state.habits).forEach((item,index)=>{if(normalized(titleOf(item)).includes(needle))hits.push({kind:k,index,item})});}
+   if(hits.length===0)throw Error('Совпадений не найдено.');
+   if(hits.length>1)throw Error('Найдено '+hits.length+' совпадений. Уточни название для точного поиска.');
+   return {op:'find',kind:hits[0].kind,index:hits[0].index,label:titleOf(hits[0].item),source:text,description:'Показать '+(hits[0].kind==='task'?'дело':'привычку')+' «'+titleOf(hits[0].item)+'»'};
+  }
+  if(/^(?:перенеси|перенести|выполни|выполнить|удали|удалить|отмени|отменить|создай|создать|добавь|добавить|найди|найти)(?=\s|$)/i.test(text))throw Error('Не удалось разобрать команду. Используй пример выше.');
+  // As in a quick-add inbox: unprefixed text is offered as a new task, never auto-executed.
+  if(text.length>160)throw Error('Название должно быть не длиннее 160 символов.');
+  if(state.tasks.some(t=>normalized(titleOf(t))===normalized(text)))throw Error('Такое дело уже есть.');
+  return {op:'create',kind:'task',label:text,date:'',source:text,description:'Создать дело «'+text+'»'};
+ }
+ function clearDraft(){draft=null;confirmButton.disabled=true;preview.textContent='';}
+ function review(){clearDraft();try{draft=parse(field.value);preview.textContent='Будет выполнено: '+draft.description;confirmButton.textContent=draft.op==='find'?'Показать':'Подтвердить';confirmButton.disabled=false;status.textContent='Проверь распознанные параметры и нажми подтверждение.';}catch(err){status.textContent=err.message;}}
+ function showTab(id){const b=document.querySelector('#tabs button[data-tab="'+id+'"]');if(!b)throw Error('Раздел не найден.');b.click();}
+ function execute(d){
+  if(d.op==='create'){
+   if((d.kind==='task'?state.tasks:state.habits).some(t=>normalized(titleOf(t))===normalized(d.label)))throw Error('Запись уже существует.');
+   if(d.kind==='task'){state.tasks.push({text:d.label,project:'',skill:'',difficulty:2,physical:0,moodEffect:0,date:d.date||'',frequency:'once',donePeriod:'',done:false,minutes:0});}
+   else{const h={text:d.label,project:'',skill:'',difficulty:2,physical:0,moodEffect:0,type:'positive',frequency:'daily',day:''};if(bedHabitName.test(d.label)){if(state.habits.some(isBedHabit))throw Error('Привычка «Заправить кровать» уже существует.');h.actionId='make-bed';}state.habits.push(h);}
+   save();showTab(d.kind==='task'?'tasks':'habits');
+  }else if(d.op==='move'){
+   const item=state.tasks[d.index];
+   if(!item||normalized(titleOf(item))!==normalized(d.label)||taskDone(item)||item.frequency&&item.frequency!=='once')throw Error('Дело изменилось. Повтори команду.');
+   item.date=d.date;save();showTab('tasks');
+  }else{
+   const list=d.kind==='task'?state.tasks:state.habits,cur=list[d.index];
+   if(!cur||normalized(titleOf(cur))!==normalized(d.label))throw Error('Запись изменилась. Повтори команду.');
+   const tab=d.kind==='task'?'tasks':'habits';showTab(tab);
+   const row=$(d.kind+'List').children[d.index];
+   if(!row)throw Error('Не удалось найти запись на экране.');
+   if(d.op==='complete'){
+    if(d.kind==='task'?taskDone(cur):cur.day===day())throw Error('Уже отмечено. Повторного XP не будет.');
+    const b=row.querySelector('button');if(!b)throw Error('Кнопка отметки недоступна.');b.click();
+    if(!(d.kind==='task'?taskDone(cur):cur.day===day()))throw Error('Отметка не сохранена. Проверь запись.');
+   }else if(d.op==='find'){row.scrollIntoView({block:'nearest',behavior:'smooth'});}
+  }
+ }
+ open.onclick=()=>{panel.classList.remove('hidden');document.body.classList.add('voice-open');startListening();};
+ listen.onclick=()=>{panel.classList.remove('hidden');startListening();};
+ prepare.onclick=review;
+ field.addEventListener('input',clearDraft);
+ field.addEventListener('keydown',e=>{if(e.key==='Enter'){e.preventDefault();review();}});
+ close.onclick=()=>{if(recognition){try{recognition.abort()}catch(_){}}clearDraft();panel.classList.add('hidden');document.body.classList.remove('voice-open');};
+ confirmButton.onclick=()=>{
+  if(!draft)return;
+  const toApply=draft;
+  if(field.value!==draft.source){clearDraft();status.textContent='Текст изменён. Проверь команду снова.';return;}
+  try{execute(toApply);status.textContent='Готово: '+toApply.description;field.value='';clearDraft();}
+  catch(e){clearDraft();status.textContent='Не выполнено: '+e.message;}
+ };
+ function startListening(){
+  const Speech=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!Speech){status.textContent='Этот браузер не поддерживает голосовое распознавание. Введи команду текстом.';field.focus();return;}
+  if(recognition){try{recognition.abort()}catch(_){}}
+  try{
+   recognition=new Speech();recognition.lang='ru-RU';recognition.interimResults=false;recognition.maxAlternatives=1;recognition.continuous=false;
+   recognition.onresult=e=>{const transcript=clean(e.results?.[0]?.[0]?.transcript);if(!transcript){status.textContent='Речь не распознана. Попробуй ещё раз.';return;}field.value=transcript;review();};
+   recognition.onerror=e=>{clearDraft();status.textContent='Распознавание не завершено ('+(e.error||'ошибка')+'). Можно ввести команду вручную.';};
+   recognition.onend=()=>{recognition=null;};
+   clearDraft();status.textContent='Слушаю…';recognition.start();
+  }catch(e){status.textContent='Микрофон не запущен: '+e.message+'. Используй текстовый ввод.';}
+ }
+})();
+
+$('date').textContent=new Intl.DateTimeFormat('ru-RU',{day:'numeric',month:'long'}).format(new Date());render();
+</script>
+<script id="restore-fallback-v2">
+/* Independent restore handler: survives errors elsewhere in the app script. */
+(function(){
+'use strict';
+var button=document.getElementById('restore'),picker=document.getElementById('restoreFile'),status=document.getElementById('restoreStatus');
+if(!button||!picker||!status)return;
+status.textContent='Восстановление готово: выбери резервную копию JSON.';
+button.addEventListener('click',async function(event){
+event.preventDefault();event.stopImmediatePropagation();
+var file=picker.files&&picker.files[0];
+if(!file){status.textContent='Сначала выбери JSON-файл';return;}
+if(file.size>5*1024*1024){status.textContent='Файл больше 5 МБ';return;}
+button.disabled=true;status.textContent='Проверяю выбранный файл…';
+try{
+var data;
+try{data=JSON.parse(await file.text());}catch(e){throw Error('Не удалось прочитать JSON-файл');}
+if(!data||typeof data!=='object'||Array.isArray(data)||!Array.isArray(data.tasks)||!Array.isArray(data.habits)||!data.skills||typeof data.skills!=='object'||Array.isArray(data.skills))throw Error('Это не резервная копия MINI v1.1');
+if(typeof data.resource!=='number'||!Number.isFinite(data.resource)||data.resource<0||data.resource>100||typeof data.mood!=='string'||typeof data.condition!=='string')throw Error('Некорректные показатели в копии');
+if(data.hygiene!==undefined&&data.hygiene!==null&&(!Number.isInteger(data.hygiene)||data.hygiene<0||data.hygiene>100))throw Error('Некорректная гигиена');
+if(data.hygieneHistory!==undefined){if(!data.hygieneHistory||typeof data.hygieneHistory!=='object'||Array.isArray(data.hygieneHistory)||Object.keys(data.hygieneHistory).length>10000)throw Error('Некорректная история гигиены');for(var kv of Object.entries(data.hygieneHistory)){var hd=kv[0],hv=kv[1];if(!/^\d{4}-\d{2}-\d{2}$/.test(hd)||!Number.isFinite(Date.parse(hd+'T12:00:00Z'))||new Date(hd+'T12:00:00Z').toISOString().slice(0,10)!==hd||!Number.isInteger(hv)||hv<0||hv>100)throw Error('Некорректная запись гигиены: '+hd)}}
+if(data.weightHistory!==undefined){
+ if(!data.weightHistory||typeof data.weightHistory!=='object'||Array.isArray(data.weightHistory)||Object.keys(data.weightHistory).length>10000)throw Error('Некорректная история веса');
+ for(var weightEntry of Object.entries(data.weightHistory)){
+  var wd=weightEntry[0],wv=weightEntry[1],wt=new Date(wd+'T12:00:00Z');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(wd)||!Number.isFinite(wt.getTime())||wt.toISOString().slice(0,10)!==wd||typeof wv!=='number'||!Number.isFinite(wv)||wv<20||wv>400)throw Error('Некорректная запись веса: '+String(wd).slice(0,40));
+ }
+}
+if(data.lifeEvents!==undefined){if(!Array.isArray(data.lifeEvents)||data.lifeEvents.length>10000)throw Error('Некорректная история событий');for(var e of data.lifeEvents){if(!e||typeof e!=='object'||Array.isArray(e)||typeof e.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(e.date)||!Number.isFinite(Date.parse(e.date+'T12:00:00Z'))||new Date(e.date+'T12:00:00Z').toISOString().slice(0,10)!==e.date||typeof e.at!=='string'||!Number.isFinite(Date.parse(e.at))||!['task','habit'].includes(e.kind)||typeof e.label!=='string'||e.label.length>200||!['completed','undone'].includes(e.action)||!Number.isFinite(e.xpDelta))throw Error('Некорректное событие истории')}}else data.lifeEvents=[];if(data.diary===undefined)data.diary={};
+if(!data.diary||typeof data.diary!=='object'||Array.isArray(data.diary))throw Error('Некорректный дневник');
+if(data.tasks.length>10000||data.habits.length>10000||Object.keys(data.diary).length>10000)throw Error('Слишком много записей');
+for(var item of data.tasks.concat(data.habits)){if(!item||typeof item!=='object'||typeof (item.text||item.title)!=='string')throw Error('Некорректное дело или привычка');}
+for(var pair of Object.entries(data.skills)){if(!pair[0]||!Number.isFinite(pair[1])||pair[1]<0)throw Error('Некорректный навык');}
+for(var pair of Object.entries(data.diary)){var k=pair[0],v=pair[1];if(!/^\d{4}-\d{2}-\d{2}$/.test(k)||!v||typeof v!=='object'||Array.isArray(v))throw Error('Некорректная запись дневника (ключ: '+String(k).slice(0,40)+', тип: '+(v===null?'null':Array.isArray(v)?'массив':typeof v)+'). Данные не изменены.');var d=new Date(k+'T12:00:00Z');if(!Number.isFinite(d.getTime())||d.toISOString().slice(0,10)!==k)throw Error('Некорректная дата дневника: '+String(k).slice(0,40));for(var field of ['sleepHours','dailySteps','totalCalories']){var n=v[field];if(n!==undefined&&n!==null&&n!==''&&(typeof n!=='number'||!Number.isFinite(n)||n<0||(field==='sleepHours'&&n>24)||(field==='dailySteps'&&!Number.isInteger(n))||(field==='totalCalories'&&!Number.isInteger(n))))throw Error('Некорректное значение '+field);}}
+status.textContent='Файл проверен. Ожидается подтверждение замены.';
+if(!window.confirm('Заменить данные тестовой MINI v1.1? Сначала скачай резервную копию текущих данных.')){status.textContent='Отменено. Данные не изменены.';return;}
+var key='lifesims-mini-v11-preview',before=localStorage.getItem(key);
+if(before!==null){var blob=new Blob([before],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='lifesims-mini-before-restore.json';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},3000);}
+var serialized=JSON.stringify(data);
+try{
+  localStorage.setItem(key,serialized);
+  if(localStorage.getItem(key)!==serialized)throw Error('Проверка записи после восстановления не пройдена');
+}catch(e){
+  try{
+    if(localStorage.getItem(key)!==before){
+      if(before===null)localStorage.removeItem(key);
+      else localStorage.setItem(key,before);
+    }
+  }catch(rollbackError){throw Error('Восстановление не удалось, откат также не удался. Не изменяй данные; сохрани резервную копию: '+rollbackError.message);}
+  throw Error('Не удалось сохранить данные на устройстве: '+e.message);
+}
+status.textContent='Данные восстановлены и проверены чтением. Перезагрузи страницу для отображения.';
+}catch(e){status.textContent='Восстановление не выполнено: '+(e.message||String(e));}finally{button.disabled=false;}
+},true);
+})();
+</script>
+<script id="room-style-presets">
+(function(){
+'use strict';
+var room=document.querySelector('.room'),wall=room&&room.querySelector('.wall'),menu=document.getElementById('actionMenu');
+if(!room||!wall||!menu)return;
+var key='lifesims-mini-room-style',allowed=['rose','mint','sunset'];
+var labels={rose:'🌸 Розовая',mint:'🌿 Мятная',sunset:'🌅 Тёплая'};
+function apply(value){
+ var style=allowed.includes(value)?value:'rose';
+ room.dataset.style=style;
+ return style;
+}
+var saved='rose';
+try{saved=localStorage.getItem(key)||'rose'}catch(_){}
+apply(saved);
+function showStyles(){
+ menu.replaceChildren();
+ var h=document.createElement('h3');h.textContent='Оформление комнаты';menu.appendChild(h);
+ allowed.forEach(function(style){
+  var b=document.createElement('button');
+  b.type='button';b.textContent=labels[style];b.setAttribute('aria-pressed',String(room.dataset.style===style));
+  b.onclick=function(){
+   apply(style);
+   try{localStorage.setItem(key,style)}catch(_){}
+   menu.classList.add('hidden');
+  };
+  menu.appendChild(b);
+ });
+ menu.classList.remove('hidden');
+ menu.scrollIntoView({block:'nearest',behavior:'smooth'});
+}
+wall.addEventListener('click',showStyles);
+wall.addEventListener('keydown',function(e){if(e.key==='Enter'||e.key===' '){e.preventDefault();showStyles()}});
+})();
+</script>
+<script id="room-interactive-decor">
+(function(){
+'use strict';
+var room=document.querySelector('.room'),menu=document.getElementById('actionMenu');if(!room||!menu)return;
+var key='lifesims-mini-room-decor-v2',defaults={lamp:'on',plant:'normal',outfit:'pink',hair:'dark'},state=Object.assign({},defaults);
+try{var old=JSON.parse(localStorage.getItem('lifesims-mini-room-decor-v1')||'null');if(old&&typeof old==='object'){state.lamp=old.lamp==='off'?'off':'on';state.plant=old.plant==='bloom'?'bloom':'normal'}var stored=JSON.parse(localStorage.getItem(key)||'null');if(stored&&typeof stored==='object'){Object.keys(defaults).forEach(function(k){if(typeof stored[k]==='string'&&stored[k].length<20)state[k]=stored[k]})}}catch(_){}
+function paint(){room.dataset.lamp=state.lamp==='off'?'off':'on';room.dataset.plant=state.plant==='bloom'?'bloom':'normal';room.dataset.outfit=['pink','blue','green'].includes(state.outfit)?state.outfit:'pink';room.dataset.hair=state.hair==='light'?'light':'dark'}
+function change(k,v){state[k]=v;paint();try{localStorage.setItem(key,JSON.stringify(state))}catch(_){}}
+function show(title,options){menu.replaceChildren();var h=document.createElement('h3');h.textContent=title;menu.appendChild(h);options.forEach(function(opt){var b=document.createElement('button');b.type='button';b.textContent=opt[0];b.onclick=function(){try{if(opt[1]==='chore'){if(!window.lifeSimsRoomChore)throw Error('Модуль дел недоступен');window.lifeSimsRoomChore(opt[2])}else change(opt[1],opt[2]);menu.classList.add('hidden')}catch(e){var msg=document.createElement('p');msg.textContent='Действие не выполнено: '+e.message;menu.appendChild(msg)}};menu.appendChild(b)});menu.classList.remove('hidden');menu.scrollIntoView({block:'nearest',behavior:'smooth'})}
+function attach(id,title,options){var b=document.getElementById(id);if(b)b.onclick=function(){show(title,options)}}
+attach('roomLamp','Лампа',[['💡 Включить','lamp','on'],['🌙 Выключить','lamp','off']]);
+attach('roomPlant','Растение',[['🪴 Обычный вид','plant','normal'],['✨ Ухоженное растение','plant','bloom'],['✓ Отметить полив','chore','Полить растения']]);
+attach('roomShelf','Полка',[['✓ Протереть пыль','chore','Протереть пыль']]);
+attach('roomCabinet','Комод',[['✓ Разобрать вещи','chore','Разобрать вещи'],['👚 Переодеться — розовый','outfit','pink'],['👕 Переодеться — синий','outfit','blue'],['👗 Переодеться — зелёный','outfit','green']]);
+attach('roomMirror','Зеркало',[['💇 Тёмные волосы','hair','dark'],['💇 Светлые волосы','hair','light'],['👚 Розовая одежда','outfit','pink'],['👕 Синяя одежда','outfit','blue'],['👗 Зелёная одежда','outfit','green']]);
+attach('roomWasher','Стиральная машина',[['✓ Постирать бельё','chore','Постирать бельё']]);
+attach('roomSink','Раковина',[['✓ Помыть посуду','chore','Помыть посуду'],['✓ Вымыть раковину','chore','Вымыть раковину']]);
+paint();
+})();
+</script></body></html>
