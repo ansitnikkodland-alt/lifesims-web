@@ -198,6 +198,7 @@ body.voice-open #voiceOpen{visibility:hidden}
 
 .room .crystal{left:57.5%!important;top:20%!important;width:clamp(36px,10vw,54px)!important;height:clamp(66px,18vw,92px)!important;z-index:8}
 .diary-calendar button{min-height:55px;display:flex;flex-direction:column;align-items:flex-start;gap:2px;overflow:hidden}.diary-calendar .calendar-item{font-size:9px;line-height:1.15;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:#d3b9ff}.diary-calendar button strong{font-size:13px}
+.event-form{display:grid;gap:12px;margin-top:12px}.event-form label{display:grid;gap:5px;font-size:14px}.event-form input,.event-form select{width:100%;box-sizing:border-box;min-height:42px;padding:9px;border-radius:10px}.event-form .event-check{display:flex;align-items:center;gap:9px}.event-form .event-check input{width:20px;min-height:20px}.event-form [hidden]{display:none!important}.event-actions{display:flex;gap:8px;flex-wrap:wrap}
 </style></head><body><main class="app"><header><div><h1>LifeSims <small>MINI v1.1</small></h1><p class="muted">Реконструкция интерфейса · данные на устройстве</p></div></header><nav id="tabs"><button class="active" data-tab="home">Дом</button><button data-tab="tasks">Дела</button><button data-tab="habits">Привычки</button><button data-tab="skills">Навыки</button><button data-tab="diary">Дневник</button><button data-tab="data">Данные</button></nav><button type="button" id="voiceOpen" aria-label="Голосовой ввод дела или привычки" title="Голосовой ввод">🎙️</button><section id="voicePanel" class="card voice-panel hidden" aria-label="Голосовой и быстрый ввод"><h2>🎙️ Голосовой ввод</h2><p class="hint">Скажи «Добавь дело купить продукты», «Добавь привычку читать», «Найди уборка», «Выполни помыть посуду» или «Перенеси дело уборка на завтра».</p><div class="voice-entry"><input id="voiceText" maxlength="220" autocomplete="off" aria-label="Распознанная команда" placeholder="Скажи или введи задачу" type="text"><button type="button" id="voiceListen">🎙️ Говорить</button></div><div class="voice-entry"><button type="button" id="voicePrepare">Проверить команду</button><button type="button" id="voiceConfirm" disabled>Подтвердить</button><button type="button" id="voiceCancel">Закрыть</button></div><p class="small" id="voiceStatus" role="status">Ничего не будет создано или отмечено без подтверждения.</p><p class="small" id="voicePreview" aria-live="polite"></p><p class="small">Голос зависит от браузера; распознавание может передавать звук сервису браузера. Текстовый ввод работает без микрофона.</p></section><section id="home"><div class="card"><div class="line"><h2>Мой персонаж</h2><span id="date"></span></div><div class="room"><div class="wall" role="button" tabindex="0" aria-label="Стены: изменить оформление комнаты" title="Нажми для оформления комнаты"></div><div class="floor"></div><div class="room-stars" aria-hidden="true"></div><button type="button" class="room-shelf" id="roomShelf" aria-label="Полка: выбрать украшение"></button><button type="button" class="room-cabinet" id="roomCabinet" aria-label="Комод: разобрать вещи или сменить одежду"></button><button type="button" class="room-mirror" id="roomMirror" aria-label="Зеркало: изменить внешний вид">🪞</button><button type="button" class="room-washer" id="roomWasher" aria-label="Стиральная машина: постирать">🧺</button><button type="button" class="room-sink" id="roomSink" aria-label="Раковина: помыть посуду или раковину">🚰</button><button class="window" id="roomWindow" type="button" aria-label="Окно: мероприятия" title="Мероприятия"><span></span></button><div class="wall-art" aria-hidden="true">✿</div><button type="button" class="plant" id="roomPlant" aria-label="Растение: ухаживать">🪴</button><div class="rug" aria-hidden="true"></div><button type="button" class="lamp" id="roomLamp" aria-label="Лампа: включить или выключить">💡</button><button class="crystal" id="crystal" type="button" title="Сводный ресурс: самочувствие + настроение + гигиена" aria-label="Сводный ресурс персонажа">
 <svg viewBox="0 0 100 160" class="resource-gem" aria-hidden="true" focusable="false">
 <path d="M50 2 89 44 75 111 50 158 25 111 11 44Z" fill="var(--gem-base)" stroke="var(--gem-light)" stroke-width="2.2"/>
@@ -411,63 +412,69 @@ function addSleepFromBed(){
  state.diary[date]=record;
  try{save();if($('diaryDate').value===date)loadDiary();renderDiaryHistory();notify('Сон за '+date+': '+hours+' ч. Записано вручную. XP не начисляются.')}catch(e){alert('Не удалось сохранить сон: '+(e.message||String(e)))}
 }
+function eventEditor(existing=null){
+ const menu=$('actionMenu');menu.replaceChildren();
+ const heading=document.createElement('h3');heading.textContent=existing?'Редактировать мероприятие':'Новое мероприятие';menu.append(heading);
+ const form=document.createElement('form');form.className='event-form';
+ const field=(label,type,value,required=false)=>{
+  const wrap=document.createElement('label');wrap.textContent=label;
+  const input=document.createElement('input');input.type=type;input.value=value||'';input.required=required;
+  wrap.append(input);form.append(wrap);return input;
+ };
+ const title=field('Название','text',existing?.title||'',true);title.maxLength=160;
+ const start=field('Начало','datetime-local',existing?.startsAt||day()+'T12:00',true);
+ const hasEnd=document.createElement('label');hasEnd.className='event-check';
+ const endToggle=document.createElement('input');endToggle.type='checkbox';endToggle.checked=!!existing?.endsAt;
+ hasEnd.append(endToggle,document.createTextNode(' Указать окончание'));form.append(hasEnd);
+ const end=field('Окончание','datetime-local',existing?.endsAt||'');
+ const endWrap=end.parentElement;endWrap.hidden=!endToggle.checked;end.disabled=!endToggle.checked;
+ endToggle.onchange=()=>{endWrap.hidden=!endToggle.checked;end.disabled=!endToggle.checked;if(endToggle.checked&&!end.value)end.value=start.value};
+ const repeatWrap=document.createElement('label');repeatWrap.textContent='Повторение';
+ const repeat=document.createElement('select');
+ for(const [value,label] of [['none','Не повторять'],['daily','Каждый день'],['weekly','Каждую неделю'],['monthly','Каждый месяц'],['yearly','Каждый год']]){
+  const option=document.createElement('option');option.value=value;option.textContent=label;repeat.append(option)
+ }
+ repeat.value=existing?.repeat||'none';repeatWrap.append(repeat);form.append(repeatWrap);
+ const error=document.createElement('p');error.className='small';error.setAttribute('role','alert');form.append(error);
+ const actions=document.createElement('div');actions.className='event-actions';
+ const submit=document.createElement('button');submit.type='submit';submit.textContent='Сохранить';
+ const cancel=document.createElement('button');cancel.type='button';cancel.textContent='Отмена';cancel.onclick=manageRoomEvents;
+ actions.append(submit,cancel);
+ if(existing){const remove=document.createElement('button');remove.type='button';remove.textContent='Удалить';remove.onclick=()=>{
+  if(!confirm('Удалить мероприятие «'+existing.title+'»?'))return;
+  const i=state.events.indexOf(existing);if(i<0){error.textContent='Запись не найдена';return}
+  const previous=state.events.slice();state.events.splice(i,1);
+  try{save();manageRoomEvents();renderDiaryCalendar()}catch(e){state.events=previous;error.textContent='Не удалось удалить: '+e.message}
+ };actions.append(remove)}
+ form.append(actions);
+ form.onsubmit=ev=>{
+  ev.preventDefault();error.textContent='';
+  const name=title.value.trim(),startsAt=start.value,endsAt=endToggle.checked?end.value||null:null;
+  if(!name||name.length>160){error.textContent='Название: от 1 до 160 символов';return}
+  if(!validEventLocalTime(startsAt)){error.textContent='Проверь дату и время начала';return}
+  if(endToggle.checked&&(!endsAt||!validEventLocalTime(endsAt)||endsAt<=startsAt)){error.textContent='Окончание должно быть позже начала';return}
+  if(!existing&&state.events.length>=1000){error.textContent='Достигнут лимит мероприятий';return}
+  const record={...(existing||{}),title:name,startsAt,endsAt,repeat:repeat.value};
+  const old=state.events.slice(),i=existing?state.events.indexOf(existing):-1;
+  if(existing&&i<0){error.textContent='Запись не найдена';return}
+  if(existing)state.events[i]=record;else state.events.push(record);
+  try{save();manageRoomEvents();renderDiaryCalendar()}catch(e){state.events=old;error.textContent='Не удалось сохранить: '+e.message}
+ };
+ menu.append(form);menu.classList.remove('hidden');menu.scrollIntoView({block:'nearest',behavior:'smooth'});title.focus();
+}
 function manageRoomEvents(){
  const menu=$('actionMenu');menu.replaceChildren();
  const heading=document.createElement('h3');heading.textContent='Мероприятия · локально';menu.append(heading);
  const info=document.createElement('p');info.className='small';info.textContent='Без синхронизации с Google Календарём. Данные входят в JSON-копию.';menu.append(info);
- const add=document.createElement('button');add.type='button';add.textContent='Добавить мероприятие';add.onclick=()=>{
-  if(state.events.length>=1000){alert('Достигнут лимит мероприятий');return}
-  const title=prompt('Название мероприятия');if(title===null)return;
-  if(!title.trim()||title.trim().length>160){alert('Название: от 1 до 160 символов');return}
-  const startsAt=prompt('Дата и время (ГГГГ-ММ-ДДTЧЧ:ММ)',day()+'T12:00');if(startsAt===null)return;
-  if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(startsAt)||!Number.isFinite(Date.parse(startsAt))||new Date(startsAt.slice(0,10)+'T12:00:00Z').toISOString().slice(0,10)!==startsAt.slice(0,10)||Number(startsAt.slice(11,13))>23||Number(startsAt.slice(14,16))>59){alert('Некорректная дата или время');return}
-  const endText=prompt('Конец мероприятия (необязательно; ГГГГ-ММ-ДДTЧЧ:ММ). Оставь пустым, если конца нет.','');
-  if(endText===null)return;
-  const endsAt=endText.trim()||null;
-  if(endsAt&&(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(endsAt)||!Number.isFinite(Date.parse(endsAt))||new Date(endsAt.slice(0,10)+'T12:00:00Z').toISOString().slice(0,10)!==endsAt.slice(0,10)||Number(endsAt.slice(11,13))>23||Number(endsAt.slice(14,16))>59||endsAt<=startsAt)){alert('Конец должен быть позже начала');return}
-  const repeatText=prompt('Повтор: нет, ежедневно, еженедельно, ежемесячно, ежегодно','нет');
-  if(repeatText===null)return;
-  const repeats={нет:'none',ежедневно:'daily',еженедельно:'weekly',ежемесячно:'monthly',ежегодно:'yearly'};
-  const repeat=repeats[repeatText.trim().toLowerCase()];
-  if(!repeat){alert('Неизвестный тип повтора');return}
-  if(!confirm('Сохранить мероприятие «'+title.trim()+'» на '+startsAt.replace('T',' ')+(endsAt?' — '+endsAt.replace('T',' '):'')+'; повтор: '+repeatText+'?'))return;
-  state.events.push({title:title.trim(),startsAt,endsAt,repeat});try{save();manageRoomEvents()}catch(e){alert('Мероприятие не сохранено: '+e.message)}
- };menu.append(add);
-
+ const add=document.createElement('button');add.type='button';add.textContent='＋ Новое мероприятие';add.onclick=()=>eventEditor();menu.append(add);
  for(const e of state.events.slice().sort((a,b)=>a.startsAt.localeCompare(b.startsAt)).slice(0,100)){
-  const b=document.createElement('button');b.type='button';
-  b.textContent=e.startsAt.replace('T',' ')+(e.endsAt?' — '+e.endsAt.replace('T',' '):'')+' · '+e.title+(e.repeat&&e.repeat!=='none'?' ↻ '+({daily:'ежедневно',weekly:'еженедельно',monthly:'ежемесячно',yearly:'ежегодно'}[e.repeat]||e.repeat):'');
-  b.onclick=()=>{
-   menu.replaceChildren();
-   const heading=document.createElement('h3');heading.textContent=e.title;menu.append(heading);
-   const edit=document.createElement('button');edit.type='button';edit.textContent='✏️ Редактировать';
-   edit.onclick=()=>{
-    const title=prompt('Название мероприятия',e.title);if(title===null)return;
-    if(!title.trim()||title.trim().length>160){alert('Название: от 1 до 160 символов');return}
-    const startsAt=prompt('Начало (ГГГГ-ММ-ДДTЧЧ:ММ)',e.startsAt);if(startsAt===null)return;
-    if(!validEventLocalTime(startsAt)){alert('Некорректное начало');return}
-    const endText=prompt('Конец (необязательно, оставь пустым)',e.endsAt||'');if(endText===null)return;
-    const endsAt=endText.trim()||null;
-    if(endsAt&&(!validEventLocalTime(endsAt)||endsAt<=startsAt)){alert('Конец должен быть позже начала');return}
-    const options={нет:'none',ежедневно:'daily',еженедельно:'weekly',ежемесячно:'monthly',ежегодно:'yearly'};
-    const reverse={none:'нет',daily:'ежедневно',weekly:'еженедельно',monthly:'ежемесячно',yearly:'ежегодно'};
-    const repeatText=prompt('Повтор: нет, ежедневно, еженедельно, ежемесячно, ежегодно',reverse[e.repeat||'none']||'нет');
-    if(repeatText===null)return;
-    const repeat=options[repeatText.trim().toLowerCase()];
-    if(!repeat){alert('Неизвестный тип повтора');return}
-    if(!confirm('Сохранить изменения мероприятия «'+title.trim()+'»?'))return;
-    const index=state.events.indexOf(e);if(index<0){alert('Мероприятие не найдено');return}
-    state.events[index]={...e,title:title.trim(),startsAt,endsAt,repeat};
-    try{save();manageRoomEvents();renderDiaryCalendar()}catch(err){alert('Не удалось сохранить: '+err.message)}
-   };
-   const remove=document.createElement('button');remove.type='button';remove.textContent='Удалить';
-   remove.onclick=()=>{if(!confirm('Удалить мероприятие «'+e.title+'»?'))return;const i=state.events.indexOf(e);if(i<0)return;state.events.splice(i,1);try{save();manageRoomEvents();renderDiaryCalendar()}catch(err){alert('Не удалось удалить: '+err.message)}};
-   const back=document.createElement('button');back.type='button';back.textContent='Назад';back.onclick=manageRoomEvents;
-   menu.append(edit,remove,back);
-  };menu.append(b)
+  const button=document.createElement('button');button.type='button';
+  button.textContent=e.startsAt.replace('T',' ')+(e.endsAt?' — '+e.endsAt.replace('T',' '):'')+' · '+e.title+(e.repeat&&e.repeat!=='none'?' ↻':'');
+  button.onclick=()=>eventEditor(e);menu.append(button)
  }
  menu.classList.remove('hidden');menu.scrollIntoView({block:'nearest',behavior:'smooth'});
 }
+
 $('roomWindow').onclick=manageRoomEvents;
 $('bed').onclick=()=>{showActions('Кровать',[['Отдохнуть',8],['Заправить кровать',2],['Сменить бельё',3]]);const menu=$('actionMenu'),button=document.createElement('button');button.type='button';button.textContent='Добавить сон';button.onclick=()=>{menu.classList.add('hidden');addSleepFromBed()};menu.append(button)};
 
