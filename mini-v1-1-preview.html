@@ -548,6 +548,13 @@ if(!data||typeof data!=='object'||Array.isArray(data)||!Array.isArray(data.tasks
 if(typeof data.resource!=='number'||!Number.isFinite(data.resource)||data.resource<0||data.resource>100||typeof data.mood!=='string'||typeof data.condition!=='string')throw Error('Некорректные показатели в копии');
 if(data.hygiene!==undefined&&data.hygiene!==null&&(!Number.isInteger(data.hygiene)||data.hygiene<0||data.hygiene>100))throw Error('Некорректная гигиена');
 if(data.hygieneHistory!==undefined){if(!data.hygieneHistory||typeof data.hygieneHistory!=='object'||Array.isArray(data.hygieneHistory)||Object.keys(data.hygieneHistory).length>10000)throw Error('Некорректная история гигиены');for(var kv of Object.entries(data.hygieneHistory)){var hd=kv[0],hv=kv[1];if(!/^\d{4}-\d{2}-\d{2}$/.test(hd)||!Number.isFinite(Date.parse(hd+'T12:00:00Z'))||new Date(hd+'T12:00:00Z').toISOString().slice(0,10)!==hd||!Number.isInteger(hv)||hv<0||hv>100)throw Error('Некорректная запись гигиены: '+hd)}}
+if(data.weightHistory!==undefined){
+ if(!data.weightHistory||typeof data.weightHistory!=='object'||Array.isArray(data.weightHistory)||Object.keys(data.weightHistory).length>10000)throw Error('Некорректная история веса');
+ for(var weightEntry of Object.entries(data.weightHistory)){
+  var wd=weightEntry[0],wv=weightEntry[1],wt=new Date(wd+'T12:00:00Z');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(wd)||!Number.isFinite(wt.getTime())||wt.toISOString().slice(0,10)!==wd||typeof wv!=='number'||!Number.isFinite(wv)||wv<20||wv>400)throw Error('Некорректная запись веса: '+String(wd).slice(0,40));
+ }
+}
 if(data.lifeEvents!==undefined){if(!Array.isArray(data.lifeEvents)||data.lifeEvents.length>10000)throw Error('Некорректная история событий');for(var e of data.lifeEvents){if(!e||typeof e!=='object'||Array.isArray(e)||typeof e.date!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(e.date)||!Number.isFinite(Date.parse(e.date+'T12:00:00Z'))||new Date(e.date+'T12:00:00Z').toISOString().slice(0,10)!==e.date||typeof e.at!=='string'||!Number.isFinite(Date.parse(e.at))||!['task','habit'].includes(e.kind)||typeof e.label!=='string'||e.label.length>200||!['completed','undone'].includes(e.action)||!Number.isFinite(e.xpDelta))throw Error('Некорректное событие истории')}}else data.lifeEvents=[];if(data.diary===undefined)data.diary={};
 if(!data.diary||typeof data.diary!=='object'||Array.isArray(data.diary))throw Error('Некорректный дневник');
 if(data.tasks.length>10000||data.habits.length>10000||Object.keys(data.diary).length>10000)throw Error('Слишком много записей');
