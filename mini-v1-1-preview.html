@@ -247,13 +247,27 @@ body.voice-open #voiceOpen{visibility:hidden}
 const KEY='lifesims-mini-v11-preview';
 const defaults=()=>({resource:70,hygiene:null,hygieneHistory:{},mood:'Спокойное',condition:'Нормальное',tasks:[],habits:[],skills:{'Здоровье':0,'Имидж':0,'Экономика':0,'Дисциплина':0,'Психология':0,'Психотерапия':0,'Программирование':0}});
 const $=id=>document.getElementById(id),day=()=>new Date().toLocaleDateString('sv-SE'),week=()=>{const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()-(d.getDay()+6)%7);return d.toLocaleDateString('sv-SE')},period=f=>f==='daily'?day():f==='weekly'?week():f==='monthly'?day().slice(0,7):'once',taskDone=t=>t.frequency&&t.frequency!=='once'?t.donePeriod===period(t.frequency):!!t.done;
-let state;try{state={...defaults(),...JSON.parse(localStorage.getItem(KEY)||'{}')}}catch{state=defaults()}
+let state,storageReadOnly=false,storageRecoveryRaw=null;
+try{
+  const raw=localStorage.getItem(KEY);
+  if(raw===null){state=defaults()}
+  else{
+    const parsed=JSON.parse(raw);
+    if(!parsed||typeof parsed!=='object'||Array.isArray(parsed))throw Error('Некорректный формат сохранения');
+    state={...defaults(),...parsed};
+  }
+}catch(error){
+  storageReadOnly=true;
+  try{storageRecoveryRaw=localStorage.getItem(KEY)}catch(_){}
+  state=defaults();
+  alert('Сохранение LifeSims не удалось прочитать. Запись заблокирована, чтобы не затереть данные. Не изменяй прогресс до восстановления из резервной копии.');
+}
 if(!state.diary||typeof state.diary!=='object'||Array.isArray(state.diary))state.diary={};
 if(!Number.isFinite(state.hygiene)||state.hygiene<0||state.hygiene>100)state.hygiene=null;
 if(!state.hygieneHistory||typeof state.hygieneHistory!=='object'||Array.isArray(state.hygieneHistory))state.hygieneHistory={};
 if(!Array.isArray(state.tasks))state.tasks=[];if(!Array.isArray(state.habits))state.habits=[];if(!state.skills||typeof state.skills!=='object'||Array.isArray(state.skills))state.skills=defaults().skills;
 let lastPersistedSnapshot;try{lastPersistedSnapshot=localStorage.getItem(KEY)}catch(_){lastPersistedSnapshot=null}
-const save=()=>{try{const next=JSON.stringify(state);localStorage.setItem(KEY,next);if(localStorage.getItem(KEY)!==next)throw Error('Проверка записи не пройдена');lastPersistedSnapshot=next}catch(error){if(lastPersistedSnapshot!==null){try{state={...defaults(),...JSON.parse(lastPersistedSnapshot)};render()}catch(_){}}alert('Не удалось сохранить изменения. Последнее сохранённое состояние восстановлено, если оно доступно. Экспортируй резервную копию.');throw error}render()},notify=t=>{$('notice').textContent=t},xp=d=>[0,2,5,10,20][Number(d)]||10;
+const save=()=>{if(storageReadOnly)throw Error('Сохранение заблокировано: требуется восстановление данных');try{const next=JSON.stringify(state);localStorage.setItem(KEY,next);if(localStorage.getItem(KEY)!==next)throw Error('Проверка записи не пройдена');lastPersistedSnapshot=next}catch(error){if(lastPersistedSnapshot!==null){try{state={...defaults(),...JSON.parse(lastPersistedSnapshot)};render()}catch(_){}}alert('Не удалось сохранить изменения. Последнее сохранённое состояние восстановлено, если оно доступно. Экспортируй резервную копию.');throw error}render()},notify=t=>{$('notice').textContent=t},xp=d=>[0,2,5,10,20][Number(d)]||10;
 function skillOptions(){for(const id of ['taskSkill','habitSkill']){const el=$(id),current=el.value;el.replaceChildren();const blank=document.createElement('option');blank.value='';blank.textContent='Без навыка';el.append(blank);for(const name of Object.keys(state.skills)){const opt=document.createElement('option');opt.value=name;opt.textContent=name;el.append(opt)}el.value=Object.prototype.hasOwnProperty.call(state.skills,current)?current:''}}
 const bedHabitName=/^заправить\\s+(?:кровать|постель)$/i;
 function isBedHabit(h){return h.actionId==='make-bed'||(!h.actionId&&bedHabitName.test(String(h.text||h.title||'').trim()))}
