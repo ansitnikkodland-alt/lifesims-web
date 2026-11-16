@@ -358,6 +358,9 @@ function renderHygiene(){
  const dates=Object.keys(hist).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)&&Number.isFinite(hist[k])&&hist[k]>=0&&hist[k]<=100).sort();
  summary.textContent=dates.length?'Последняя запись: '+dates[dates.length-1]+' · '+hist[dates[dates.length-1]]+'/100. Всего дней: '+dates.length+'.':'Нет записей; значения за прошлые дни не создаются автоматически.';
 }
+// Refresh displayed hygiene and crystal without writing synthetic history entries.
+setInterval(()=>{if(!document.hidden){renderHygiene();renderCrystal()}},60000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){renderHygiene();renderCrystal()}});
 function saveHygieneScore(value){
  if(!Number.isInteger(value)||value<0||value>100)throw Error('Гигиена должна быть от 0 до 100');
  state.hygiene=value;state.hygieneUpdatedAt=new Date().toISOString();state.hygieneHistory[day()]=value;save();notify('Гигиена: '+value+'/100. Сохранено за '+day()+'.');
