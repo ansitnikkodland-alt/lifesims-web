@@ -354,7 +354,24 @@ function saveHygieneScore(value){
 $('hygieneSlider').addEventListener('input',function(){ $('hygieneValue').textContent=this.value+' / 100 · не сохранено'; });
 $('saveHygiene').onclick=()=>saveHygieneScore(Number($('hygieneSlider').value));
 function showActions(title,actions){const menu=$('actionMenu');menu.replaceChildren();const h=document.createElement('h3');h.textContent=title;menu.append(h);for(const [label,delta] of actions){const b=document.createElement('button');b.textContent=label;b.onclick=()=>{if(title==='Кровать'&&label==='Заправить кровать'){completeBedHabit();menu.classList.add('hidden');return}if(title==='Душ'&&label==='Принять душ'){if(!confirm('Подтверди, что душ действительно принят. Установить игровую гигиену 100/100?'))return;saveHygieneScore(100);menu.classList.add('hidden');return}state.resource=Math.max(0,Math.min(100,state.resource+delta));save();menu.classList.add('hidden');const sim=$('sim');sim.classList.remove('busy');void sim.offsetWidth;sim.classList.add('busy');notify(label+': игровое действие. Ресурс '+(delta>=0?'+':'')+delta+'. Реальное выполнение не подтверждено.')};menu.append(b)}menu.classList.remove('hidden');menu.scrollIntoView({block:'nearest',behavior:'smooth'})}
-$('bed').onclick=()=>showActions('Кровать',[['Отдохнуть',8],['Заправить кровать',2],['Сменить бельё',3]]);
+function addSleepFromBed(){
+ const date=prompt('Дата сна (ГГГГ-ММ-ДД). Можно изменить прошлую запись.',day());
+ if(date===null)return;
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date+'T12:00:00Z'))||new Date(date+'T12:00:00Z').toISOString().slice(0,10)!==date){alert('Некорректная дата сна');return}
+ const previous=state.diary[date];
+ if(previous!==undefined&&(previous===null||typeof previous!=='object'||Array.isArray(previous))){alert('Запись за эту дату повреждена. Сохранение отменено.');return}
+ const raw=prompt('Сколько часов сна за '+date+'? Например, 7,5.',previous?.sleepHours??'');
+ if(raw===null)return;
+ const normalized=raw.trim().replace(',','.');
+ if(!/^(?:\d{1,2})(?:\.\d{1,2})?$/.test(normalized)||Number(normalized)>24){alert('Укажи часы сна от 0 до 24, например 7,5');return}
+ const hours=Number(normalized);
+ if(!confirm('Сохранить сон: '+date+', '+hours+' ч? Другие данные за день останутся без изменений.'))return;
+ const record={...(previous||{}),sleepHours:hours,source:'manual',savedAt:new Date().toISOString()};
+ state.diary[date]=record;
+ try{save();if($('diaryDate').value===date)loadDiary();renderDiaryHistory();notify('Сон за '+date+': '+hours+' ч. Записано вручную. XP не начисляются.')}catch(e){alert('Не удалось сохранить сон: '+(e.message||String(e)))}
+}
+$('bed').onclick=()=>{showActions('Кровать',[['Отдохнуть',8],['Заправить кровать',2],['Сменить бельё',3]]);const menu=$('actionMenu'),button=document.createElement('button');button.type='button';button.textContent='Добавить сон';button.onclick=()=>{menu.classList.add('hidden');addSleepFromBed()};menu.append(button)};
+
 $('shower').onclick=()=>showActions('Душ',[['Принять душ',6],['Помыть душ',3]]);
 function editCharacterWeight(){const history=weightHistory(),dates=Object.keys(history).filter(k=>/^\d{4}-\d{2}-\d{2}$/.test(k)&&Number.isFinite(history[k])).sort(),last=dates[dates.length-1];const date=prompt('Дата замера (ГГГГ-ММ-ДД). Можно исправить прошлую запись.',last||day());if(date===null)return;if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||!Number.isFinite(Date.parse(date+'T12:00:00Z'))||new Date(date+'T12:00:00Z').toISOString().slice(0,10)!==date){alert('Некорректная дата');return}const raw=prompt('Вес на '+date+', кг. Отмена — без изменений.',history[date]===undefined?'':String(history[date]).replace('.',','));if(raw===null)return;const normalized=raw.trim().replace(',','.');if(!/^\d+(?:\.\d{1,2})?$/.test(normalized)||!Number.isFinite(Number(normalized))||Number(normalized)<20||Number(normalized)>400){alert('Введи вес от 20 до 400 кг, например 59,5');return}history[date]=Number(normalized);try{save();notify('Вес за '+date+' сохранён: '+normalized+' кг. Задачи и XP не изменены.')}catch(e){alert('Не удалось сохранить вес: '+(e.message||String(e)))}}
 $('sim').onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();$('sim').click()}};
