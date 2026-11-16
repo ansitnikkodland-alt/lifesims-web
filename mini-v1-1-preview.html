@@ -160,6 +160,10 @@ nav#tabs button.active{background:#e6c5df;color:#38253e}
 #voicePreview{font-weight:650;color:#e6c9ff}
 
 /* Faceted SVG crystal, accessible palette driven by three recorded state values. */
+.room .crystal{left:50%!important;top:2%!important;transform:translateX(-50%);width:clamp(56px,16vw,88px)!important;height:clamp(66px,19vw,100px)!important;z-index:8;animation:plumbobFloat 3s ease-in-out infinite}
+@keyframes plumbobFloat{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-8px)}}
+@media(prefers-reduced-motion:reduce){.room .crystal{animation:none}}
+
 .room .crystal{width:clamp(44px,12vw,70px);height:clamp(48px,13vw,75px);line-height:0;display:grid;place-items:center;padding:0 3px;filter:drop-shadow(0 1px 5px var(--gem-glow,#7ccde9));transition:filter .2s ease}
 .room .crystal .resource-gem{display:block;width:100%;height:100%;overflow:visible}
 .room .crystal{--gem-light:#c9efff;--gem-base:#56bde3;--gem-deep:#196aa7;--gem-glow:#4ea8de}
@@ -402,10 +406,19 @@ function manageRoomEvents(){
   if(!title.trim()||title.trim().length>160){alert('Название: от 1 до 160 символов');return}
   const startsAt=prompt('Дата и время (ГГГГ-ММ-ДДTЧЧ:ММ)',day()+'T12:00');if(startsAt===null)return;
   if(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(startsAt)||!Number.isFinite(Date.parse(startsAt))||new Date(startsAt.slice(0,10)+'T12:00:00Z').toISOString().slice(0,10)!==startsAt.slice(0,10)||Number(startsAt.slice(11,13))>23||Number(startsAt.slice(14,16))>59){alert('Некорректная дата или время');return}
-  if(!confirm('Сохранить мероприятие «'+title.trim()+'» на '+startsAt.replace('T',' ')+'?'))return;
-  state.events.push({title:title.trim(),startsAt});try{save();manageRoomEvents()}catch(e){alert('Мероприятие не сохранено: '+e.message)}
+  const endText=prompt('Конец мероприятия (необязательно; ГГГГ-ММ-ДДTЧЧ:ММ). Оставь пустым, если конца нет.','');
+  if(endText===null)return;
+  const endsAt=endText.trim()||null;
+  if(endsAt&&(!/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(endsAt)||!Number.isFinite(Date.parse(endsAt))||new Date(endsAt.slice(0,10)+'T12:00:00Z').toISOString().slice(0,10)!==endsAt.slice(0,10)||Number(endsAt.slice(11,13))>23||Number(endsAt.slice(14,16))>59||endsAt<=startsAt)){alert('Конец должен быть позже начала');return}
+  const repeatText=prompt('Повтор: нет, ежедневно, еженедельно, ежемесячно, ежегодно','нет');
+  if(repeatText===null)return;
+  const repeats={нет:'none',ежедневно:'daily',еженедельно:'weekly',ежемесячно:'monthly',ежегодно:'yearly'};
+  const repeat=repeats[repeatText.trim().toLowerCase()];
+  if(!repeat){alert('Неизвестный тип повтора');return}
+  if(!confirm('Сохранить мероприятие «'+title.trim()+'» на '+startsAt.replace('T',' ')+(endsAt?' — '+endsAt.replace('T',' '):'')+'; повтор: '+repeatText+'?'))return;
+  state.events.push({title:title.trim(),startsAt,endsAt,repeat});try{save();manageRoomEvents()}catch(e){alert('Мероприятие не сохранено: '+e.message)}
  };menu.append(add);
- for(const e of state.events.slice().sort((a,b)=>a.startsAt.localeCompare(b.startsAt)).slice(0,100)){const b=document.createElement('button');b.type='button';b.textContent=e.startsAt.replace('T',' ')+' · '+e.title;b.onclick=()=>{if(!confirm('Удалить мероприятие «'+e.title+'»?'))return;const i=state.events.indexOf(e);if(i<0)return;state.events.splice(i,1);try{save();manageRoomEvents()}catch(err){alert('Не удалось удалить: '+err.message)}};menu.append(b)}
+ for(const e of state.events.slice().sort((a,b)=>a.startsAt.localeCompare(b.startsAt)).slice(0,100)){const b=document.createElement('button');b.type='button';b.textContent=e.startsAt.replace('T',' ')+(e.endsAt?' — '+e.endsAt.replace('T',' '):'')+' · '+e.title+(e.repeat&&e.repeat!=='none'?' ↻ '+({daily:'ежедневно',weekly:'еженедельно',monthly:'ежемесячно',yearly:'ежегодно'}[e.repeat]||e.repeat):'');b.onclick=()=>{if(!confirm('Удалить мероприятие «'+e.title+'»?'))return;const i=state.events.indexOf(e);if(i<0)return;state.events.splice(i,1);try{save();manageRoomEvents()}catch(err){alert('Не удалось удалить: '+err.message)}};menu.append(b)}
  menu.classList.remove('hidden');menu.scrollIntoView({block:'nearest',behavior:'smooth'});
 }
 $('roomWindow').onclick=manageRoomEvents;
