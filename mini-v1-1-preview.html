@@ -539,8 +539,20 @@ status.textContent='Файл проверен. Ожидается подтвер
 if(!window.confirm('Заменить данные тестовой MINI v1.1? Сначала скачай резервную копию текущих данных.')){status.textContent='Отменено. Данные не изменены.';return;}
 var key='lifesims-mini-v11-preview',before=localStorage.getItem(key);
 if(before!==null){var blob=new Blob([before],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='lifesims-mini-before-restore.json';document.body.appendChild(a);a.click();a.remove();setTimeout(function(){URL.revokeObjectURL(url)},3000);}
-try{localStorage.setItem(key,JSON.stringify(data));}catch(e){throw Error('Не удалось сохранить данные на устройстве: '+e.message);}
-status.textContent='Данные восстановлены. Перезагрузи страницу для отображения.';
+var serialized=JSON.stringify(data);
+try{
+  localStorage.setItem(key,serialized);
+  if(localStorage.getItem(key)!==serialized)throw Error('Проверка записи после восстановления не пройдена');
+}catch(e){
+  try{
+    if(localStorage.getItem(key)!==before){
+      if(before===null)localStorage.removeItem(key);
+      else localStorage.setItem(key,before);
+    }
+  }catch(rollbackError){throw Error('Восстановление не удалось, откат также не удался. Не изменяй данные; сохрани резервную копию: '+rollbackError.message);}
+  throw Error('Не удалось сохранить данные на устройстве: '+e.message);
+}
+status.textContent='Данные восстановлены и проверены чтением. Перезагрузи страницу для отображения.';
 }catch(e){status.textContent='Восстановление не выполнено: '+(e.message||String(e));}finally{button.disabled=false;}
 },true);
 })();
