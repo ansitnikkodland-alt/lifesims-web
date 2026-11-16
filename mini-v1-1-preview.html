@@ -433,7 +433,39 @@ function manageRoomEvents(){
   if(!confirm('Сохранить мероприятие «'+title.trim()+'» на '+startsAt.replace('T',' ')+(endsAt?' — '+endsAt.replace('T',' '):'')+'; повтор: '+repeatText+'?'))return;
   state.events.push({title:title.trim(),startsAt,endsAt,repeat});try{save();manageRoomEvents()}catch(e){alert('Мероприятие не сохранено: '+e.message)}
  };menu.append(add);
- for(const e of state.events.slice().sort((a,b)=>a.startsAt.localeCompare(b.startsAt)).slice(0,100)){const b=document.createElement('button');b.type='button';b.textContent=e.startsAt.replace('T',' ')+(e.endsAt?' — '+e.endsAt.replace('T',' '):'')+' · '+e.title+(e.repeat&&e.repeat!=='none'?' ↻ '+({daily:'ежедневно',weekly:'еженедельно',monthly:'ежемесячно',yearly:'ежегодно'}[e.repeat]||e.repeat):'');b.onclick=()=>{if(!confirm('Удалить мероприятие «'+e.title+'»?'))return;const i=state.events.indexOf(e);if(i<0)return;state.events.splice(i,1);try{save();manageRoomEvents()}catch(err){alert('Не удалось удалить: '+err.message)}};menu.append(b)}
+
+ for(const e of state.events.slice().sort((a,b)=>a.startsAt.localeCompare(b.startsAt)).slice(0,100)){
+  const b=document.createElement('button');b.type='button';
+  b.textContent=e.startsAt.replace('T',' ')+(e.endsAt?' — '+e.endsAt.replace('T',' '):'')+' · '+e.title+(e.repeat&&e.repeat!=='none'?' ↻ '+({daily:'ежедневно',weekly:'еженедельно',monthly:'ежемесячно',yearly:'ежегодно'}[e.repeat]||e.repeat):'');
+  b.onclick=()=>{
+   menu.replaceChildren();
+   const heading=document.createElement('h3');heading.textContent=e.title;menu.append(heading);
+   const edit=document.createElement('button');edit.type='button';edit.textContent='✏️ Редактировать';
+   edit.onclick=()=>{
+    const title=prompt('Название мероприятия',e.title);if(title===null)return;
+    if(!title.trim()||title.trim().length>160){alert('Название: от 1 до 160 символов');return}
+    const startsAt=prompt('Начало (ГГГГ-ММ-ДДTЧЧ:ММ)',e.startsAt);if(startsAt===null)return;
+    if(!validEventLocalTime(startsAt)){alert('Некорректное начало');return}
+    const endText=prompt('Конец (необязательно, оставь пустым)',e.endsAt||'');if(endText===null)return;
+    const endsAt=endText.trim()||null;
+    if(endsAt&&(!validEventLocalTime(endsAt)||endsAt<=startsAt)){alert('Конец должен быть позже начала');return}
+    const options={нет:'none',ежедневно:'daily',еженедельно:'weekly',ежемесячно:'monthly',ежегодно:'yearly'};
+    const reverse={none:'нет',daily:'ежедневно',weekly:'еженедельно',monthly:'ежемесячно',yearly:'ежегодно'};
+    const repeatText=prompt('Повтор: нет, ежедневно, еженедельно, ежемесячно, ежегодно',reverse[e.repeat||'none']||'нет');
+    if(repeatText===null)return;
+    const repeat=options[repeatText.trim().toLowerCase()];
+    if(!repeat){alert('Неизвестный тип повтора');return}
+    if(!confirm('Сохранить изменения мероприятия «'+title.trim()+'»?'))return;
+    const index=state.events.indexOf(e);if(index<0){alert('Мероприятие не найдено');return}
+    state.events[index]={...e,title:title.trim(),startsAt,endsAt,repeat};
+    try{save();manageRoomEvents();renderDiaryCalendar()}catch(err){alert('Не удалось сохранить: '+err.message)}
+   };
+   const remove=document.createElement('button');remove.type='button';remove.textContent='Удалить';
+   remove.onclick=()=>{if(!confirm('Удалить мероприятие «'+e.title+'»?'))return;const i=state.events.indexOf(e);if(i<0)return;state.events.splice(i,1);try{save();manageRoomEvents();renderDiaryCalendar()}catch(err){alert('Не удалось удалить: '+err.message)}};
+   const back=document.createElement('button');back.type='button';back.textContent='Назад';back.onclick=manageRoomEvents;
+   menu.append(edit,remove,back);
+  };menu.append(b)
+ }
  menu.classList.remove('hidden');menu.scrollIntoView({block:'nearest',behavior:'smooth'});
 }
 $('roomWindow').onclick=manageRoomEvents;
