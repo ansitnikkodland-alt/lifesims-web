@@ -160,6 +160,9 @@ nav#tabs button.active{background:#e6c5df;color:#38253e}
 #voicePreview{font-weight:650;color:#e6c9ff}
 
 /* Faceted SVG crystal, accessible palette driven by three recorded state values. */
+/* Place plumbob on the avatar's centerline, just above its head. */
+.room .crystal{left:57.5%!important;top:20%!important;width:clamp(36px,10vw,54px)!important;height:clamp(66px,18vw,92px)!important;z-index:8}
+
 .room .crystal{left:50%!important;top:2%!important;transform:translateX(-50%);width:clamp(56px,16vw,88px)!important;height:clamp(66px,19vw,100px)!important;z-index:8;animation:plumbobFloat 3s ease-in-out infinite}
 @keyframes plumbobFloat{0%,100%{transform:translate(-50%,0)}50%{transform:translate(-50%,-8px)}}
 @media(prefers-reduced-motion:reduce){.room .crystal{animation:none}}
@@ -192,16 +195,17 @@ body.voice-open #voiceOpen{visibility:hidden}
 #voiceOpen{right:14px;bottom:calc(82px + env(safe-area-inset-bottom));width:54px;height:54px}
 #voicePanel{right:12px;left:12px;bottom:calc(78px + env(safe-area-inset-bottom));width:auto;max-height:calc(100dvh - 115px)}
 }
+
+.room .crystal{left:57.5%!important;top:20%!important;width:clamp(36px,10vw,54px)!important;height:clamp(66px,18vw,92px)!important;z-index:8}
 </style></head><body><main class="app"><header><div><h1>LifeSims <small>MINI v1.1</small></h1><p class="muted">Реконструкция интерфейса · данные на устройстве</p></div></header><nav id="tabs"><button class="active" data-tab="home">Дом</button><button data-tab="tasks">Дела</button><button data-tab="habits">Привычки</button><button data-tab="skills">Навыки</button><button data-tab="diary">Дневник</button><button data-tab="data">Данные</button></nav><button type="button" id="voiceOpen" aria-label="Голосовой ввод дела или привычки" title="Голосовой ввод">🎙️</button><section id="voicePanel" class="card voice-panel hidden" aria-label="Голосовой и быстрый ввод"><h2>🎙️ Голосовой ввод</h2><p class="hint">Скажи «Добавь дело купить продукты», «Добавь привычку читать», «Найди уборка», «Выполни помыть посуду» или «Перенеси дело уборка на завтра».</p><div class="voice-entry"><input id="voiceText" maxlength="220" autocomplete="off" aria-label="Распознанная команда" placeholder="Скажи или введи задачу" type="text"><button type="button" id="voiceListen">🎙️ Говорить</button></div><div class="voice-entry"><button type="button" id="voicePrepare">Проверить команду</button><button type="button" id="voiceConfirm" disabled>Подтвердить</button><button type="button" id="voiceCancel">Закрыть</button></div><p class="small" id="voiceStatus" role="status">Ничего не будет создано или отмечено без подтверждения.</p><p class="small" id="voicePreview" aria-live="polite"></p><p class="small">Голос зависит от браузера; распознавание может передавать звук сервису браузера. Текстовый ввод работает без микрофона.</p></section><section id="home"><div class="card"><div class="line"><h2>Мой персонаж</h2><span id="date"></span></div><div class="room"><div class="wall" role="button" tabindex="0" aria-label="Стены: изменить оформление комнаты" title="Нажми для оформления комнаты"></div><div class="floor"></div><div class="room-stars" aria-hidden="true"></div><button type="button" class="room-shelf" id="roomShelf" aria-label="Полка: выбрать украшение"></button><button type="button" class="room-cabinet" id="roomCabinet" aria-label="Комод: разобрать вещи или сменить одежду"></button><button type="button" class="room-mirror" id="roomMirror" aria-label="Зеркало: изменить внешний вид">🪞</button><button type="button" class="room-washer" id="roomWasher" aria-label="Стиральная машина: постирать">🧺</button><button type="button" class="room-sink" id="roomSink" aria-label="Раковина: помыть посуду или раковину">🚰</button><button class="window" id="roomWindow" type="button" aria-label="Окно: мероприятия" title="Мероприятия"><span></span></button><div class="wall-art" aria-hidden="true">✿</div><button type="button" class="plant" id="roomPlant" aria-label="Растение: ухаживать">🪴</button><div class="rug" aria-hidden="true"></div><button type="button" class="lamp" id="roomLamp" aria-label="Лампа: включить или выключить">💡</button><button class="crystal" id="crystal" type="button" title="Сводный ресурс: самочувствие + настроение + гигиена" aria-label="Сводный ресурс персонажа">
-<svg viewBox="0 0 100 104" class="resource-gem" aria-hidden="true" focusable="false">
-<path class="gem-outline" d="M25 10H75L96 35 50 98 4 35Z"/>
-<path class="gem-top" d="M25 10H75L96 35H4Z"/>
-<path class="gem-left" d="M4 35H36L50 98Z"/>
-<path class="gem-center" d="M36 35H64L50 98Z"/>
-<path class="gem-right" d="M64 35H96L50 98Z"/>
-<path class="gem-highlight" d="M25 10 36 35 4 35Z"/>
-<path class="gem-highlight" d="M75 10 64 35 96 35Z"/>
-<path d="M25 10 36 35 50 98 64 35 75 10 M4 35H96" fill="none" stroke="#fff" stroke-opacity=".56" stroke-width="2"/>
+<svg viewBox="0 0 100 160" class="resource-gem" aria-hidden="true" focusable="false">
+<path d="M50 2 89 44 75 111 50 158 25 111 11 44Z" fill="var(--gem-base)" stroke="var(--gem-light)" stroke-width="2.2"/>
+<path d="M50 2 11 44 50 57Z" fill="var(--gem-light)"/>
+<path d="M50 2 89 44 50 57Z" fill="var(--gem-base)"/>
+<path d="M11 44 50 57 50 158 25 111Z" fill="var(--gem-base)"/>
+<path d="M89 44 50 57 50 158 75 111Z" fill="var(--gem-deep)"/>
+<path d="M50 57 25 111 50 158 75 111Z" fill="var(--gem-light)" opacity=".48"/>
+<path d="M50 2V158M11 44 50 57 89 44M25 111 50 57 75 111" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width="1.5"/>
 </svg>
 </button><button class="shower" id="shower" title="Принять душ">🚿</button><div class="sim" id="sim" role="button" tabindex="0" title="Изменить персонажа" aria-label="Персонаж: изменить вес, волосы или одежду">
 <svg class="avatar-svg" viewBox="0 0 160 320" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
@@ -245,7 +249,7 @@ body.voice-open #voiceOpen{visibility:hidden}
 <path d="M55 54 Q49 82 52 111 Q60 125 66 113 L64 90Z" fill="url(#avatarHairShadow)"/>
 <path d="M106 56 Q113 91 109 113 Q101 120 97 109 L101 89Z" fill="url(#avatarHairShadow)"/>
 <ellipse cx="80" cy="69" rx="25" ry="35" fill="url(#avatarFaceLight)" pointer-events="none"/>
-<path d="M63 58 Q70 55 77 58 M87 58 Q95 55 102 59" fill="none" stroke="#4d353c" stroke-width="2.4" stroke-linecap="round" opacity=".65"/>
+
 <path d="M65 64 Q72 60 77 64 M86 64 Q93 61 99 65" fill="none" stroke="#66494d" stroke-width="2" stroke-linecap="round"/>
 <path d="M65 70 Q72 67 78 70 M86 70 Q93 67 100 70" fill="none" stroke="#3d3340" stroke-width="1.3" stroke-linecap="round"/>
 <path d="M68 77 Q72 79 76 77 M89 77 Q93 79 97 77" fill="none" stroke="#d8a18e" stroke-width=".8" opacity=".65"/>
