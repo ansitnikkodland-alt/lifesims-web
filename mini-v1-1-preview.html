@@ -412,7 +412,7 @@ function addSleepFromBed(){
  state.diary[date]=record;
  try{save();if($('diaryDate').value===date)loadDiary();renderDiaryHistory();notify('Сон за '+date+': '+hours+' ч. Записано вручную. XP не начисляются.')}catch(e){alert('Не удалось сохранить сон: '+(e.message||String(e)))}
 }
-function eventEditor(existing=null){
+function eventEditor(existing=null,initialDate=null){
  const menu=$('actionMenu');menu.replaceChildren();
  const heading=document.createElement('h3');heading.textContent=existing?'Редактировать мероприятие':'Новое мероприятие';menu.append(heading);
  const form=document.createElement('form');form.className='event-form';
@@ -422,7 +422,7 @@ function eventEditor(existing=null){
   wrap.append(input);form.append(wrap);return input;
  };
  const title=field('Название','text',existing?.title||'',true);title.maxLength=160;
- const start=field('Начало','datetime-local',existing?.startsAt||day()+'T12:00',true);
+ const start=field('Начало','datetime-local',existing?.startsAt||(initialDate||day())+'T12:00',true);
  const hasEnd=document.createElement('label');hasEnd.className='event-check';
  const endToggle=document.createElement('input');endToggle.type='checkbox';endToggle.checked=!!existing?.endsAt;
  hasEnd.append(endToggle,document.createTextNode(' Указать окончание'));form.append(hasEnd);
@@ -516,6 +516,7 @@ function renderCalendarAgenda(date){
  const host=$('calendarAgenda');if(!host)return;
  host.replaceChildren();
  const h=document.createElement('h3');h.textContent='План на '+date;host.append(h);
+ const create=document.createElement('button');create.type='button';create.textContent='＋ Мероприятие на этот день';create.onclick=()=>eventEditor(null,date);host.append(create);
  const items=calendarItems(date);
  if(!items.length){const p=document.createElement('p');p.className='small';p.textContent='Нет запланированных дел и мероприятий на эту дату';host.append(p);return}
  for(const item of items){const p=document.createElement('p');p.className='small';p.textContent=(item.type==='event'?'📅 ':'☑ ') +(item.time?item.time+(item.end?'–'+item.end:'')+' · ':'')+item.title+(item.repeat!=='none'?' ↻':'');host.append(p)}
