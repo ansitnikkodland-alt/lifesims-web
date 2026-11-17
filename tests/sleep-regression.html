@@ -1,0 +1,24 @@
+<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LifeSims — проверки сна</title><style>body{font:16px system-ui;max-width:650px;margin:2rem auto;padding:1rem}li{margin:.5rem 0}.pass{color:green}.fail{color:crimson}iframe{display:none}</style><h1>Проверки расчёта сна</h1><p>Только чтение: тесты не изменяют сохранения. Проверяется функция непосредственно из опубликованного приложения.</p><ol id="results"></ol><strong id="summary">Загрузка…</strong><iframe id="app" src="./lifesims-character-20261116-v2.html" title="LifeSims"></iframe><script>
+const tests=[
+['Нет записей — нет выдуманного сна',{},'2026-11-17',r=>r===null],
+['7,5 часа — 100%',{'2026-11-17':{sleepHours:7.5}},'2026-11-17',r=>r.score===100&&r.debt===0],
+['6 часов — 1,5 часа долга',{'2026-11-17':{sleepHours:6}},'2026-11-17',r=>r.debt===1.5&&r.score<100],
+['Три дня по 6 часов — 4,5 часа долга',{'2026-11-15':{sleepHours:6},'2026-11-16':{sleepHours:6},'2026-11-17':{sleepHours:6}},'2026-11-17',r=>r.debt===4.5&&r.days===3],
+['Пропуск разрывает последовательность',{'2026-11-14':{sleepHours:5},'2026-11-17':{sleepHours:7.5}},'2026-11-17',r=>r.debt===0&&r.days===1],
+['Будущая запись не учитывается',{'2026-11-18':{sleepHours:3}},'2026-11-17',r=>r===null],
+['Долг не становится отрицательным',{'2026-11-16':{sleepHours:6},'2026-11-17':{sleepHours:10}},'2026-11-17',r=>r.debt===0],
+['Строка вместо числа не считается измерением',{'2026-11-17':{sleepHours:'7.5'}},'2026-11-17',r=>r===null]
+];
+const frame=document.getElementById('app'),list=document.getElementById('results'),summary=document.getElementById('summary');
+frame.addEventListener('load',()=>{
+ let passed=0;
+ for(const [label,diary,date,check] of tests){
+  const li=document.createElement('li');let ok=false;
+  try{ok=check(frame.contentWindow.sleepResourceFromDiary(diary,date))}catch(e){li.title=String(e)}
+  li.textContent=(ok?'✓ ':'✗ ')+label;li.className=ok?'pass':'fail';list.append(li);if(ok)passed++;
+ }
+ summary.textContent='Пройдено '+passed+' из '+tests.length;
+ summary.className=passed===tests.length?'pass':'fail';
+});
+frame.addEventListener('error',()=>{summary.textContent='Не удалось загрузить приложение';summary.className='fail'});
+</script></html>
