@@ -62,7 +62,7 @@ if(Array.isArray(old.log))for(const l of old.log){if(!l||typeof l.at!=='string'|
 return s}
 function save(){try{localStorage.setItem(STORE,JSON.stringify(state));storageOK=true;setStorage();return true}catch(e){storageOK=false;setStorage();toast('Данные не записались в браузер. Экспортируй резервную копию.');return false}}
 function setStorage(message){$('storageStatus').textContent=message|| (storageOK?'✓ Локальное сохранение доступно. Перед обновлением экспортируй JSON.':'⚠ Локальное сохранение недоступно. Не закрывай страницу без экспорта.');$('storageStatus').classList.toggle('error',!storageOK)}
-function load(){try{const x=localStorage.getItem(STORE);if(x){state=normalize(JSON.parse(x));storageOK=true;return}const v1=localStorage.getItem(OLD);if(v1){const raw=JSON.parse(v1);if(raw&&Array.isArray(raw.tasks)&&raw.skills){state=migrate(raw);save();setStorage('✓ Найдены старые данные: создана отдельная копия. Старое хранилище не изменено.');return}}state=base();save()}catch(e){state=base();storageOK=false;setStorage('⚠ Старые данные не удалось прочитать или хранилище недоступно. Используй импорт JSON.')}}
+function load(){try{const x=localStorage.getItem(STORE);if(x){state=normalize(JSON.parse(x));storageOK=true;setStorage();return}const v1=localStorage.getItem(OLD);if(v1){const raw=JSON.parse(v1);if(raw&&Array.isArray(raw.tasks)&&raw.skills){state=migrate(raw);save();setStorage('✓ Найдены старые данные: создана отдельная копия. Старое хранилище не изменено.');return}}state=base();save()}catch(e){state=base();storageOK=false;setStorage('⚠ Старые данные не удалось прочитать или хранилище недоступно. Используй импорт JSON.')}}
 let toastTimeout;function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>t.classList.remove('show'),3300)}
 function currentRecord(d){const x=state.days[d];return x&&typeof x==='object'?x:{}};
 function transact(fn){const before=JSON.stringify(state);fn();if(save())return true;state=JSON.parse(before);return false}
@@ -84,7 +84,7 @@ const width=popup.offsetWidth,height=popup.offsetHeight;
 const midX=(ar.left+ar.right)/2-sr.left,midY=(ar.top+ar.bottom)/2-sr.top;
 const right=midX+12,left=midX-width-12;
 const x=right+width+6<=sr.width?right:(left>=6?left:Math.max(6,Math.min(sr.width-width-6,midX-width/2)));
-const y=Math.max(6,Math.min(sr.height-height-6,midY-height/2));
+const y=Math.max(6,Math.min(Math.max(6,sr.height-height-6),midY-height/2));
 $('sheetWrap').style.setProperty('--pop-left',x+'px');$('sheetWrap').style.setProperty('--pop-top',y+'px');
 }
 function openObject(object,anchor){
