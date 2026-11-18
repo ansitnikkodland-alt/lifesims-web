@@ -34,8 +34,8 @@
 <div class="note">Это проверочная HTML-версия, а не готовая 3D-игра. Данные хранятся локально, без учётной записи и облачной синхронизации. Функции реального приложения, не показанные здесь, не реализованы в прототипе. Не удаляй предыдущую версию и резервную копию.</div></main>
 <script>
 'use strict';
-// Keep the same v1 shape/key as the existing web app, preserving unknown future fields.
-const KEY='lifesims-personal-mini-v1';
+// Isolated preview storage: never mutate the main app's localStorage key. JSON backups can be imported explicitly.
+const KEY='lifesims-room-preview-v1';
 const defaults=()=>({schema:1,resource:70,mood:'спокойное',condition:'нормальное',projects:['Личное','Дом','Работа'],skills:{'Здоровье':0,'Имидж':0,'Экономика':0,'Дисциплина':0,'Психология':0,'Психотерапия':0,'Программирование':0},tasks:[],habits:[],log:[],roomClaims:[]});
 const $=id=>document.getElementById(id);
 let state=defaults(), storageAvailable=true;
@@ -51,9 +51,9 @@ const claimKey=title=>today()+'|'+norm(title);
 const note=t=>$('message').textContent=t;
 function completeAction(title,skill,xp,delta){
  if(!skill){note(title+' — функция пока не реализована.');return;}
- const claim=claimKey(title),linked=state.tasks.find(t=>norm(t.name)===norm(title));
- if(state.roomClaims.includes(claim)||(linked&&linked.done)){note('Уже выполнено; XP повторно не начисляются.');return;}
- const next=hydrate(state);const item=next.tasks.find(t=>norm(t.name)===norm(title));
+ const claim=claimKey(title),linked=state.tasks.find(t=>norm(t.name)===norm(title)&&!t.done);
+ if(state.roomClaims.includes(claim)){note('Уже выполнено сегодня; XP повторно не начисляются.');return;}
+ const next=hydrate(state);const item=linked?next.tasks.find(t=>t.id===linked.id):null;
  const earned=item?Number(item.xp||20):xp;
  if(item){item.done=true;item.completedAt=new Date().toISOString();next.skills['Дисциплина']=(next.skills['Дисциплина']||0)+earned;}
  else next.skills[skill]=(next.skills[skill]||0)+earned;
