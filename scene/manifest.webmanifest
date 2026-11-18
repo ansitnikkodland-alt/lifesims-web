@@ -1,0 +1,18 @@
+{
+  "name": "LifeSims — моя жизнь",
+  "short_name": "LifeSims",
+  "id": "./",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#171f35",
+  "theme_color": "#19223d",
+  "icons": [
+    {
+      "src": "../icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}
