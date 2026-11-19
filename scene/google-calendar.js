@@ -395,6 +395,8 @@
         if (!local.google?.id && !claimed.has(local.id)) changes.push({ type: 'create', title: local.title, local });
       }
     }
+    // Hide legacy expanded masters only after individual occurrences are safely stored.
+    changes.sort((a,b)=>(a.type==='supersede'?1:0)-(b.type==='supersede'?1:0));
     for (const local of locals) {
       const cid=local.google?.calendarId||'primary';
       if(local.google?.id && selectedIds.has(cid)&&!local.google?.supersededRange&&
