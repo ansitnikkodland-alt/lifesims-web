@@ -175,7 +175,10 @@ function openTab(tab,jump=false){
 function showNeedsEditor(field='',date=today()){
   openTab('needs',true);fillState(date);$('needsEditor').open=true;
   requestAnimationFrame(()=>{
-    const target=field?$(field):$('stateDate');
+    // An empty slider remains intentionally "Не записано"; focus its checkbox
+    // instead of moving keyboard focus to a disabled range input.
+    const unknown=field&&sliderFields.includes(field)&&$(field+'Unknown').checked;
+    const target=unknown?$(field+'Unknown'):(field?$(field):$('stateDate'));
     if(target){
       target.scrollIntoView({behavior:'smooth',block:'center'});
       if(field)target.focus({preventScroll:true});
