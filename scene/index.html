@@ -171,6 +171,7 @@ $('closeSheet').focus({preventScroll:true});
 function closeSheet(){$('sheetWrap').classList.remove('open');$('sheetWrap').setAttribute('aria-hidden','true')}
 function openTab(tab,jump=false){
   if(tab==='tasks'||tab==='schedule')tab='history';
+  if(tab!=='history')closeDayAgenda();
   if(tab==='state')tab='needs';
   closeSheet();selectedTab=tab;
   document.querySelectorAll('.section').forEach(section=>section.classList.toggle('active',section.id===tab));
@@ -255,6 +256,97 @@ function scheduleHistoryOccurrences(from,to){
   }
   return entries.sort((a,b)=>a.date.localeCompare(b.date)||a.startsAt-b.startsAt||a.title.localeCompare(b.title,'ru'));
 }
+
+function safeEventColor(color){return /^#[0-9a-fA-F]{6}$/.test(color||'')?color:'#4285f4'}
+function timeOf(when){return new Date(when).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}
+function closeDayAgenda(){$('dayAgendaOverlay').hidden=true}
+function openDayAgenda(date){
+  $('historyDate').value=date;
+  renderHistory();
+  $('dayAgendaOverlay').hidden=false;
+  renderDayAgenda();
+  $('agendaClose').focus({preventScroll:true});
+}
+function renderDayAgenda(){
+  if($('dayAgendaOverlay').hidden)return;
+  const date=$('historyDate').value||today();
+  const d=asDay(date);
+  $('agendaTitle').textContent=d.toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'});
+  const occurrences=scheduleHistoryOccurrences(date,date);
+  const tasks=state.activities.filter(a=>a&&!a.legacyDone&&due(a,date)&&
+    (a.kind!=='habit'||a.createdDate||date>=(state.createdAt||'').slice(0,10)));
+  const completed=(state.events||[]).filter(e=>e.date===date);
+  $('agendaSubtitle').textContent=occurrences.length+' мероприятий · '+tasks.length+' дел и привычек';
+  const body=$('agendaBody');body.replaceChildren();
+  function title(label){const h=document.createElement('div');h.className='agenda-group-title';h.textContent=label;body.append(h)}
+  function eventLine(item,allDay){
+    const row=document.createElement('div');row.className='agenda-entry';
+    const time=document.createElement('span');time.className='agenda-time';
+    time.textContent=allDay?'Весь день':timeOf(item.startsAt);
+    const color=document.createElement('span');color.className='agenda-event-color';
+    color.style.setProperty('--event-color',safeEventColor(item.color));
+    const main=document.createElement('div');main.className='agenda-event-main';
+    const name=document.createElement('div');name.className='agenda-event-title';name.textContent=item.title;
+    const meta=document.createElement('div');meta.className='agenda-event-meta';
+    meta.textContent=(item.google?item.sourceName:'LifeSims')+
+      (allDay?'':' · '+timeOf(item.startsAt)+'–'+timeOf(item.endsAt));
+    main.append(name,meta);row.append(time,color,main);
+    if(item.id){
+      const edit=document.createElement('button');edit.className='agenda-edit';edit.type='button';edit.textContent='Изменить';
+      edit.onclick=()=>{closeDayAgenda();openCalendarEventEditor(item.id)};
+      row.append(edit);
+    }
+    body.append(row);
+  }
+  const allDay=occurrences.filter(e=>e.allDay);
+  if(allDay.length){title('Весь день');for(const e of allDay)eventLine(e,true)}
+  const timed=occurrences.filter(e=>!e.allDay).sort((a,b)=>a.startsAt-b.startsAt);
+  if(timed.length){title('По времени');for(const e of timed)eventLine(e,false)}
+  if(tasks.length){
+    title('Дела и привычки');
+    for(const task of tasks){
+      const row=document.createElement('div');row.className='agenda-entry';
+      const check=document.createElement('button');check.type='button';check.className='agenda-check';
+      const finished=done(task,date);check.textContent=finished?'✓':'○';check.disabled=finished;
+      check.setAttribute('aria-label',finished?'Выполнено':'Отметить выполнение: '+task.name);
+      check.onclick=()=>complete(task,date);
+      const main=document.createElement('div');main.className='agenda-event-main';
+      const name=document.createElement('div');name.className='agenda-event-title';name.textContent=task.name;
+      const meta=document.createElement('div');meta.className='agenda-event-meta';
+      meta.textContent=(task.kind==='habit'?'Привычка':'Дело')+' · '+(finished?'выполнено':'запланировано');
+      main.append(name,meta);row.append(check,main);body.append(row);
+    }
+  }
+  if(completed.length){
+    title('Запись выполнений и действий');
+    for(const e of completed){
+      const line=document.createElement('div');line.className='agenda-entry';
+      const icon=document.createElement('span');icon.className='agenda-time';icon.textContent='✓';
+      const info=document.createElement('div');info.className='agenda-event-main';info.textContent=e.name||'Выполненное действие';
+      line.append(icon,info);body.append(line);
+    }
+  }
+  const rec=state.days[date];
+  if(rec && Object.keys(rec).some(k=>rec[k]!=null&&k!=='updatedAt')){
+    title('Записи состояния');
+    const row=document.createElement('div');row.className='agenda-entry';
+    const main=document.createElement('div');main.className='agenda-event-main';
+    const pieces=[];
+    if(rec.sleepHours!=null)pieces.push('Сон: '+rec.sleepHours+' ч');
+    if(rec.steps!=null)pieces.push('Шаги: '+rec.steps);
+    if(rec.mood!=null)pieces.push('Настроение: '+rec.mood+'%');
+    if(rec.diary)pieces.push('Дневник: '+rec.diary);
+    main.textContent=pieces.join(' · ')||'Состояние записано';
+    const edit=document.createElement('button');edit.type='button';edit.className='agenda-edit';edit.textContent='Открыть';
+    edit.onclick=()=>{closeDayAgenda();showNeedsEditor('',date)};
+    row.append(main,edit);body.append(row);
+  }
+  if(!body.children.length){
+    const empty=document.createElement('p');empty.className='agenda-empty';
+    empty.textContent='На этот день записей нет. Можно добавить мероприятие или дело.';
+    body.append(empty);
+  }
+}
 function renderHistory(){
   const chosen=$('historyDate').value||today(),[start,end]=getPeriod();
   $('taskDate').value=chosen;
@@ -274,7 +366,7 @@ function renderHistory(){
   cal.replaceChildren();
   if(historyView!=='day'){
     const grid=document.createElement('div');
-    grid.className='calendar';
+    grid.className='calendar'+(historyView==='week'?' week-view':'');
     const weekday=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
     for(const name of weekday){const el=document.createElement('div');el.className='weekday';el.textContent=name;grid.append(el)}
     const offset=(asDay(start).getDay()+6)%7;
@@ -288,8 +380,24 @@ function renderHistory(){
       const hasEvent=plannedDays.has(day);
       button.className=(day===chosen?'selected ':'')+(day===today()?'today ':'')+
         (hasNotes||completed||hasEvent||hasTasks?'marked':'');
-      const number=document.createElement('span');number.textContent=String(asDay(day).getDate());
+      const number=document.createElement('span');number.className='calendar-number';number.textContent=String(asDay(day).getDate());
       button.append(number);
+      const dailyEvents=planned.filter(e=>e.date===day);
+      if(dailyEvents.length){
+        const eventBox=document.createElement('span');eventBox.className='calendar-events';
+        const maximum=historyView==='week'?4:2;
+        for(const event of dailyEvents.slice(0,maximum)){
+          const pill=document.createElement('span');pill.className='calendar-event-pill';
+          pill.style.setProperty('--event-color',safeEventColor(event.color));
+          pill.textContent=(event.allDay?'':timeOf(event.startsAt)+' ')+event.title;
+          eventBox.append(pill);
+        }
+        if(dailyEvents.length>maximum){
+          const more=document.createElement('span');more.className='calendar-event-more';
+          more.textContent='+'+(dailyEvents.length-maximum)+' ещё';eventBox.append(more);
+        }
+        button.append(eventBox);
+      }
       const markers=document.createElement('span');markers.className='calendar-day-markers';
       if(hasEvent){const dot=document.createElement('span');dot.textContent='📅';markers.append(dot)}
       if(hasTasks){const dot=document.createElement('span');dot.textContent='☑';markers.append(dot)}
@@ -298,10 +406,14 @@ function renderHistory(){
       button.append(markers);
       const labels=[hasEvent?'есть мероприятия':'',hasTasks?'есть задачи и привычки':'',completed?'есть выполненные действия':'',hasNotes?'есть записи':''].filter(Boolean);
       button.setAttribute('aria-label',day+(labels.length?' — '+labels.join(', '):''));
-      button.onclick=()=>{$('historyDate').value=day;renderHistory()};
+      button.onclick=()=>openDayAgenda(day);
       grid.append(button);
     }
     cal.append(grid);
+  }else{
+    const open=document.createElement('button');open.type='button';open.className='secondary';
+    open.textContent='Открыть расписание за '+chosen;
+    open.onclick=()=>openDayAgenda(chosen);cal.append(open);
   }
   const panel=$('historyDetails');
   panel.replaceChildren();
@@ -353,6 +465,7 @@ function renderHistory(){
     panel.append(p);
   }
   renderActivities();
+  if(!$('dayAgendaOverlay').hidden)renderDayAgenda();
 }
 function changePeriod(n){const d=$('historyDate').value||today(),x=asDay(d);if(historyView==='month'){const wanted=x.getDate();x.setDate(1);x.setMonth(x.getMonth()+n);const last=new Date(x.getFullYear(),x.getMonth()+1,0).getDate();x.setDate(Math.min(wanted,last))}else x.setDate(x.getDate()+n*(historyView==='week'?7:1));$('historyDate').value=dayStr(x);renderHistory()}
 const weekdayNames=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];function clearEventForm(){$('eventForm').reset();$('eventEditId').value='';$('eventWeekdays').hidden=true}function renderSchedule(){const list=$('eventList');list.replaceChildren();for(const e of state.schedule||[]){const item=document.createElement('div');item.className='item';const info=document.createElement('div');info.className='itemtext';const title=document.createElement('strong');title.textContent=e.title;const desc=document.createElement('small');desc.textContent=(e.allDay?'Весь день · ':'')+(e.startsAt||'')+' — '+(e.endsAt||'')+(e.repeat==='weekly'?' · Каждую неделю: '+(e.weekdays||[]).map(n=>weekdayNames[n-1]).filter(Boolean).join(', '):'');info.append(title,desc);const edit=document.createElement('button');edit.className='secondary';edit.textContent='Изменить';edit.onclick=()=>openCalendarEventEditor(e.id);item.append(info,edit);list.append(item)}if(!list.children.length)list.textContent='Мероприятий пока нет'}function openCalendarEventEditor(id){
@@ -384,7 +497,10 @@ function importMessage(message,error=false){const el=$('importStatus');el.textCo
 function importSummary(proposed){const dayCount=Object.keys(proposed.days||{}).length,activityCount=proposed.activities.length,doneCount=proposed.events.filter(e=>e.kind==='complete').length,oldCount=proposed.activities.filter(x=>x.legacyDone).length,calendarCount=(proposed.schedule||[]).length;return `Найдено: ${dayCount} датированных записей, ${activityCount} дел и привычек, ${calendarCount} мероприятий, ${doneCount} выполненных действий${oldCount?', '+oldCount+' ранее выполненных задач':''}. Данные текущей версии заменятся только после подтверждения.`}
 async function restore(){pendingImport=null;$('importConfirmPanel').hidden=true;const file=$('importFile').files?.[0];if(!file){importMessage('Сначала выбери JSON-файл с прогрессом.',true);return}if(file.size>6_000_000){importMessage('Файл слишком большой (максимум 6 МБ).',true);return}try{const text=await file.text();pendingImport=parseBackup(JSON.parse(text));$('importPreview').textContent=importSummary(pendingImport);$('importConfirmPanel').hidden=false;importMessage('Файл распознан: '+file.name+'. Проверь количество записей и подтверди импорт.')}catch(e){pendingImport=null;importMessage('Не удалось прочитать копию: '+e.message,true)}}
 function confirmImport(){if(!pendingImport){importMessage('Сначала выбери и проверь JSON.',true);return}const old=state,wasBlocked=storageBlocked,wasOK=storageOK;let oldContents;try{oldContents=localStorage.getItem(STORE)}catch(e){importMessage('Браузер не разрешил доступ к сохранению. Открой HTTPS-версию LifeSims и повтори импорт.',true);return}const proposed=pendingImport;state=proposed;storageBlocked=false;let written=save();if(written){try{const read=normalize(JSON.parse(localStorage.getItem(STORE)));written=JSON.stringify(read.days)===JSON.stringify(state.days)&&JSON.stringify(read.activities)===JSON.stringify(state.activities)&&JSON.stringify(read.events)===JSON.stringify(state.events)&&JSON.stringify(read.schedule)===JSON.stringify(state.schedule)}catch(e){written=false}}if(!written){try{if(oldContents===null)localStorage.removeItem(STORE);else localStorage.setItem(STORE,oldContents)}catch(e){}state=old;storageBlocked=wasBlocked;storageOK=wasOK;setStorage();importMessage('Не удалось записать и проверить импорт. Прежние данные не заменены. Открой HTTPS-версию LifeSims и попробуй снова.',true);return}pendingImport=null;$('importConfirmPanel').hidden=true;activeDay=today();for(const id of ['stateDate','taskDate','diaryDate','historyDate'])$(id).value=activeDay;fillState(activeDay);fillDiary(activeDay);renderAll();importMessage('✓ Импорт записан и проверен. '+importSummary(proposed)+' Проверь вкладки «Дела» и «История».');toast('✓ Прогресс импортирован и сохранён')}
-for(const b of document.querySelectorAll('.touchmap .hot')){b.addEventListener('click',()=>openObject(b.dataset.object,b));b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openObject(b.dataset.object,b)}})}$('plumbob').onclick=()=>showNeedsEditor('',today());$('returnHome').onclick=finishWork;$('portraitBtn').onclick=()=>openObject('sim',document.querySelector('.touchmap .hot[data-object=sim]'));$('resourceChip').onclick=()=>showNeedsEditor('',today());$('xpChip').onclick=()=>openTab('history',true);$('closeSheet').onclick=closeSheet;document.addEventListener('pointerdown',e=>{if($('sheetWrap').classList.contains('open')&&!e.target.closest('.sheet')&&!e.target.closest('.hot'))closeSheet()});document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheet()});for(const b of document.querySelectorAll('[data-tab]'))b.onclick=()=>openTab(b.dataset.tab,true);$('openNeedsEditor').onclick=()=>showNeedsEditor('',today());$('stateForm').onsubmit=saveFieldState;$('taskForm').onsubmit=addActivity;$('saveDiary').onclick=saveDiary;for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>{historyView=b.dataset.view;renderHistory()};$('historyDate').onchange=renderHistory;$('prevPeriod').onclick=()=>changePeriod(-1);$('nextPeriod').onclick=()=>changePeriod(1);$('editSelectedDay').onclick=()=>{activeDay=$('historyDate').value;showNeedsEditor('',activeDay)};$('stateDate').onchange=()=>fillState($('stateDate').value);$('addCalendarEvent').onclick=openNewCalendarEvent;$('addCalendarTask').onclick=openNewCalendarTask;$('openCalendarGoogle').onclick=()=>{$('calendarGoogleEditor').open=true;$('calendarGoogleEditor').scrollIntoView({behavior:'smooth',block:'start'})};$('diaryDate').onchange=()=>fillDiary($('diaryDate').value);$('exportData').onclick=backup;$('downloadHTML').onclick=downloadHTML;$('importData').onclick=restore;$('confirmImport').onclick=confirmImport;$('cancelImport').onclick=()=>{pendingImport=null;$('importConfirmPanel').hidden=true;importMessage('Импорт отменён. Текущий прогресс не изменён.')};$('importFile').onchange=()=>{pendingImport=null;$('importConfirmPanel').hidden=true;importMessage('Файл выбран. Нажми «Проверить файл JSON».')};
+for(const b of document.querySelectorAll('.touchmap .hot')){b.addEventListener('click',()=>openObject(b.dataset.object,b));b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openObject(b.dataset.object,b)}})}$('plumbob').onclick=()=>showNeedsEditor('',today());$('returnHome').onclick=finishWork;$('portraitBtn').onclick=()=>openObject('sim',document.querySelector('.touchmap .hot[data-object=sim]'));$('resourceChip').onclick=()=>showNeedsEditor('',today());$('xpChip').onclick=()=>openTab('history',true);$('closeSheet').onclick=closeSheet;document.addEventListener('pointerdown',e=>{if($('sheetWrap').classList.contains('open')&&!e.target.closest('.sheet')&&!e.target.closest('.hot'))closeSheet()});document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSheet();closeDayAgenda()}});for(const b of document.querySelectorAll('[data-tab]'))b.onclick=()=>openTab(b.dataset.tab,true);$('openNeedsEditor').onclick=()=>showNeedsEditor('',today());$('stateForm').onsubmit=saveFieldState;$('taskForm').onsubmit=addActivity;$('saveDiary').onclick=saveDiary;for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>{historyView=b.dataset.view;renderHistory()};$('historyDate').onchange=renderHistory;$('prevPeriod').onclick=()=>changePeriod(-1);$('nextPeriod').onclick=()=>changePeriod(1);$('editSelectedDay').onclick=()=>{activeDay=$('historyDate').value;showNeedsEditor('',activeDay)};$('stateDate').onchange=()=>fillState($('stateDate').value);$('addCalendarEvent').onclick=openNewCalendarEvent;$('addCalendarTask').onclick=openNewCalendarTask;$('agendaClose').onclick=closeDayAgenda;
+$('dayAgendaOverlay').addEventListener('click',e=>{if(e.target===$('dayAgendaOverlay'))closeDayAgenda()});
+$('agendaAddEvent').onclick=()=>{closeDayAgenda();openNewCalendarEvent()};
+$('agendaAddTask').onclick=()=>{closeDayAgenda();openNewCalendarTask()};$('openCalendarGoogle').onclick=()=>{$('calendarGoogleEditor').open=true;$('calendarGoogleEditor').scrollIntoView({behavior:'smooth',block:'start'})};$('diaryDate').onchange=()=>fillDiary($('diaryDate').value);$('exportData').onclick=backup;$('downloadHTML').onclick=downloadHTML;$('importData').onclick=restore;$('confirmImport').onclick=confirmImport;$('cancelImport').onclick=()=>{pendingImport=null;$('importConfirmPanel').hidden=true;importMessage('Импорт отменён. Текущий прогресс не изменён.')};$('importFile').onchange=()=>{pendingImport=null;$('importConfirmPanel').hidden=true;importMessage('Файл выбран. Нажми «Проверить файл JSON».')};
 for(const a of defs.filter(a=>a.xp>0)){const opt=document.createElement('option');opt.value=a.id;opt.textContent=a.name;$('taskAction').append(opt)}
 $('eventRepeat').onchange=()=>{$('eventWeekdays').hidden=$('eventRepeat').value!=='weekly'};$('eventForm').onsubmit=saveEvent;$('eventCancel').onclick=clearEventForm;for(const k of sliderFields){$(k).addEventListener('input',()=>{$(k+'Unknown').checked=false;updateSlider(k)});$(k+'Unknown').addEventListener('change',()=>updateSlider(k))}for(const [k,button] of [['meds','medsYesterday'],['food','foodYesterday']])$(button).onclick=()=>{const d=$('stateDate').value||today(),y=currentRecord(plusDays(d,-1))[k];if(!y)return toast('За вчера нет записи');$(k).value=y;toast('Скопировано из предыдущего дня — проверь перед сохранением')};for(const id of ['stateDate','taskDate','diaryDate','historyDate'])$(id).value=activeDay;load();fillState(activeDay);fillDiary(activeDay);renderAll();
 if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
