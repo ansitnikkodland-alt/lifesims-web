@@ -211,7 +211,7 @@
     return JSON.stringify(values);
   }
   function project(event) {
-    if (!event || event.status === 'cancelled' || (event.eventType && event.eventType !== 'default')) return null;
+    if (!event || event.status === 'cancelled') return null;
     const allDay=!!event.start?.date&&!event.start?.dateTime;
     if(allDay){
       if(!/^\d{4}-\d\d-\d\d$/.test(event.start.date)||!/^\d{4}-\d\d-\d\d$/.test(event.end?.date||''))return null;
@@ -267,55 +267,56 @@
     else payload.recurrence = [];
     return payload;
   }
-  async function listRemote() {
-    const min = new Date(Date.now() - 365 * DAY).toISOString();
-    const max = new Date(Date.now() + 400 * DAY).toISOString();
-    let pageToken = '', page = 0;
-    const instances = [], masterIds = new Set(), exceptions = new Set();
-    do {
-      if (++page > 6) throw Error('Слишком много событий Google (больше 15 000). Синхронизация остановлена, чтобы не использовать неполный список.');
-      const qs = new URLSearchParams({
-        timeMin: min, timeMax: max, maxResults: '2500', singleEvents: 'true', orderBy: 'startTime', showDeleted: 'false'
-      });
-      if (pageToken) qs.set('pageToken', pageToken);
-      const data = await api('GET', '?' + qs.toString());
-      for (const event of data.items || []) {
-        if (event.recurringEventId) {
-          masterIds.add(event.recurringEventId);
-          const original=event.originalStartTime?.dateTime||event.originalStartTime?.date;
-          const actual=event.start?.dateTime||event.start?.date;
-          if(original&&actual&&(event.originalStartTime?.date?original!==actual:new Date(original).getTime()!==new Date(actual).getTime())){
-            exceptions.add(event.recurringEventId);
-          }
-        } else instances.push(event);
-      }
-      pageToken = data.nextPageToken || '';
-    } while (pageToken);
-    const masters = [];
-    if (masterIds.size > 100) throw Error('Найдено более 100 серий повторяющихся событий. Синхронизация не выполнена; нужна пакетная обработка.');
-    for (const id of masterIds) {
-      if (exceptions.has(id)) continue;
-      try { masters.push(await api('GET', '/' + encodeURIComponent(id))); }
-      catch (error) { if (/404|410/.test(error.message)) continue; throw error; }
+  async function listRemote(){
+    const from=new Date(Date.now()-365*DAY).toISOString();
+    const to=new Date(Date.now()+400*DAY).toISOString();
+    const supported=[];
+    const chosen=getChosen();
+    if(!chosen.length)throw Error('Выбери хотя бы один календарь Google.');
+    let skipped=0,total=0;
+    for(const calendar of chosen){
+      status('Читаю «'+calendar.name+'» ('+(chosen.indexOf(calendar)+1)+'/'+chosen.length+')…');
+      const id=calendar.primary?'primary':calendar.id;
+      let next='',pages=0;
+      do{
+        if(++pages>6)throw Error('В календаре «'+calendar.name+'» слишком много событий. Для безопасности частичный импорт отменён.');
+        const qs=new URLSearchParams({
+          timeMin:from,timeMax:to,maxResults:'2500',singleEvents:'true',
+          showDeleted:'false',orderBy:'startTime'
+        });
+        if(next)qs.set('pageToken',next);
+        const data=await api('GET',eventsUrl(id)+'?'+qs.toString());
+        for(const event of data.items||[]){
+          total++;
+          if(total>12000)throw Error('Больше 12 000 событий. Импорт прерван до применения изменений, чтобы не переполнить память браузера.');
+          const normalized=project(event);
+          if(!normalized){skipped++;continue;}
+          supported.push({
+            id:event.id,calendarId:id,etag:event.etag||'',
+            normalized,sourceName:calendar.name,color:calendar.color,
+            seriesId:event.recurringEventId||'',
+            eventType:event.eventType||'default',
+            writable:calendar.primary
+          });
+        }
+        next=data.nextPageToken||'';
+      }while(next);
     }
-    const events = [...instances, ...masters];
-    const supported = [];
-    let skipped = exceptions.size;
-    for (const event of events) {
-      const normalized = project(event);
-      if (normalized) supported.push({ id: event.id, etag: event.etag || '', normalized });
-      else skipped++;
-    }
-    return { supported, skipped, visible: events.length };
+    return {supported,skipped,visible:total,from:from.slice(0,10),to:to.slice(0,10),chosenCount:chosen.length};
   }
-  function calendarMeta(remote, base) {
-    return { id: remote.id, calendarId: 'primary', etag: remote.etag, base };
+  function calendarMeta(remote,base){
+    return {
+      id:remote.id,calendarId:remote.calendarId,etag:remote.etag,base,
+      sourceName:remote.sourceName,color:remote.color,
+      seriesId:remote.seriesId||'',eventType:remote.eventType||'default'
+    };
   }
+  const eventKey=(calendarId,id)=>calendarId+'::'+id;
   function summarize(changes, skipped, conflicts, orphaned) {
-    const types = { import: 0, pull: 0, link: 0, create: 0, push: 0 };
+    const types = { import: 0, pull: 0, link: 0, create: 0, push: 0, supersede: 0 };
     for (const c of changes) types[c.type]++;
     return 'Из Google в LifeSims: ' + (types.import + types.pull) + '; без дубликатов привязать: ' + types.link +
-      '; создать в Google: ' + types.create + '; обновить в Google: ' + types.push +
+      '; создать в Google: ' + types.create + '; обновить в Google: ' + types.push + '; заменить устаревшие серии в отображении: '+types.supersede +
       '; конфликтов (пропущены): ' + conflicts + '; неподдерживаемых событий/исключений: ' + skipped +
       '; не найдено в окне просмотра: ' + orphaned + '. Ничего не удаляется.';
   }
@@ -327,10 +328,10 @@
     box.append(intro);
     if (data.changes.length) {
       const list = document.createElement('ul');
-      const labels = { import: 'Импорт', pull: 'Обновить LifeSims', link: 'Связать', create: 'Создать в Google', push: 'Обновить Google' };
+      const labels = { import: 'Импорт', pull: 'Обновить LifeSims', link: 'Связать', create: 'Создать в Google', push: 'Обновить Google', supersede: 'Убрать дубль старой серии' };
       for (const ch of data.changes.slice(0, 15)) {
         const row = document.createElement('li');
-        row.textContent = labels[ch.type] + ': ' + ch.title;
+        row.textContent = labels[ch.type] + ': ' + ch.title + (ch.remote?' · '+ch.remote.sourceName:'');
         list.append(row);
       }
       box.append(list);
@@ -343,18 +344,30 @@
     if (data.conflicts || data.orphaned) {
       const warning = document.createElement('p');
       warning.className = 'hint';
-      warning.textContent = 'Конфликтующие записи и события Google вне окна просмотра не перезаписываются. Отмены отдельных дат повторяющихся событий пока не поддерживаются.';
+      warning.textContent = 'Конфликтующие и отсутствующие в текущем диапазоне записи не удаляются. Изменённые экземпляры повторов импортируются отдельно, а ранее импортированные серии сохраняются в резервной копии.';
       box.append(warning);
     }
   }
   function makePlan(remoteData, mode, locals) {
     const changes = [], claimed = new Set(), remoteIds = new Set();
+    const selectedIds=new Set(getChosen().map(c=>c.primary?'primary':c.id));
+    const migrated=new Set();
     let conflicts = 0, orphaned = 0;
-    const mapped = new Map(locals.filter(x => x.google?.id && x.google.calendarId === 'primary').map(x => [x.google.id, x]));
+    const mapped=new Map(locals.filter(x=>x.google?.id).map(x=>[eventKey(x.google.calendarId||'primary',x.google.id),x]));
+    const legacySeries=new Map(locals.filter(x=>x.google?.id&&x.repeat==='weekly')
+      .map(x=>[eventKey(x.google.calendarId||'primary',x.google.id),x]));
     for (const remote of remoteData.supported) {
-      remoteIds.add(remote.id);
+      const key=eventKey(remote.calendarId,remote.id);
+      remoteIds.add(key);
+      if(remote.seriesId){
+        const prior=legacySeries.get(eventKey(remote.calendarId,remote.seriesId));
+        if(prior&&!migrated.has(prior.id)&&!prior.google?.supersededRange){
+          changes.push({type:'supersede',title:prior.title,local:prior});
+          migrated.add(prior.id);
+        }
+      }
       const sig = signature(remote.normalized);
-      const linked = mapped.get(remote.id);
+      const linked = mapped.get(key);
       if (linked) {
         claimed.add(linked.id);
         const base = linked.google?.base;
@@ -362,7 +375,7 @@
         const remoteChanged = base !== sig;
         if (!base || (localChanged && remoteChanged)) { conflicts++; continue; }
         if (remoteChanged) changes.push({ type: 'pull', title: remote.normalized.title, remote, local: linked });
-        else if (localChanged && mode === 'both') changes.push({ type: 'push', title: linked.title, local: linked, remote });
+        else if (localChanged && mode === 'both' && remote.calendarId==='primary') changes.push({ type: 'push', title: linked.title, local: linked, remote });
       } else {
         const matches = locals.filter(x => !x.google?.id && !claimed.has(x.id) && signature(x) === sig);
         if (matches.length === 1) {
@@ -383,9 +396,11 @@
       }
     }
     for (const local of locals) {
-      if (local.google?.id && local.google.calendarId === 'primary' && !remoteIds.has(local.google.id)) orphaned++;
+      const cid=local.google?.calendarId||'primary';
+      if(local.google?.id && selectedIds.has(cid)&&!local.google?.supersededRange&&
+        !remoteIds.has(eventKey(cid,local.google.id)))orphaned++;
     }
-    return { mode, changes, conflicts, orphaned, skipped: remoteData.skipped, snapshot: JSON.stringify(locals) };
+    return { mode, changes, conflicts, orphaned, skipped: remoteData.skipped, snapshot: JSON.stringify(locals), from: remoteData.from,to:remoteData.to,calendars:remoteData.chosenCount,seen:remoteData.visible };
   }
   async function withBusy(task) {
     if (busy) return;
@@ -396,13 +411,14 @@
   el('gcPreview').addEventListener('click', () => withBusy(async () => {
     invalidatePreview();
     if (!bridge.canWrite()) throw Error('Локальные данные недоступны для записи. Сначала восстанови сохранение LifeSims.');
-    status('Читаю события основного Google Календаря…');
+    status('Читаю выбранные календари Google…');
     const remote = await listRemote();
     const mode = el('gcMode').value;
     const locals = bridge.getSchedule();
     preview = makePlan(remote, mode, locals);
     renderPreview(preview);
-    status(preview.changes.length ? 'Проверь список и нажми «Применить изменения», чтобы события появились в «Истории».' : 'Новых изменений нет. Сохранённых Google-мероприятий в LifeSims: ' + bridge.getSchedule().filter(e=>e.google).length + '. Их можно посмотреть в «Календаре».');
+    status('Прочитано событий: '+remote.visible+' из '+remote.chosenCount+' календарей. '+(preview.changes.length?'Изменений: '+preview.changes.length+'. Проверь список и нажми «Применить изменения».':'Изменений нет. Сохранённые мероприятия смотри в «Календаре».'));
+
   }));
   el('gcApply').addEventListener('click', () => withBusy(async () => {
     if (!preview || !preview.changes.length) return;
@@ -421,18 +437,22 @@
       status('Синхронизация Google: ' + applied + ' / ' + plan.changes.length + '…');
       const remote = change.remote;
       if (['import', 'pull', 'link'].includes(change.type)) {
-        const local = change.local || { id: 'google:' + remote.id };
+        const local = change.local || { id: 'google:'+encodeURIComponent(remote.calendarId)+':'+remote.id };
         const normalized = change.type === 'link' ? local : remote.normalized;
         bridge.upsert([{ ...local, ...normalized, google: calendarMeta(remote, signature(normalized)) }]);
+      } else if(change.type==='supersede'){
+        const updated=JSON.parse(JSON.stringify(change.local));
+        updated.google={...updated.google,supersededRange:{from:plan.from,to:plan.to}};
+        bridge.upsert([updated]);
       } else if (change.type === 'create') {
-        const created = await api('POST', '', toGoogle(change.local));
+        const created = await api('POST', eventsUrl('primary'), toGoogle(change.local));
         const normalized = project(created) || change.local;
-        bridge.upsert([{ ...change.local, ...normalized, google: calendarMeta(created, signature(normalized)) }]);
+        bridge.upsert([{ ...change.local, ...normalized, google: calendarMeta({...created,calendarId:'primary',sourceName:'Основной Google',color:'#4285f4'}, signature(normalized)) }]);
       } else if (change.type === 'push') {
-        const updated = await api('PATCH', '/' + encodeURIComponent(remote.id),
+        const updated = await api('PATCH', eventsUrl(remote.calendarId)+'/'+encodeURIComponent(remote.id),
           toGoogle(change.local), remote.etag);
         const normalized = project(updated) || change.local;
-        bridge.upsert([{ ...change.local, ...normalized, google: calendarMeta(updated, signature(normalized)) }]);
+        bridge.upsert([{ ...change.local, ...normalized, google: calendarMeta({...remote,...updated}, signature(normalized)) }]);
       }
       applied++;
     }
