@@ -2,7 +2,7 @@
 (function () {
   'use strict';
   const bridge = window.LifeSimsCalendarBridge;
-  const section = document.getElementById('schedule');
+  const section = document.getElementById('googleCalendarMount');
   if (!bridge || !section) return;
 
   const READ_SCOPE = 'https://www.googleapis.com/auth/calendar.events.readonly';
@@ -19,7 +19,7 @@
   panel.innerHTML =
     '<h3>📅 Google Календарь</h3>' +
     '<p class="hint">События основного календаря Google ↔ мероприятия LifeSims. Сначала показываем список изменений; удалений нет. Без интернета местные записи остаются доступны.</p>' +
-    '<p class="hint">Подключение подготовлено. Для первого входа нажми «Подключить Google» и подтверди доступ в Google. По умолчанию только чтение календаря.</p>' +
+    '<p class="hint">После входа нажми «Проверить изменения», затем «Применить изменения». Иначе события не появятся в «Календаре». По умолчанию Google доступен только для чтения.</p>' +
     '<details><summary>Технические настройки (обычно не нужны)</summary>' +
     '<label class="field">OAuth Client ID<input id="gcClient" type="text" spellcheck="false" autocomplete="off" value="431544105696-rvvpicrjlrff400pafjb8tp3805lpqj8.apps.googleusercontent.com"></label>' +
     '<p class="hint">Публичный идентификатор приложения. Изменять не требуется.</p></details>' +
@@ -32,11 +32,11 @@
     '<button type="button" class="primary" id="gcApply" disabled>Применить изменения</button></div>' +
     '<p id="gcStatus" class="hint" role="status" aria-live="polite">Google не подключён.</p>' +
     '<div id="gcChanges"></div><p class="hint">Синхронизация выполняется только по кнопке, пока действует разрешение Google. ' +
-    'Окно просмотра: от 14 дней назад до 400 дней вперёд. Поддерживаются события с временем и простые еженедельные повторы; ' +
-    'отдельные исключения в повторяющихся событиях, целодневные и сложные повторы пока не переносим. ' +
+    'Окно просмотра: от 365 дней назад до 400 дней вперёд. Поддерживаются события с временем и простые еженедельные повторы; ' +
+    'отдельные исключения в повторяющихся событиях и сложные повторы пока не переносим. Целодневные события поддерживаются. ' +
     'Перед первой синхронизацией скачай резервную копию JSON.</p>';
-  const heading = section.querySelector('.heading');
-  heading.insertAdjacentElement('afterend', panel);
+  // Google sync stays inside the unified LifeSims calendar.
+  section.append(panel);
   const el = id => document.getElementById(id);
   // Always use the verified project client; an obsolete localStorage value could prevent login.
   el('gcClient').value = DEFAULT_CLIENT_ID;
@@ -150,15 +150,21 @@
     return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
   }
   function signature(event) {
-    return JSON.stringify([
+    const values=[
       String(event.title || ''), String(event.startsAt || ''), String(event.endsAt || ''),
       event.repeat === 'weekly' ? 'weekly' : 'none',
       event.repeat === 'weekly' ? [...(event.weekdays || [])].map(Number).sort((a, b) => a - b) : []
-    ]);
+    ];
+    // Keep legacy timed-event signatures compatible with previously synced data.
+    if(event.allDay)values.push('all-day');
+    return JSON.stringify(values);
   }
   function project(event) {
     if (!event || event.status === 'cancelled' || (event.eventType && event.eventType !== 'default')) return null;
-    if (!event.start?.dateTime || !event.end?.dateTime) return null;
+    const allDay=!!event.start?.date&&!event.start?.dateTime;
+    if(allDay){
+      if(!/^\d{4}-\d\d-\d\d$/.test(event.start.date)||!/^\d{4}-\d\d-\d\d$/.test(event.end?.date||''))return null;
+    } else if (!event.start?.dateTime || !event.end?.dateTime) return null;
     let repeat = 'none', weekdays = [];
     if (event.recurrence && event.recurrence.length) {
       if (event.recurrence.length !== 1) return null;
@@ -173,13 +179,14 @@
         weekdays = opts.BYDAY.split(',').map(x => weekdayCodes.indexOf(x) + 1);
         if (weekdays.some(x => x < 1)) return null;
       } else {
-        const date = new Date(event.start.dateTime);
+        const date = new Date(allDay ? event.start.date+'T12:00:00' : event.start.dateTime);
         weekdays = [((date.getDay() + 6) % 7) + 1];
       }
     }
-    const startsAt = localDate(event.start.dateTime), endsAt = localDate(event.end.dateTime);
+    const startsAt=allDay?event.start.date+'T00:00':localDate(event.start.dateTime);
+    const endsAt=allDay?event.end.date+'T00:00':localDate(event.end.dateTime);
     if (!startsAt || !endsAt || endsAt <= startsAt) return null;
-    return { title: event.summary || 'Без названия', startsAt, endsAt, repeat, weekdays };
+    return { title: event.summary || 'Без названия', startsAt, endsAt, repeat, weekdays, allDay };
   }
   function toGoogle(event) {
     const start = new Date(event.startsAt), end = new Date(event.endsAt);
@@ -198,10 +205,11 @@
         }
       }
     }
+    const dateOnly=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
     const payload = {
       summary: event.title,
-      start: { dateTime: start.toISOString(), timeZone: tz },
-      end: { dateTime: end.toISOString(), timeZone: tz }
+      start: event.allDay ? {date:dateOnly(start)} : {dateTime:start.toISOString(),timeZone:tz},
+      end: event.allDay ? {date:dateOnly(end)} : {dateTime:end.toISOString(),timeZone:tz}
     };
     if (event.repeat === 'weekly') payload.recurrence = ['RRULE:FREQ=WEEKLY;BYDAY=' +
       [...new Set(event.weekdays)].map(n => weekdayCodes[n - 1]).join(',')];
@@ -209,7 +217,7 @@
     return payload;
   }
   async function listRemote() {
-    const min = new Date(Date.now() - 14 * DAY).toISOString();
+    const min = new Date(Date.now() - 365 * DAY).toISOString();
     const max = new Date(Date.now() + 400 * DAY).toISOString();
     let pageToken = '', page = 0;
     const instances = [], masterIds = new Set(), exceptions = new Set();
@@ -223,8 +231,9 @@
       for (const event of data.items || []) {
         if (event.recurringEventId) {
           masterIds.add(event.recurringEventId);
-          if (event.originalStartTime?.dateTime && event.start?.dateTime &&
-              new Date(event.originalStartTime.dateTime).getTime() !== new Date(event.start.dateTime).getTime()) {
+          const original=event.originalStartTime?.dateTime||event.originalStartTime?.date;
+          const actual=event.start?.dateTime||event.start?.date;
+          if(original&&actual&&(event.originalStartTime?.date?original!==actual:new Date(original).getTime()!==new Date(actual).getTime())){
             exceptions.add(event.recurringEventId);
           }
         } else instances.push(event);
@@ -342,7 +351,7 @@
     const locals = bridge.getSchedule();
     preview = makePlan(remote, mode, locals);
     renderPreview(preview);
-    status(preview.changes.length ? 'Проверь список и нажми «Применить изменения».' : 'Изменений для применения нет.');
+    status(preview.changes.length ? 'Проверь список и нажми «Применить изменения», чтобы события появились в «Истории».' : 'Новых изменений нет. Сохранённых Google-мероприятий в LifeSims: ' + bridge.getSchedule().filter(e=>e.google).length + '. Их можно посмотреть в «Календаре».');
   }));
   el('gcApply').addEventListener('click', () => withBusy(async () => {
     if (!preview || !preview.changes.length) return;
@@ -377,7 +386,7 @@
       applied++;
     }
     invalidatePreview();
-    status('✓ Синхронизировано ' + applied + ' мероприятий. Удалений не было. Перед закрытием можно скачать новый JSON.');
+    status('✓ Синхронизировано ' + applied + ' мероприятий. В «Календаре» отображаются сохранённые события по датам. Ничего не удалено; можно скачать резервную копию JSON.');
   }));
   ready();
   window.LifeSimsGoogleCalendarVersion = 'inline-v9';
