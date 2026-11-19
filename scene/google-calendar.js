@@ -33,7 +33,7 @@
     '<p id="gcStatus" class="hint" role="status" aria-live="polite">Google не подключён.</p>' +
     '<div id="gcChanges"></div><p class="hint">Синхронизация выполняется только по кнопке, пока действует разрешение Google. ' +
     'Окно просмотра: от 365 дней назад до 400 дней вперёд. Поддерживаются события с временем и простые еженедельные повторы; ' +
-    'отдельные исключения в повторяющихся событиях, целодневные и сложные повторы пока не переносим. ' +
+    'отдельные исключения в повторяющихся событиях и сложные повторы пока не переносим. Целодневные события поддерживаются. ' +
     'Перед первой синхронизацией скачай резервную копию JSON.</p>';
   // Google sync stays inside the unified LifeSims calendar.
   section.append(panel);
@@ -150,15 +150,21 @@
     return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
   }
   function signature(event) {
-    return JSON.stringify([
+    const values=[
       String(event.title || ''), String(event.startsAt || ''), String(event.endsAt || ''),
       event.repeat === 'weekly' ? 'weekly' : 'none',
       event.repeat === 'weekly' ? [...(event.weekdays || [])].map(Number).sort((a, b) => a - b) : []
-    ]);
+    ];
+    // Keep legacy timed-event signatures compatible with previously synced data.
+    if(event.allDay)values.push('all-day');
+    return JSON.stringify(values);
   }
   function project(event) {
     if (!event || event.status === 'cancelled' || (event.eventType && event.eventType !== 'default')) return null;
-    if (!event.start?.dateTime || !event.end?.dateTime) return null;
+    const allDay=!!event.start?.date&&!event.start?.dateTime;
+    if(allDay){
+      if(!/^\d{4}-\d\d-\d\d$/.test(event.start.date)||!/^\d{4}-\d\d-\d\d$/.test(event.end?.date||''))return null;
+    } else if (!event.start?.dateTime || !event.end?.dateTime) return null;
     let repeat = 'none', weekdays = [];
     if (event.recurrence && event.recurrence.length) {
       if (event.recurrence.length !== 1) return null;
@@ -173,13 +179,14 @@
         weekdays = opts.BYDAY.split(',').map(x => weekdayCodes.indexOf(x) + 1);
         if (weekdays.some(x => x < 1)) return null;
       } else {
-        const date = new Date(event.start.dateTime);
+        const date = new Date(allDay ? event.start.date+'T12:00:00' : event.start.dateTime);
         weekdays = [((date.getDay() + 6) % 7) + 1];
       }
     }
-    const startsAt = localDate(event.start.dateTime), endsAt = localDate(event.end.dateTime);
+    const startsAt=allDay?event.start.date+'T00:00':localDate(event.start.dateTime);
+    const endsAt=allDay?event.end.date+'T00:00':localDate(event.end.dateTime);
     if (!startsAt || !endsAt || endsAt <= startsAt) return null;
-    return { title: event.summary || 'Без названия', startsAt, endsAt, repeat, weekdays };
+    return { title: event.summary || 'Без названия', startsAt, endsAt, repeat, weekdays, allDay };
   }
   function toGoogle(event) {
     const start = new Date(event.startsAt), end = new Date(event.endsAt);
@@ -198,10 +205,11 @@
         }
       }
     }
+    const dateOnly=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
     const payload = {
       summary: event.title,
-      start: { dateTime: start.toISOString(), timeZone: tz },
-      end: { dateTime: end.toISOString(), timeZone: tz }
+      start: event.allDay ? {date:dateOnly(start)} : {dateTime:start.toISOString(),timeZone:tz},
+      end: event.allDay ? {date:dateOnly(end)} : {dateTime:end.toISOString(),timeZone:tz}
     };
     if (event.repeat === 'weekly') payload.recurrence = ['RRULE:FREQ=WEEKLY;BYDAY=' +
       [...new Set(event.weekdays)].map(n => weekdayCodes[n - 1]).join(',')];
@@ -223,8 +231,9 @@
       for (const event of data.items || []) {
         if (event.recurringEventId) {
           masterIds.add(event.recurringEventId);
-          if (event.originalStartTime?.dateTime && event.start?.dateTime &&
-              new Date(event.originalStartTime.dateTime).getTime() !== new Date(event.start.dateTime).getTime()) {
+          const original=event.originalStartTime?.dateTime||event.originalStartTime?.date;
+          const actual=event.start?.dateTime||event.start?.date;
+          if(original&&actual&&(event.originalStartTime?.date?original!==actual:new Date(original).getTime()!==new Date(actual).getTime())){
             exceptions.add(event.recurringEventId);
           }
         } else instances.push(event);
