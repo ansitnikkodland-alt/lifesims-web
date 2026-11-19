@@ -175,7 +175,7 @@
     if(!list.length)throw Error('Google не вернул ни одного доступного календаря.');
     let saved;
     try{const stored=JSON.parse(localStorage.getItem(CAL_CHOICE_KEY));if(Array.isArray(stored))saved=new Set(stored)}catch(_){}
-    availableCalendars=list.filter(c=>c.id&&c.accessRole!=='none'&&c.accessRole!=='freeBusyReader').map(c=>({
+    availableCalendars=list.filter(c=>c.id&&c.accessRole!=='none').map(c=>({
       id:c.id,name:c.summary||'Календарь',primary:!!c.primary,role:c.accessRole||'reader',
       checked:saved?saved.has(c.id):true,color:/^#[0-9a-f]{6}$/i.test(c.backgroundColor||'')?c.backgroundColor:'#4285f4'
     }));
@@ -435,29 +435,37 @@
     // Discard the plan before writing to prevent retrying a partially completed batch.
     invalidatePreview();
     let applied = 0;
+    let pendingRecords = [];
+    const flush=()=>{
+      if(pendingRecords.length){bridge.upsert(pendingRecords);pendingRecords=[];}
+    };
     for (const change of plan.changes) {
       status('Синхронизация Google: ' + applied + ' / ' + plan.changes.length + '…');
       const remote = change.remote;
       if (['import', 'pull', 'link'].includes(change.type)) {
         const local = change.local || { id: 'google:'+encodeURIComponent(remote.calendarId)+':'+remote.id };
         const normalized = change.type === 'link' ? local : remote.normalized;
-        bridge.upsert([{ ...local, ...normalized, google: calendarMeta(remote, signature(normalized)) }]);
+        pendingRecords.push({ ...local, ...normalized, google: calendarMeta(remote, signature(normalized)) });
       } else if(change.type==='supersede'){
         const updated=JSON.parse(JSON.stringify(change.local));
         updated.google={...updated.google,supersededRange:{from:plan.from,to:plan.to}};
-        bridge.upsert([updated]);
+        pendingRecords.push(updated);
       } else if (change.type === 'create') {
+        flush();
         const created = await api('POST', eventsUrl('primary'), toGoogle(change.local));
         const normalized = project(created) || change.local;
         bridge.upsert([{ ...change.local, ...normalized, google: calendarMeta({...created,calendarId:'primary',sourceName:'Основной Google',color:'#4285f4'}, signature(normalized)) }]);
       } else if (change.type === 'push') {
+        flush();
         const updated = await api('PATCH', eventsUrl(remote.calendarId)+'/'+encodeURIComponent(remote.id),
           toGoogle(change.local), remote.etag);
         const normalized = project(updated) || change.local;
         bridge.upsert([{ ...change.local, ...normalized, google: calendarMeta({...remote,...updated}, signature(normalized)) }]);
       }
       applied++;
+      if(pendingRecords.length>=150)flush();
     }
+    flush();
     invalidatePreview();
     status('✓ Синхронизировано ' + applied + ' мероприятий. В «Календаре» отображаются сохранённые события по датам. Ничего не удалено; можно скачать резервную копию JSON.');
   }));
