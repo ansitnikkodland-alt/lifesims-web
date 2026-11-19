@@ -5,7 +5,8 @@
   const section = document.getElementById('schedule');
   if (!bridge || !section) return;
 
-  const SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+  const READ_SCOPE = 'https://www.googleapis.com/auth/calendar.events.readonly';
+  const WRITE_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
   const ROOT = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
   const CLIENT_KEY = 'lifesims-google-oauth-client-id';
   const DAY = 86400000;
@@ -39,7 +40,7 @@
   el('gcOrigin').textContent = location.origin;
   try { el('gcClient').value = localStorage.getItem(CLIENT_KEY) || ''; } catch (_) {}
 
-  let token = '', expiry = 0, preview = null, busy = false;
+  let token = '', expiry = 0, preview = null, busy = false, authorizedMode = '';
   let googleLibraryReady = false;
   function status(message) { el('gcStatus').textContent = message; }
   function ready() {
@@ -65,10 +66,17 @@
   }
   loadIdentityLibrary();
   el('gcClient').addEventListener('change', () => {
+    token = ''; expiry = 0; authorizedMode = '';
     invalidatePreview();
     try { localStorage.setItem(CLIENT_KEY, el('gcClient').value.trim()); } catch (_) {}
   });
-  el('gcMode').addEventListener('change', invalidatePreview);
+  el('gcMode').addEventListener('change', () => {
+    invalidatePreview();
+    if (token && el('gcMode').value === 'both' && authorizedMode !== 'both') {
+      token = ''; expiry = 0; ready();
+      status('Для двусторонней синхронизации снова нажми «Подключить Google», чтобы разрешить запись.');
+    }
+  });
   el('gcConnect').addEventListener('click', () => {
     const clientId = el('gcClient').value.trim();
     if (location.protocol !== 'https:') return status('Для Google OAuth открой опубликованный HTTPS-сайт LifeSims, а не локальный HTML.');
@@ -82,13 +90,14 @@
       localStorage.setItem(CLIENT_KEY, clientId);
       const oauth = window.google.accounts.oauth2.initTokenClient({
         client_id: clientId,
-        scope: SCOPE,
+        scope: el('gcMode').value === 'both' ? WRITE_SCOPE : READ_SCOPE,
         callback: result => {
           if (result.error || !result.access_token) {
             status('Google не выдал доступ: ' + (result.error || 'операция отменена'));
             return;
           }
           token = result.access_token;
+          authorizedMode = el('gcMode').value;
           expiry = Date.now() + Number(result.expires_in || 3600) * 1000;
           invalidatePreview();
           status('Google подключён на время этого сеанса. Нажми «Проверить изменения».');
@@ -101,7 +110,7 @@
   });
   el('gcDisconnect').addEventListener('click', () => {
     if (token && window.google?.accounts?.oauth2?.revoke) window.google.accounts.oauth2.revoke(token, () => {});
-    token = ''; expiry = 0; invalidatePreview();
+    token = ''; expiry = 0; authorizedMode = ''; invalidatePreview();
     status('Сеанс завершён. Локальные записи не удалены.');
   });
 
@@ -290,6 +299,10 @@
         if (matches.length === 1) {
           claimed.add(matches[0].id);
           changes.push({ type: 'link', title: matches[0].title, local: matches[0], remote });
+        } else if (matches.length > 1) {
+          // Ambiguous duplicates: do not import or push; wait for manual resolution.
+          conflicts++;
+          for (const match of matches) claimed.add(match.id);
         } else {
           changes.push({ type: 'import', title: remote.normalized.title, remote });
         }
@@ -332,6 +345,8 @@
     if (!window.confirm('Применить ' + plan.changes.length + ' изменений? ' +
       (plan.mode === 'both' ? 'Это может СОЗДАТЬ или ОБНОВИТЬ события в Google Calendar. ' : 'Google Calendar останется без изменений. ') +
       'Удалений не будет.')) return;
+    // Discard the plan before writing to prevent retrying a partially completed batch.
+    invalidatePreview();
     let applied = 0;
     for (const change of plan.changes) {
       status('Синхронизация Google: ' + applied + ' / ' + plan.changes.length + '…');
