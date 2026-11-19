@@ -8,6 +8,10 @@
   const READ_SCOPE = 'https://www.googleapis.com/auth/calendar.events.readonly';
   const WRITE_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
   const ROOT = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+  const API_ROOT = 'https://www.googleapis.com/calendar/v3';
+  const LIST_SCOPE = 'https://www.googleapis.com/auth/calendar.calendarlist.readonly';
+  const CAL_CHOICE_KEY = 'lifesims-google-calendar-selection';
+  const eventsUrl=id=>API_ROOT+'/calendars/'+encodeURIComponent(id)+'/events';
   const CLIENT_KEY = 'lifesims-google-oauth-client-id';
   const DEFAULT_CLIENT_ID = '431544105696-rvvpicrjlrff400pafjb8tp3805lpqj8.apps.googleusercontent.com'; // Public OAuth client ID, not a secret.
   const DAY = 86400000;
@@ -18,13 +22,14 @@
   panel.id = 'googleCalendarPanel';
   panel.innerHTML =
     '<h3>📅 Google Календарь</h3>' +
-    '<p class="hint">События основного календаря Google ↔ мероприятия LifeSims. Сначала показываем список изменений; удалений нет. Без интернета местные записи остаются доступны.</p>' +
+    '<p class="hint">События выбранных календарей Google → LifeSims. Вариант двусторонней записи изменяет только основной календарь. Удалений нет, без интернета местные записи остаются.</p>' +
     '<p class="hint">После входа нажми «Проверить изменения», затем «Применить изменения». Иначе события не появятся в «Календаре». По умолчанию Google доступен только для чтения.</p>' +
     '<details><summary>Технические настройки (обычно не нужны)</summary>' +
     '<label class="field">OAuth Client ID<input id="gcClient" type="text" spellcheck="false" autocomplete="off" value="431544105696-rvvpicrjlrff400pafjb8tp3805lpqj8.apps.googleusercontent.com"></label>' +
     '<p class="hint">Публичный идентификатор приложения. Изменять не требуется.</p></details>' +
     '<div class="row"><button type="button" class="primary" id="gcConnect">Подключить Google</button>' +
     '<button type="button" class="secondary" id="gcDisconnect" disabled>Завершить сеанс</button></div>' +
+    '<details id="gcCalendars" open><summary>Какие календари импортировать</summary><div id="gcCalendarList" class="hint">Подключи Google, чтобы загрузить список календарей.</div></details>' +
     '<label class="field">Направление синхронизации<select id="gcMode">' +
     '<option value="pull">Google → LifeSims (без записи в Google)</option>' +
     '<option value="both">Двусторонняя (с записью в Google)</option></select></label>' +
@@ -32,8 +37,8 @@
     '<button type="button" class="primary" id="gcApply" disabled>Применить изменения</button></div>' +
     '<p id="gcStatus" class="hint" role="status" aria-live="polite">Google не подключён.</p>' +
     '<div id="gcChanges"></div><p class="hint">Синхронизация выполняется только по кнопке, пока действует разрешение Google. ' +
-    'Окно просмотра: от 365 дней назад до 400 дней вперёд. Поддерживаются события с временем и простые еженедельные повторы; ' +
-    'отдельные исключения в повторяющихся событиях и сложные повторы пока не переносим. Целодневные события поддерживаются. ' +
+    'Окно просмотра: от 365 дней назад до 400 дней вперёд. Повторяющиеся события загружаются по отдельным датам, с изменёнными экземплярами; ' +
+    'целодневные события поддерживаются. Для списка календарей Google запрашивает отдельное разрешение на чтение названий календарей. ' +
     'Перед первой синхронизацией скачай резервную копию JSON.</p>';
   // Google sync stays inside the unified LifeSims calendar.
   section.append(panel);
@@ -42,6 +47,14 @@
   el('gcClient').value = DEFAULT_CLIENT_ID;
 
   let token = '', expiry = 0, preview = null, busy = false, authorizedMode = '';
+  let availableCalendars = [];
+  let calendarListLoaded = false;
+  const getChosen=()=>availableCalendars.filter(c=>c.checked);
+  function updateSelection(){
+    const chosen=getChosen().map(c=>c.id);
+    try{localStorage.setItem(CAL_CHOICE_KEY,JSON.stringify(chosen))}catch(_){}
+    invalidatePreview();
+  }
   let googleLibraryReady = false;
   function status(message) { el('gcStatus').textContent = message; }
   function ready() {
@@ -49,9 +62,10 @@
     if (!authenticated) { token = ''; expiry = 0; }
     el('gcConnect').disabled = busy;
     el('gcDisconnect').disabled = busy || !authenticated;
-    el('gcPreview').disabled = busy || !authenticated;
+    el('gcPreview').disabled = busy || !authenticated || !calendarListLoaded || !getChosen().length;
     el('gcApply').disabled = busy || !authenticated || !preview || !preview.changes.length;
     el('gcMode').disabled = busy;
+    for(const control of el('gcCalendarList').querySelectorAll('input[type=checkbox]'))control.disabled=busy;
   }
   function invalidatePreview() { preview = null; el('gcChanges').replaceChildren(); ready(); }
   function loadIdentityLibrary() {
@@ -99,7 +113,7 @@
       status('Открываю окно входа Google… Если оно не появилось, открой LifeSims в Chrome, а не во встроенном браузере.');
       const oauth = window.google.accounts.oauth2.initTokenClient({
         client_id: clientId,
-        scope: el('gcMode').value === 'both' ? WRITE_SCOPE : READ_SCOPE,
+        scope: (el('gcMode').value === 'both' ? WRITE_SCOPE : READ_SCOPE)+' '+LIST_SCOPE,
         callback: result => {
           if (result.error || !result.access_token) {
             status('Google не выдал доступ: ' + (result.error || 'операция отменена'));
@@ -109,7 +123,8 @@
           authorizedMode = el('gcMode').value;
           expiry = Date.now() + Number(result.expires_in || 3600) * 1000;
           invalidatePreview();
-          status('Google подключён на время этого сеанса. Нажми «Проверить изменения».');
+          status('Google подключён. Загружаю список календарей…');
+          loadCalendars().catch(err=>{calendarListLoaded=false;status('⚠ '+err.message);ready();});
           ready();
         },
         error_callback: result => { status('Не удалось открыть Google: ' + (result.type === 'popup_failed_to_open' ? 'всплывающее окно заблокировано. Открой LifeSims в Chrome.' : result.type === 'popup_closed' ? 'окно входа закрыто. Нажми «Подключить Google» ещё раз.' : (result.type || 'неизвестная ошибка'))); }
@@ -119,7 +134,7 @@
   });
   el('gcDisconnect').addEventListener('click', () => {
     if (token && window.google?.accounts?.oauth2?.revoke) window.google.accounts.oauth2.revoke(token, () => {});
-    token = ''; expiry = 0; authorizedMode = ''; invalidatePreview();
+    token = ''; expiry = 0; authorizedMode = ''; calendarListLoaded = false; availableCalendars = []; el('gcCalendarList').textContent='Подключи Google для выбора календарей.'; invalidatePreview();
     status('Сеанс завершён. Локальные записи не удалены.');
   });
 
@@ -132,7 +147,7 @@
     if (etag) headers['If-Match'] = etag;
     let response;
     try {
-      response = await fetch(ROOT + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), cache: 'no-store' });
+      response = await fetch(path.startsWith(API_ROOT) ? path : ROOT + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), cache: 'no-store' });
     } catch (_) { throw Error('Нет связи с Google Calendar API. Проверь интернет.'); }
     if (response.status === 401) { token = ''; expiry = 0; ready(); throw Error('Авторизация Google истекла. Подключи аккаунт повторно.'); }
     let data = {};
@@ -142,6 +157,42 @@
       throw Error('Google Calendar API: ' + response.status + ' ' + String(data.error?.message || response.statusText).slice(0, 180));
     }
     return data;
+  }
+  async function loadCalendars(){
+    calendarListLoaded=false;
+    const list=[];
+    let next='';
+    do {
+      const args=new URLSearchParams({maxResults:'250'});
+      if(next)args.set('pageToken',next);
+      let data;
+      try{data=await api('GET',API_ROOT+'/users/me/calendarList?'+args.toString())}
+      catch(err){if(/403|insufficient|scope/i.test(err.message))throw Error('Для выбора всех календарей нужно разрешение Google на просмотр списка календарей. Подключи Google повторно и подтверди оба разрешения. '+err.message);throw err;}
+      list.push(...(data.items||[]));
+      next=data.nextPageToken||'';
+    }while(next&&list.length<500);
+    if(next)throw Error('Список календарей слишком большой; импорт остановлен, чтобы не пропустить часть.');
+    if(!list.length)throw Error('Google не вернул ни одного доступного календаря.');
+    let saved;
+    try{const stored=JSON.parse(localStorage.getItem(CAL_CHOICE_KEY));if(Array.isArray(stored))saved=new Set(stored)}catch(_){}
+    availableCalendars=list.filter(c=>c.id&&c.accessRole!=='none'&&c.accessRole!=='freeBusyReader').map(c=>({
+      id:c.id,name:c.summary||'Календарь',primary:!!c.primary,role:c.accessRole||'reader',
+      checked:saved?saved.has(c.id):true,color:/^#[0-9a-f]{6}$/i.test(c.backgroundColor||'')?c.backgroundColor:'#4285f4'
+    }));
+    if(!availableCalendars.length)throw Error('Нет календарей с правом чтения мероприятий.');
+    const target=el('gcCalendarList');target.replaceChildren();
+    for(const cal of availableCalendars){
+      const line=document.createElement('label');
+      line.className='gc-calendar-option';
+      const checkbox=document.createElement('input');checkbox.type='checkbox';checkbox.checked=cal.checked;
+      checkbox.addEventListener('change',()=>{cal.checked=checkbox.checked;updateSelection()});
+      const dot=document.createElement('span');dot.className='gc-calendar-color';dot.style.background=cal.color;
+      const title=document.createElement('span');title.textContent=cal.name+(cal.primary?' · основной':'');
+      line.append(checkbox,dot,title);target.append(line);
+    }
+    calendarListLoaded=true;
+    status('Найдено календарей: '+availableCalendars.length+'. Выбрано: '+getChosen().length+'. Нажми «Проверить изменения».');
+    ready();
   }
   function localDate(iso) {
     const d = new Date(iso);
