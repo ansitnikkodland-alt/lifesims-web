@@ -38,7 +38,8 @@
   const heading = section.querySelector('.heading');
   heading.insertAdjacentElement('afterend', panel);
   const el = id => document.getElementById(id);
-  try { el('gcClient').value = localStorage.getItem(CLIENT_KEY) || DEFAULT_CLIENT_ID; } catch (_) { el('gcClient').value = DEFAULT_CLIENT_ID; }
+  // Always use the verified project client; an obsolete localStorage value could prevent login.
+  el('gcClient').value = DEFAULT_CLIENT_ID;
 
   let token = '', expiry = 0, preview = null, busy = false, authorizedMode = '';
   let googleLibraryReady = false;
@@ -54,19 +55,23 @@
   }
   function invalidatePreview() { preview = null; el('gcChanges').replaceChildren(); ready(); }
   function loadIdentityLibrary() {
-    if (window.google && window.google.accounts && window.google.accounts.oauth2) {
-      googleLibraryReady = true; return;
+    if (window.google?.accounts?.oauth2) {
+      googleLibraryReady = true;
+      status('✓ Google готов. Нажми «Подключить Google».');
+      return;
     }
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
     script.onload = () => {
       googleLibraryReady = !!window.google?.accounts?.oauth2;
-      if (!googleLibraryReady) status('Google не загрузил службу авторизации. Открой приложение через Chrome и попробуй ещё раз.');
+      if (googleLibraryReady) status('✓ Google готов. Нажми «Подключить Google».');
+      else status('Google не загрузил службу авторизации. Открой приложение через Chrome и попробуй ещё раз.');
     };
     script.onerror = () => { googleLibraryReady = false; status('Google Identity Services недоступен. Проверь интернет и блокировку скриптов.'); };
     document.head.append(script);
   }
+  status('Модуль LifeSims загружен. Загружаю авторизацию Google…');
   loadIdentityLibrary();
   el('gcClient').addEventListener('change', () => {
     token = ''; expiry = 0; authorizedMode = '';
@@ -109,7 +114,7 @@
         },
         error_callback: result => { status('Не удалось открыть Google: ' + (result.type === 'popup_failed_to_open' ? 'всплывающее окно заблокировано. Открой LifeSims в Chrome.' : result.type === 'popup_closed' ? 'окно входа закрыто. Нажми «Подключить Google» ещё раз.' : (result.type || 'неизвестная ошибка'))); }
       });
-      oauth.requestAccessToken({ prompt: '' });
+      oauth.requestAccessToken(); // GIS defaults to an account chooser; consent is requested if necessary.
     } catch (error) { status('Авторизация Google: ' + error.message); }
   });
   el('gcDisconnect').addEventListener('click', () => {
@@ -375,4 +380,6 @@
     status('✓ Синхронизировано ' + applied + ' мероприятий. Удалений не было. Перед закрытием можно скачать новый JSON.');
   }));
   ready();
+  window.LifeSimsGoogleCalendarVersion = 'inline-v9';
+  el('gcConnect').dataset.authHandler = 'inline-v9';
 })();
