@@ -209,7 +209,7 @@ function scheduleHistoryOccurrences(from,to){
       const nextMidnight=asDay(plusDays(date,1)).getTime();
       if(midnight>=occEnd)break;
       if(nextMidnight>occStart){
-        entries.push({id:event.id,date,title:event.title,startsAt:occStart,endsAt:occEnd,google:!!event.google,repeat:event.repeat==='weekly'});
+        entries.push({id:event.id,date,title:event.title,startsAt:occStart,endsAt:occEnd,google:!!event.google,repeat:event.repeat==='weekly',allDay:!!event.allDay});
       }
       date=plusDays(date,1);
     }
@@ -316,8 +316,8 @@ function renderHistory(){
     const startDay=dayStr(new Date(event.startsAt));
     const startTime=new Date(event.startsAt).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
     const endTime=new Date(event.endsAt).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
-    const info=(event.google?'📅 Google':'📆 Мероприятие')+' · '+
-      (chosen===startDay?startTime+'–'+endTime:'продолжение до '+endTime)+' · '+event.title+
+    const when=event.allDay?'весь день':(chosen===startDay?startTime+'–'+endTime:'продолжение до '+endTime);
+    const info=(event.google?'📅 Google':'📆 Мероприятие')+' · '+when+' · '+event.title+
       (event.repeat?' · каждую неделю':'')+' · запланировано';
     const row=document.createElement('div');
     row.className='history-activity-line';
@@ -341,7 +341,7 @@ function renderHistory(){
   renderActivities();
 }
 function changePeriod(n){const d=$('historyDate').value||today(),x=asDay(d);if(historyView==='month'){const wanted=x.getDate();x.setDate(1);x.setMonth(x.getMonth()+n);const last=new Date(x.getFullYear(),x.getMonth()+1,0).getDate();x.setDate(Math.min(wanted,last))}else x.setDate(x.getDate()+n*(historyView==='week'?7:1));$('historyDate').value=dayStr(x);renderHistory()}
-const weekdayNames=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];function clearEventForm(){$('eventForm').reset();$('eventEditId').value='';$('eventWeekdays').hidden=true}function renderSchedule(){const list=$('eventList');list.replaceChildren();for(const e of state.schedule||[]){const item=document.createElement('div');item.className='item';const info=document.createElement('div');info.className='itemtext';const title=document.createElement('strong');title.textContent=e.title;const desc=document.createElement('small');desc.textContent=(e.startsAt||'')+' — '+(e.endsAt||'')+(e.repeat==='weekly'?' · Каждую неделю: '+(e.weekdays||[]).map(n=>weekdayNames[n-1]).filter(Boolean).join(', '):'');info.append(title,desc);const edit=document.createElement('button');edit.className='secondary';edit.textContent='Изменить';edit.onclick=()=>openCalendarEventEditor(e.id);item.append(info,edit);list.append(item)}if(!list.children.length)list.textContent='Мероприятий пока нет'}function openCalendarEventEditor(id){
+const weekdayNames=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];function clearEventForm(){$('eventForm').reset();$('eventEditId').value='';$('eventWeekdays').hidden=true}function renderSchedule(){const list=$('eventList');list.replaceChildren();for(const e of state.schedule||[]){const item=document.createElement('div');item.className='item';const info=document.createElement('div');info.className='itemtext';const title=document.createElement('strong');title.textContent=e.title;const desc=document.createElement('small');desc.textContent=(e.allDay?'Весь день · ':'')+(e.startsAt||'')+' — '+(e.endsAt||'')+(e.repeat==='weekly'?' · Каждую неделю: '+(e.weekdays||[]).map(n=>weekdayNames[n-1]).filter(Boolean).join(', '):'');info.append(title,desc);const edit=document.createElement('button');edit.className='secondary';edit.textContent='Изменить';edit.onclick=()=>openCalendarEventEditor(e.id);item.append(info,edit);list.append(item)}if(!list.children.length)list.textContent='Мероприятий пока нет'}function openCalendarEventEditor(id){
   const e=(state.schedule||[]).find(x=>x.id===id);if(!e)return toast('Мероприятие не найдено');
   $('eventEditId').value=e.id;$('eventName').value=e.title;
   $('eventStart').value=e.startsAt;$('eventEnd').value=e.endsAt;
