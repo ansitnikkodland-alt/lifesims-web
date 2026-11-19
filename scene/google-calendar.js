@@ -470,6 +470,6 @@
     status('✓ Синхронизировано ' + applied + ' мероприятий. В «Календаре» отображаются сохранённые события по датам. Ничего не удалено; можно скачать резервную копию JSON.');
   }));
   ready();
-  window.LifeSimsGoogleCalendarVersion = 'inline-v9';
-  el('gcConnect').dataset.authHandler = 'inline-v9';
+  window.LifeSimsGoogleCalendarVersion = 'inline-v11';
+  el('gcConnect').dataset.authHandler = 'inline-v11';
 })();
