@@ -38,7 +38,6 @@
   const heading = section.querySelector('.heading');
   heading.insertAdjacentElement('afterend', panel);
   const el = id => document.getElementById(id);
-  el('gcOrigin').textContent = location.origin;
   try { el('gcClient').value = localStorage.getItem(CLIENT_KEY) || DEFAULT_CLIENT_ID; } catch (_) { el('gcClient').value = DEFAULT_CLIENT_ID; }
 
   let token = '', expiry = 0, preview = null, busy = false, authorizedMode = '';
@@ -61,7 +60,10 @@
     const script = document.createElement('script');
     script.src = 'https://accounts.google.com/gsi/client';
     script.async = true;
-    script.onload = () => { googleLibraryReady = true; };
+    script.onload = () => {
+      googleLibraryReady = !!window.google?.accounts?.oauth2;
+      if (!googleLibraryReady) status('Google не загрузил службу авторизации. Открой приложение через Chrome и попробуй ещё раз.');
+    };
     script.onerror = () => { googleLibraryReady = false; status('Google Identity Services недоступен. Проверь интернет и блокировку скриптов.'); };
     document.head.append(script);
   }
@@ -88,7 +90,8 @@
       return status('Авторизация Google ещё загружается. Повтори нажатие, когда есть интернет.');
     }
     try {
-      localStorage.setItem(CLIENT_KEY, clientId);
+      try { localStorage.setItem(CLIENT_KEY, clientId); } catch (_) { /* OAuth must still work if local storage is unavailable */ }
+      status('Открываю окно входа Google… Если оно не появилось, открой LifeSims в Chrome, а не во встроенном браузере.');
       const oauth = window.google.accounts.oauth2.initTokenClient({
         client_id: clientId,
         scope: el('gcMode').value === 'both' ? WRITE_SCOPE : READ_SCOPE,
@@ -104,7 +107,7 @@
           status('Google подключён на время этого сеанса. Нажми «Проверить изменения».');
           ready();
         },
-        error_callback: result => { status('Не удалось открыть авторизацию Google: ' + (result.type || 'неизвестная ошибка')); }
+        error_callback: result => { status('Не удалось открыть Google: ' + (result.type === 'popup_failed_to_open' ? 'всплывающее окно заблокировано. Открой LifeSims в Chrome.' : result.type === 'popup_closed' ? 'окно входа закрыто. Нажми «Подключить Google» ещё раз.' : (result.type || 'неизвестная ошибка'))); }
       });
       oauth.requestAccessToken({ prompt: '' });
     } catch (error) { status('Авторизация Google: ' + error.message); }
