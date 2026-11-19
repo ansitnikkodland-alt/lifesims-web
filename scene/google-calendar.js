@@ -19,7 +19,7 @@
   panel.innerHTML =
     '<h3>📅 Google Календарь</h3>' +
     '<p class="hint">События основного календаря Google ↔ мероприятия LifeSims. Сначала показываем список изменений; удалений нет. Без интернета местные записи остаются доступны.</p>' +
-    '<p class="hint">Подключение подготовлено. Для первого входа нажми «Подключить Google» и подтверди доступ в Google. По умолчанию только чтение календаря.</p>' +
+    '<p class="hint">После входа нажми «Проверить изменения», затем «Применить изменения». Иначе события не появятся в «Истории». По умолчанию Google доступен только для чтения.</p>' +
     '<details><summary>Технические настройки (обычно не нужны)</summary>' +
     '<label class="field">OAuth Client ID<input id="gcClient" type="text" spellcheck="false" autocomplete="off" value="431544105696-rvvpicrjlrff400pafjb8tp3805lpqj8.apps.googleusercontent.com"></label>' +
     '<p class="hint">Публичный идентификатор приложения. Изменять не требуется.</p></details>' +
@@ -32,7 +32,7 @@
     '<button type="button" class="primary" id="gcApply" disabled>Применить изменения</button></div>' +
     '<p id="gcStatus" class="hint" role="status" aria-live="polite">Google не подключён.</p>' +
     '<div id="gcChanges"></div><p class="hint">Синхронизация выполняется только по кнопке, пока действует разрешение Google. ' +
-    'Окно просмотра: от 14 дней назад до 400 дней вперёд. Поддерживаются события с временем и простые еженедельные повторы; ' +
+    'Окно просмотра: от 365 дней назад до 400 дней вперёд. Поддерживаются события с временем и простые еженедельные повторы; ' +
     'отдельные исключения в повторяющихся событиях, целодневные и сложные повторы пока не переносим. ' +
     'Перед первой синхронизацией скачай резервную копию JSON.</p>';
   const heading = section.querySelector('.heading');
@@ -209,7 +209,7 @@
     return payload;
   }
   async function listRemote() {
-    const min = new Date(Date.now() - 14 * DAY).toISOString();
+    const min = new Date(Date.now() - 365 * DAY).toISOString();
     const max = new Date(Date.now() + 400 * DAY).toISOString();
     let pageToken = '', page = 0;
     const instances = [], masterIds = new Set(), exceptions = new Set();
@@ -342,7 +342,7 @@
     const locals = bridge.getSchedule();
     preview = makePlan(remote, mode, locals);
     renderPreview(preview);
-    status(preview.changes.length ? 'Проверь список и нажми «Применить изменения».' : 'Изменений для применения нет.');
+    status(preview.changes.length ? 'Проверь список и нажми «Применить изменения», чтобы события появились в «Истории».' : 'Новых изменений нет. Сохранённых Google-мероприятий в LifeSims: ' + bridge.getSchedule().filter(e=>e.google).length + '. Их можно посмотреть в «Истории».');
   }));
   el('gcApply').addEventListener('click', () => withBusy(async () => {
     if (!preview || !preview.changes.length) return;
@@ -377,7 +377,7 @@
       applied++;
     }
     invalidatePreview();
-    status('✓ Синхронизировано ' + applied + ' мероприятий. Удалений не было. Перед закрытием можно скачать новый JSON.');
+    status('✓ Синхронизировано ' + applied + ' мероприятий. В «Истории» отображаются сохранённые события по датам. Ничего не удалено; можно скачать резервную копию JSON.');
   }));
   ready();
   window.LifeSimsGoogleCalendarVersion = 'inline-v9';
