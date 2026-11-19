@@ -9,6 +9,7 @@
   const WRITE_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
   const ROOT = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
   const CLIENT_KEY = 'lifesims-google-oauth-client-id';
+  const DEFAULT_CLIENT_ID = '431544105696-rvvpicrjlrff400pafjb8tp3805lpqj8.apps.googleusercontent.com'; // Public OAuth client ID, not a secret.
   const DAY = 86400000;
   const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
   const weekdayCodes = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
@@ -18,10 +19,10 @@
   panel.innerHTML =
     '<h3>📅 Google Календарь</h3>' +
     '<p class="hint">События основного календаря Google ↔ мероприятия LifeSims. Сначала показываем список изменений; удалений нет. Без интернета местные записи остаются доступны.</p>' +
-    '<label class="field">OAuth Client ID для веб-приложения Google' +
-    '<input id="gcClient" type="text" spellcheck="false" autocomplete="off" placeholder="123456789-....apps.googleusercontent.com"></label>' +
-    '<p class="hint">Создай веб-клиент в <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer">Google Cloud</a>, включи Google Calendar API, добавь разрешённый JavaScript-источник ' +
-    '<strong id="gcOrigin"></strong>. Секрет клиента не вводи. ID хранится только в браузере.</p>' +
+    '<p class="hint">Подключение подготовлено. Для первого входа нажми «Подключить Google» и подтверди доступ в Google. По умолчанию только чтение календаря.</p>' +
+    '<details><summary>Технические настройки (обычно не нужны)</summary>' +
+    '<label class="field">OAuth Client ID<input id="gcClient" type="text" spellcheck="false" autocomplete="off"></label>' +
+    '<p class="hint">Публичный идентификатор приложения. Изменять не требуется.</p></details>' +
     '<div class="row"><button type="button" class="primary" id="gcConnect">Подключить Google</button>' +
     '<button type="button" class="secondary" id="gcDisconnect" disabled>Завершить сеанс</button></div>' +
     '<label class="field">Направление синхронизации<select id="gcMode">' +
@@ -38,7 +39,7 @@
   heading.insertAdjacentElement('afterend', panel);
   const el = id => document.getElementById(id);
   el('gcOrigin').textContent = location.origin;
-  try { el('gcClient').value = localStorage.getItem(CLIENT_KEY) || ''; } catch (_) {}
+  try { el('gcClient').value = localStorage.getItem(CLIENT_KEY) || DEFAULT_CLIENT_ID; } catch (_) { el('gcClient').value = DEFAULT_CLIENT_ID; }
 
   let token = '', expiry = 0, preview = null, busy = false, authorizedMode = '';
   let googleLibraryReady = false;
