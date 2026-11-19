@@ -1,0 +1,359 @@
+/* LifeSims Google Calendar sync. OAuth tokens remain in memory; no background writes. */
+(function () {
+  'use strict';
+  const bridge = window.LifeSimsCalendarBridge;
+  const section = document.getElementById('schedule');
+  if (!bridge || !section) return;
+
+  const SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+  const ROOT = 'https://www.googleapis.com/calendar/v3/calendars/primary/events';
+  const CLIENT_KEY = 'lifesims-google-oauth-client-id';
+  const DAY = 86400000;
+  const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC';
+  const weekdayCodes = ['MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
+  const panel = document.createElement('div');
+  panel.className = 'card';
+  panel.id = 'googleCalendarPanel';
+  panel.innerHTML =
+    '<h3>📅 Google Календарь</h3>' +
+    '<p class="hint">События основного календаря Google ↔ мероприятия LifeSims. Сначала показываем список изменений; удалений нет. Без интернета местные записи остаются доступны.</p>' +
+    '<label class="field">OAuth Client ID для веб-приложения Google' +
+    '<input id="gcClient" type="text" spellcheck="false" autocomplete="off" placeholder="123456789-....apps.googleusercontent.com"></label>' +
+    '<p class="hint">Создай веб-клиент в <a href="https://console.cloud.google.com/apis/credentials" target="_blank" rel="noopener noreferrer">Google Cloud</a>, включи Google Calendar API, добавь разрешённый JavaScript-источник ' +
+    '<strong id="gcOrigin"></strong>. Секрет клиента не вводи. ID хранится только в браузере.</p>' +
+    '<div class="row"><button type="button" class="primary" id="gcConnect">Подключить Google</button>' +
+    '<button type="button" class="secondary" id="gcDisconnect" disabled>Завершить сеанс</button></div>' +
+    '<label class="field">Направление синхронизации<select id="gcMode">' +
+    '<option value="pull">Google → LifeSims (без записи в Google)</option>' +
+    '<option value="both">Двусторонняя (с записью в Google)</option></select></label>' +
+    '<div class="row"><button type="button" class="secondary" id="gcPreview" disabled>Проверить изменения</button>' +
+    '<button type="button" class="primary" id="gcApply" disabled>Применить изменения</button></div>' +
+    '<p id="gcStatus" class="hint" role="status" aria-live="polite">Google не подключён.</p>' +
+    '<div id="gcChanges"></div><p class="hint">Синхронизация выполняется только по кнопке, пока действует разрешение Google. ' +
+    'Окно просмотра: от 14 дней назад до 400 дней вперёд. Поддерживаются события с временем и простые еженедельные повторы; ' +
+    'отдельные исключения в повторяющихся событиях, целодневные и сложные повторы пока не переносим. ' +
+    'Перед первой синхронизацией скачай резервную копию JSON.</p>';
+  const heading = section.querySelector('.heading');
+  heading.insertAdjacentElement('afterend', panel);
+  const el = id => document.getElementById(id);
+  el('gcOrigin').textContent = location.origin;
+  try { el('gcClient').value = localStorage.getItem(CLIENT_KEY) || ''; } catch (_) {}
+
+  let token = '', expiry = 0, preview = null, busy = false;
+  let googleLibraryReady = false;
+  function status(message) { el('gcStatus').textContent = message; }
+  function ready() {
+    const authenticated = !!token && Date.now() < expiry - 30000;
+    if (!authenticated) { token = ''; expiry = 0; }
+    el('gcConnect').disabled = busy;
+    el('gcDisconnect').disabled = busy || !authenticated;
+    el('gcPreview').disabled = busy || !authenticated;
+    el('gcApply').disabled = busy || !authenticated || !preview || !preview.changes.length;
+    el('gcMode').disabled = busy;
+  }
+  function invalidatePreview() { preview = null; el('gcChanges').replaceChildren(); ready(); }
+  function loadIdentityLibrary() {
+    if (window.google && window.google.accounts && window.google.accounts.oauth2) {
+      googleLibraryReady = true; return;
+    }
+    const script = document.createElement('script');
+    script.src = 'https://accounts.google.com/gsi/client';
+    script.async = true;
+    script.onload = () => { googleLibraryReady = true; };
+    script.onerror = () => { googleLibraryReady = false; status('Google Identity Services недоступен. Проверь интернет и блокировку скриптов.'); };
+    document.head.append(script);
+  }
+  loadIdentityLibrary();
+  el('gcClient').addEventListener('change', () => {
+    invalidatePreview();
+    try { localStorage.setItem(CLIENT_KEY, el('gcClient').value.trim()); } catch (_) {}
+  });
+  el('gcMode').addEventListener('change', invalidatePreview);
+  el('gcConnect').addEventListener('click', () => {
+    const clientId = el('gcClient').value.trim();
+    if (location.protocol !== 'https:') return status('Для Google OAuth открой опубликованный HTTPS-сайт LifeSims, а не локальный HTML.');
+    if (!/^[0-9]+-[a-z0-9-]+\.apps\.googleusercontent\.com$/.test(clientId)) {
+      return status('Укажи OAuth Client ID типа Web application из Google Cloud (не Client Secret).');
+    }
+    if (!googleLibraryReady || !window.google || !window.google.accounts || !window.google.accounts.oauth2) {
+      return status('Авторизация Google ещё загружается. Повтори нажатие, когда есть интернет.');
+    }
+    try {
+      localStorage.setItem(CLIENT_KEY, clientId);
+      const oauth = window.google.accounts.oauth2.initTokenClient({
+        client_id: clientId,
+        scope: SCOPE,
+        callback: result => {
+          if (result.error || !result.access_token) {
+            status('Google не выдал доступ: ' + (result.error || 'операция отменена'));
+            return;
+          }
+          token = result.access_token;
+          expiry = Date.now() + Number(result.expires_in || 3600) * 1000;
+          invalidatePreview();
+          status('Google подключён на время этого сеанса. Нажми «Проверить изменения».');
+          ready();
+        },
+        error_callback: result => { status('Не удалось открыть авторизацию Google: ' + (result.type || 'неизвестная ошибка')); }
+      });
+      oauth.requestAccessToken({ prompt: '' });
+    } catch (error) { status('Авторизация Google: ' + error.message); }
+  });
+  el('gcDisconnect').addEventListener('click', () => {
+    if (token && window.google?.accounts?.oauth2?.revoke) window.google.accounts.oauth2.revoke(token, () => {});
+    token = ''; expiry = 0; invalidatePreview();
+    status('Сеанс завершён. Локальные записи не удалены.');
+  });
+
+  async function api(method, path, body, etag) {
+    if (!token || Date.now() >= expiry - 30000) {
+      token = ''; ready(); throw Error('Сеанс Google истёк. Подключи Google ещё раз.');
+    }
+    const headers = { Authorization: 'Bearer ' + token };
+    if (body !== undefined) headers['Content-Type'] = 'application/json';
+    if (etag) headers['If-Match'] = etag;
+    let response;
+    try {
+      response = await fetch(ROOT + path, { method, headers, body: body === undefined ? undefined : JSON.stringify(body), cache: 'no-store' });
+    } catch (_) { throw Error('Нет связи с Google Calendar API. Проверь интернет.'); }
+    if (response.status === 401) { token = ''; expiry = 0; ready(); throw Error('Авторизация Google истекла. Подключи аккаунт повторно.'); }
+    let data = {};
+    try { data = await response.json(); } catch (_) {}
+    if (!response.ok) {
+      if (response.status === 412) throw Error('Google изменил мероприятие после проверки. Заново проверь изменения.');
+      throw Error('Google Calendar API: ' + response.status + ' ' + String(data.error?.message || response.statusText).slice(0, 180));
+    }
+    return data;
+  }
+  function localDate(iso) {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return null;
+    const p = x => String(x).padStart(2, '0');
+    return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + 'T' + p(d.getHours()) + ':' + p(d.getMinutes());
+  }
+  function signature(event) {
+    return JSON.stringify([
+      String(event.title || ''), String(event.startsAt || ''), String(event.endsAt || ''),
+      event.repeat === 'weekly' ? 'weekly' : 'none',
+      event.repeat === 'weekly' ? [...(event.weekdays || [])].map(Number).sort((a, b) => a - b) : []
+    ]);
+  }
+  function project(event) {
+    if (!event || event.status === 'cancelled' || (event.eventType && event.eventType !== 'default')) return null;
+    if (!event.start?.dateTime || !event.end?.dateTime) return null;
+    let repeat = 'none', weekdays = [];
+    if (event.recurrence && event.recurrence.length) {
+      if (event.recurrence.length !== 1) return null;
+      const rule = event.recurrence[0];
+      if (!rule.startsWith('RRULE:')) return null;
+      const opts = Object.fromEntries(rule.slice(6).split(';').map(s => s.split('=')));
+      if (opts.FREQ !== 'WEEKLY' || (opts.INTERVAL && opts.INTERVAL !== '1') ||
+          opts.UNTIL || opts.COUNT || Object.keys(opts).some(k => !['FREQ', 'INTERVAL', 'BYDAY', 'WKST'].includes(k))) return null;
+      if (event.start.timeZone && event.start.timeZone !== tz) return null;
+      repeat = 'weekly';
+      if (opts.BYDAY) {
+        weekdays = opts.BYDAY.split(',').map(x => weekdayCodes.indexOf(x) + 1);
+        if (weekdays.some(x => x < 1)) return null;
+      } else {
+        const date = new Date(event.start.dateTime);
+        weekdays = [((date.getDay() + 6) % 7) + 1];
+      }
+    }
+    const startsAt = localDate(event.start.dateTime), endsAt = localDate(event.end.dateTime);
+    if (!startsAt || !endsAt || endsAt <= startsAt) return null;
+    return { title: event.summary || 'Без названия', startsAt, endsAt, repeat, weekdays };
+  }
+  function toGoogle(event) {
+    const start = new Date(event.startsAt), end = new Date(event.endsAt);
+    if (!Number.isFinite(start.getTime()) || !Number.isFinite(end.getTime()) || end <= start) throw Error('Неверные даты у «' + event.title + '».');
+    if (event.repeat === 'weekly') {
+      const days = [...new Set((event.weekdays || []).map(Number))].sort((a, b) => a - b);
+      if (!days.length || days.some(n => n < 1 || n > 7)) throw Error('Выбери дни недели для «' + event.title + '».');
+      const day = ((start.getDay() + 6) % 7) + 1;
+      if (!days.includes(day)) {
+        for (let ahead = 1; ahead < 8; ahead++) {
+          if (days.includes(((day + ahead - 1) % 7) + 1)) {
+            start.setDate(start.getDate() + ahead);
+            end.setDate(end.getDate() + ahead);
+            break;
+          }
+        }
+      }
+    }
+    const payload = {
+      summary: event.title,
+      start: { dateTime: start.toISOString(), timeZone: tz },
+      end: { dateTime: end.toISOString(), timeZone: tz }
+    };
+    if (event.repeat === 'weekly') payload.recurrence = ['RRULE:FREQ=WEEKLY;BYDAY=' +
+      [...new Set(event.weekdays)].map(n => weekdayCodes[n - 1]).join(',')];
+    else payload.recurrence = [];
+    return payload;
+  }
+  async function listRemote() {
+    const min = new Date(Date.now() - 14 * DAY).toISOString();
+    const max = new Date(Date.now() + 400 * DAY).toISOString();
+    let pageToken = '', page = 0;
+    const instances = [], masterIds = new Set(), exceptions = new Set();
+    do {
+      if (++page > 6) throw Error('Слишком много событий Google (больше 15 000). Синхронизация остановлена, чтобы не использовать неполный список.');
+      const qs = new URLSearchParams({
+        timeMin: min, timeMax: max, maxResults: '2500', singleEvents: 'true', orderBy: 'startTime', showDeleted: 'false'
+      });
+      if (pageToken) qs.set('pageToken', pageToken);
+      const data = await api('GET', '?' + qs.toString());
+      for (const event of data.items || []) {
+        if (event.recurringEventId) {
+          masterIds.add(event.recurringEventId);
+          if (event.originalStartTime?.dateTime && event.start?.dateTime &&
+              new Date(event.originalStartTime.dateTime).getTime() !== new Date(event.start.dateTime).getTime()) {
+            exceptions.add(event.recurringEventId);
+          }
+        } else instances.push(event);
+      }
+      pageToken = data.nextPageToken || '';
+    } while (pageToken);
+    const masters = [];
+    if (masterIds.size > 100) throw Error('Найдено более 100 серий повторяющихся событий. Синхронизация не выполнена; нужна пакетная обработка.');
+    for (const id of masterIds) {
+      if (exceptions.has(id)) continue;
+      try { masters.push(await api('GET', '/' + encodeURIComponent(id))); }
+      catch (error) { if (/404|410/.test(error.message)) continue; throw error; }
+    }
+    const events = [...instances, ...masters];
+    const supported = [];
+    let skipped = exceptions.size;
+    for (const event of events) {
+      const normalized = project(event);
+      if (normalized) supported.push({ id: event.id, etag: event.etag || '', normalized });
+      else skipped++;
+    }
+    return { supported, skipped, visible: events.length };
+  }
+  function calendarMeta(remote, base) {
+    return { id: remote.id, calendarId: 'primary', etag: remote.etag, base };
+  }
+  function summarize(changes, skipped, conflicts, orphaned) {
+    const types = { import: 0, pull: 0, link: 0, create: 0, push: 0 };
+    for (const c of changes) types[c.type]++;
+    return 'Из Google в LifeSims: ' + (types.import + types.pull) + '; без дубликатов привязать: ' + types.link +
+      '; создать в Google: ' + types.create + '; обновить в Google: ' + types.push +
+      '; конфликтов (пропущены): ' + conflicts + '; неподдерживаемых событий/исключений: ' + skipped +
+      '; не найдено в окне просмотра: ' + orphaned + '. Ничего не удаляется.';
+  }
+  function renderPreview(data) {
+    const box = el('gcChanges'); box.replaceChildren();
+    const intro = document.createElement('p');
+    intro.className = 'hint';
+    intro.textContent = summarize(data.changes, data.skipped, data.conflicts, data.orphaned);
+    box.append(intro);
+    if (data.changes.length) {
+      const list = document.createElement('ul');
+      const labels = { import: 'Импорт', pull: 'Обновить LifeSims', link: 'Связать', create: 'Создать в Google', push: 'Обновить Google' };
+      for (const ch of data.changes.slice(0, 15)) {
+        const row = document.createElement('li');
+        row.textContent = labels[ch.type] + ': ' + ch.title;
+        list.append(row);
+      }
+      box.append(list);
+      if (data.changes.length > 15) {
+        const note = document.createElement('p');
+        note.className = 'hint'; note.textContent = 'И ещё ' + (data.changes.length - 15) + ' изменений.';
+        box.append(note);
+      }
+    }
+    if (data.conflicts || data.orphaned) {
+      const warning = document.createElement('p');
+      warning.className = 'hint';
+      warning.textContent = 'Конфликтующие записи и события Google вне окна просмотра не перезаписываются. Отмены отдельных дат повторяющихся событий пока не поддерживаются.';
+      box.append(warning);
+    }
+  }
+  function makePlan(remoteData, mode, locals) {
+    const changes = [], claimed = new Set(), remoteIds = new Set();
+    let conflicts = 0, orphaned = 0;
+    const mapped = new Map(locals.filter(x => x.google?.id && x.google.calendarId === 'primary').map(x => [x.google.id, x]));
+    for (const remote of remoteData.supported) {
+      remoteIds.add(remote.id);
+      const sig = signature(remote.normalized);
+      const linked = mapped.get(remote.id);
+      if (linked) {
+        claimed.add(linked.id);
+        const base = linked.google?.base;
+        const localChanged = base !== signature(linked);
+        const remoteChanged = base !== sig;
+        if (!base || (localChanged && remoteChanged)) { conflicts++; continue; }
+        if (remoteChanged) changes.push({ type: 'pull', title: remote.normalized.title, remote, local: linked });
+        else if (localChanged && mode === 'both') changes.push({ type: 'push', title: linked.title, local: linked, remote });
+      } else {
+        const matches = locals.filter(x => !x.google?.id && !claimed.has(x.id) && signature(x) === sig);
+        if (matches.length === 1) {
+          claimed.add(matches[0].id);
+          changes.push({ type: 'link', title: matches[0].title, local: matches[0], remote });
+        } else {
+          changes.push({ type: 'import', title: remote.normalized.title, remote });
+        }
+      }
+    }
+    if (mode === 'both') {
+      for (const local of locals) {
+        if (!local.google?.id && !claimed.has(local.id)) changes.push({ type: 'create', title: local.title, local });
+      }
+    }
+    for (const local of locals) {
+      if (local.google?.id && local.google.calendarId === 'primary' && !remoteIds.has(local.google.id)) orphaned++;
+    }
+    return { mode, changes, conflicts, orphaned, skipped: remoteData.skipped, snapshot: JSON.stringify(locals) };
+  }
+  async function withBusy(task) {
+    if (busy) return;
+    busy = true; ready();
+    try { await task(); } catch (e) { status('⚠ ' + e.message); }
+    finally { busy = false; ready(); }
+  }
+  el('gcPreview').addEventListener('click', () => withBusy(async () => {
+    invalidatePreview();
+    if (!bridge.canWrite()) throw Error('Локальные данные недоступны для записи. Сначала восстанови сохранение LifeSims.');
+    status('Читаю события основного Google Календаря…');
+    const remote = await listRemote();
+    const mode = el('gcMode').value;
+    const locals = bridge.getSchedule();
+    preview = makePlan(remote, mode, locals);
+    renderPreview(preview);
+    status(preview.changes.length ? 'Проверь список и нажми «Применить изменения».' : 'Изменений для применения нет.');
+  }));
+  el('gcApply').addEventListener('click', () => withBusy(async () => {
+    if (!preview || !preview.changes.length) return;
+    if (preview.snapshot !== JSON.stringify(bridge.getSchedule())) {
+      invalidatePreview();
+      throw Error('Мероприятия изменились после проверки. Проверь изменения заново.');
+    }
+    const plan = preview;
+    if (!window.confirm('Применить ' + plan.changes.length + ' изменений? ' +
+      (plan.mode === 'both' ? 'Это может СОЗДАТЬ или ОБНОВИТЬ события в Google Calendar. ' : 'Google Calendar останется без изменений. ') +
+      'Удалений не будет.')) return;
+    let applied = 0;
+    for (const change of plan.changes) {
+      status('Синхронизация Google: ' + applied + ' / ' + plan.changes.length + '…');
+      const remote = change.remote;
+      if (['import', 'pull', 'link'].includes(change.type)) {
+        const local = change.local || { id: 'google:' + remote.id };
+        const normalized = change.type === 'link' ? local : remote.normalized;
+        bridge.upsert([{ ...local, ...normalized, google: calendarMeta(remote, signature(normalized)) }]);
+      } else if (change.type === 'create') {
+        const created = await api('POST', '', toGoogle(change.local));
+        const normalized = project(created) || change.local;
+        bridge.upsert([{ ...change.local, ...normalized, google: calendarMeta(created, signature(normalized)) }]);
+      } else if (change.type === 'push') {
+        const updated = await api('PATCH', '/' + encodeURIComponent(remote.id),
+          toGoogle(change.local), remote.etag);
+        const normalized = project(updated) || change.local;
+        bridge.upsert([{ ...change.local, ...normalized, google: calendarMeta(updated, signature(normalized)) }]);
+      }
+      applied++;
+    }
+    invalidatePreview();
+    status('✓ Синхронизировано ' + applied + ' мероприятий. Удалений не было. Перед закрытием можно скачать новый JSON.');
+  }));
+  ready();
+})();
