@@ -21,7 +21,7 @@
     '<p class="hint">События основного календаря Google ↔ мероприятия LifeSims. Сначала показываем список изменений; удалений нет. Без интернета местные записи остаются доступны.</p>' +
     '<p class="hint">Подключение подготовлено. Для первого входа нажми «Подключить Google» и подтверди доступ в Google. По умолчанию только чтение календаря.</p>' +
     '<details><summary>Технические настройки (обычно не нужны)</summary>' +
-    '<label class="field">OAuth Client ID<input id="gcClient" type="text" spellcheck="false" autocomplete="off"></label>' +
+    '<label class="field">OAuth Client ID<input id="gcClient" type="text" spellcheck="false" autocomplete="off" value="431544105696-rvvpicrjlrff400pafjb8tp3805lpqj8.apps.googleusercontent.com"></label>' +
     '<p class="hint">Публичный идентификатор приложения. Изменять не требуется.</p></details>' +
     '<div class="row"><button type="button" class="primary" id="gcConnect">Подключить Google</button>' +
     '<button type="button" class="secondary" id="gcDisconnect" disabled>Завершить сеанс</button></div>' +
