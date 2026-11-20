@@ -1335,7 +1335,8 @@ const EXTRA_COLLECTIONS=[
  {name:'vo2_max',scope:'heart_health',label:'VO₂ max'},
  {name:'sleep_time',scope:'daily',label:'Рекомендации по сну'},
  {name:'rest_mode_period',scope:'daily',label:'Режим отдыха'},
- {name:'ring_battery_level',scope:'ring_configuration',time:true,label:'Заряд кольца'}
+ {name:'ring_battery_level',scope:'ring_configuration',time:true,label:'Заряд кольца'},
+ {name:'ring_configuration',scope:'ring_configuration',snapshot:true,label:'Текущая конфигурация кольца'}
 ];
 const el=id=>document.getElementById(id);
 const panel=document.createElement('div');panel.className='card oura-panel';
@@ -1433,11 +1434,11 @@ const dateAdd=(date,delta)=>{
  const p=date.split('-').map(Number),d=new Date(p[0],p[1]-1,p[2]+delta,12);
  return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
 };
-async function read(name,start,end,time=false){
+async function read(name,start,end,time=false,snapshot=false){
  let data=[],next='',pages=0;
  do{
   if(++pages>10)throw Error('Слишком много страниц Oura; сократи период.');
-  const q=time?new URLSearchParams({
+  const q=snapshot?new URLSearchParams():time?new URLSearchParams({
     start_datetime:new Date(start+'T00:00:00').toISOString(),
     end_datetime:new Date(end+'T23:59:59').toISOString()
   }):new URLSearchParams({start_date:start,end_date:end});
@@ -1464,7 +1465,7 @@ async function fetchExtras(from,to,baseCollections){
   if(!grantedScopes.includes(collection.scope))continue;
   status('Загружаю Oura: '+collection.label+'…');
   try{
-   const items=await read(collection.name,from,to,!!collection.time);
+   const items=await read(collection.name,from,to,!!collection.time,!!collection.snapshot);
    extra.push({...collection,items});
   }catch(e){
    // Optional endpoint failure must never conceal missing data or discard daily metrics.
