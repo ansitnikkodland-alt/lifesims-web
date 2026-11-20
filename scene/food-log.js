@@ -238,11 +238,15 @@ $('mealRepeat').addEventListener('click',()=>{
  $('mealEstimateResult').textContent='Значения взяты из предыдущей записи. Проверь порцию.';
  setStatus('Скопировано: '+recent.title+'. Новая запись сохранится отдельно.');
 });
-$('mealPhoto').addEventListener('change',async()=>{
- const file=$('mealPhoto').files?.[0];if(!file)return;
- try{photoThumb=await compressPhoto(file);entryMethod='photo';setPhotoPreview();setStatus('Фото добавлено локально. Опиши еду словами, чтобы рассчитать примерные калории.')}
- catch(e){setStatus('⚠ '+e.message)}
-});
+async function attachMealPhoto(input){
+ const file=input.files?.[0];if(!file)return;
+ try{
+  photoThumb=await compressPhoto(file);entryMethod='photo';setPhotoPreview();
+  setStatus('Фото добавлено локально. Опиши еду словами, чтобы рассчитать примерные калории.');
+ }catch(e){setStatus('⚠ '+e.message)}
+}
+$('mealPhoto').addEventListener('change',()=>attachMealPhoto($('mealPhoto')));
+$('mealGallery').addEventListener('change',()=>attachMealPhoto($('mealGallery')));
 $('mealVoice').addEventListener('click',()=>{
  const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
  if(!Recognition){setStatus('Голосовой ввод недоступен в этом браузере. Можно воспользоваться микрофоном Android-клавиатуры.');$('mealDescription').focus();return}
