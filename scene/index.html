@@ -238,7 +238,9 @@ function scheduleHistoryOccurrences(from,to){
       if(nextMidnight>occStart && !(suppressed&&date>=suppressed.from&&date<=suppressed.to)){
         entries.push({id:event.id,date,title:event.title,startsAt:occStart,endsAt:occEnd,
           google:!!event.google,repeat:event.repeat&&event.repeat!=='none',allDay:!!event.allDay,
-          sourceName:event.google?.sourceName||'LifeSims',color:event.color||event.google?.color||'#4285f4'});
+          sourceName:event.google?.sourceName||'LifeSims',
+          color:event.color||event.google?.color||'#4285f4',
+          location:event.location||'',description:event.description||''});
       }
       date=plusDays(date,1);
     }
@@ -306,7 +308,9 @@ function renderDayAgenda(){
     const name=document.createElement('div');name.className='agenda-event-title';name.textContent=item.title;
     const meta=document.createElement('div');meta.className='agenda-event-meta';
     meta.textContent=(item.google?item.sourceName:'LifeSims')+
-      (allDay?'':' · '+timeOf(item.startsAt)+'–'+timeOf(item.endsAt));
+      (allDay?'':' · '+timeOf(item.startsAt)+'–'+timeOf(item.endsAt))+
+      (item.location?' · 📍 '+item.location:'')+
+      (item.description?' · '+item.description:'');
     main.append(name,meta);row.append(time,color,main);
     if(item.id){
       const edit=document.createElement('button');edit.className='agenda-edit';edit.type='button';edit.textContent='✎';
@@ -618,6 +622,7 @@ function removeLocalCalendarEvent(id,hideGoogle=true){
   if(!ok)throw Error('Не удалось сохранить удаление. Проверь доступ к памяти браузера.');
   if($('eventEditId').value===id){clearEventForm();$('calendarEventEditor').open=false}
   renderSchedule();renderHistory();
+  window.LifeSimsGoogleCalendarActions?.refreshHidden?.();
   return event;
 }
 function deleteEventLocal(id){
