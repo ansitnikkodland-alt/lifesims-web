@@ -155,7 +155,7 @@
 </svg><div class="work-indicator" id="workIndicator" hidden role="status"><strong>Анюта на мероприятии</strong><span id="workName"></span><button id="returnHome" type="button">Вернуться домой</button></div><div class="sheetwrap" id="sheetWrap" aria-hidden="true"><div class="sheet" role="dialog" aria-modal="false" aria-labelledby="sheetTitle"><div class="sheethead"><h2 id="sheetTitle">Действия</h2><button id="closeSheet" aria-label="Закрыть меню">×</button></div><div class="sheetacts" id="sheetActions"></div></div></div><span class="sr-only" id="sceneStatus" aria-live="polite"></span></div>
 <nav class="nav" aria-label="Разделы"><button class="active" data-tab="needs">◈ Потребности</button><button data-tab="diary">▤ Дневник</button><button data-tab="history">▦ Календарь</button><button data-tab="data">⇩ Данные</button></nav>
 <div class="content"><div id="storageStatus" class="notice" role="status">Проверка локального хранения…</div>
-<section class="section active" id="needs"><div class="heading"><h2>Потребности</h2><button class="secondary" id="openNeedsEditor" type="button">Все показатели</button></div><div class="grid" id="needsGrid"></div><p class="hint">Нажми на любую потребность, чтобы изменить её показатель. Ресурс автоматически рассчитывается по доступным оценкам: сон, восстановление Oura и записанные настроение, физическое состояние, гигиена и питание. Неизвестные показатели остаются пустыми. Если записана еда, питание оценивается только по времени после последнего приёма пищи (игровая сытость, не качество рациона). Ручное значение питания имеет приоритет. Потребность во сне — игровая оценка по фактическому сну и накопленному недосыпу. Подключение Oura доступно ниже.</p><hr class="separator"><div class="card"><h3>Сегодня</h3><div id="todaySummary" class="muted">Нет записей</div></div><details id="needsEditor" class="card needs-editor"><summary>✎ Показатели дня</summary><button type="button" id="needsClose" class="secondary needs-popup-close">× Закрыть</button><div class="heading"><h3>Показатели и состояние</h3><input type="date" id="stateDate" aria-label="Дата записи"></div><p class="hint">Нажми на потребность выше, чтобы открыть нужное поле. Здесь также доступны сон, шаги, вес, лекарства и питание.</p><form id="stateForm"><div class="cols"><label class="field">Фактический сон, часов <input id="sleepHours" type="number" min="0" max="24" step="0.01" placeholder="Не записано"></label><label class="field">Недосып (ручная корректировка, ч) <input id="sleepDebtAdjustment" type="number" min="0" max="500" step="0.01" placeholder="Автоматический расчёт"></label><p class="hint">◆ Ресурс рассчитывается автоматически по сну, настроению, физическому состоянию, гигиене и питанию. Если данных недостаточно, показывается «—».</p><label class="field">Настроение: <output id="moodValue">—</output>% <input id="mood" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="moodUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Физическое состояние: <output id="conditionValue">—</output>% <input id="condition" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="conditionUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Гигиена: <output id="hygieneValue">—</output>% <input id="hygiene" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="hygieneUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Питание: <output id="nutritionValue">—</output>% <input id="nutrition" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="nutritionUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Шаги <input id="steps" type="number" min="0" max="100000" step="1" placeholder="Не записано"></label><label class="field">Общий расход, ккал <input id="totalCalories" type="number" min="0" max="20000" step="1" placeholder="Не записано"></label><label class="field">Вес, кг <input id="weight" type="number" min="20" max="350" step="0.1" placeholder="Не записано"></label><label class="field">Талия, см <input id="waist" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label><label class="field">Бёдра, см <input id="hips" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label><label class="field">Грудь, см <input id="chest" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label></div><label class="field">Лекарства <button class="secondary" type="button" id="medsYesterday">Как вчера</button><textarea id="meds" placeholder="Только реально принятые лекарства"></textarea></label><label class="field">Питание <button class="secondary" type="button" id="foodYesterday">Как вчера</button><textarea id="food" placeholder="Что ела"></textarea></label><label class="field">Цикл <input id="cycle" maxlength="200" placeholder="Заметка о цикле"></label><button class="primary" type="submit">Сохранить запись за дату</button></form><div class="notice" id="sleepDebtNote">Долг сна рассчитывается по записанным дням.</div>
+<section class="section active" id="needs"><div class="heading"><h2>Потребности</h2><button class="secondary" id="openNeedsEditor" type="button">Все показатели</button></div><div class="grid" id="needsGrid"></div><p class="hint">Нажми на любую потребность, чтобы изменить её показатель. Ресурс автоматически рассчитывается по доступным оценкам: сон, восстановление Oura и записанные настроение, физическое состояние, гигиена и питание. Неизвестные показатели остаются пустыми. Если записана еда, питание оценивается только по времени после последнего приёма пищи (игровая сытость, не качество рациона). Ручное значение питания имеет приоритет. Потребность во сне — игровая оценка по фактическому сну и накопленному недосыпу. Подключение Oura доступно ниже.</p><hr class="separator"><div class="card"><h3>Сегодня</h3><div id="todaySummary" class="muted">Нет записей</div></div><details id="needsEditor" class="card needs-editor"><summary>✎ Показатели дня</summary><button type="button" id="needsClose" class="secondary needs-popup-close">× Закрыть</button><div class="heading"><h3>Показатели и состояние</h3><input type="date" id="stateDate" aria-label="Дата записи"></div><p class="hint">Нажми на потребность выше, чтобы открыть нужное поле. Здесь также доступны сон, шаги, вес, лекарства и питание.</p><form id="stateForm"><div class="cols"><label class="field">Фактический сон, часов <input id="sleepHours" type="number" min="0" max="24" step="0.01" placeholder="Не записано"></label><label class="field">Недосып (ручная корректировка, ч) <input id="sleepDebtAdjustment" type="number" min="0" max="500" step="0.01" placeholder="Автоматический расчёт"></label><p class="hint">◆ Ресурс — игровая оценка по имеющимся данным. Физическое состояние автоматически использует Oura Readiness за сегодня (или вчера при отсутствии сегодняшнего); это не медицинская оценка. Ручное значение физического состояния используется только при отсутствии Oura.</p><label class="field">Настроение: <output id="moodValue">—</output>% <input id="mood" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="moodUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Физическое состояние: <output id="conditionValue">—</output>% <input id="condition" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="conditionUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Гигиена: <output id="hygieneValue">—</output>% <input id="hygiene" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="hygieneUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Питание: <output id="nutritionValue">—</output>% <input id="nutrition" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="nutritionUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Шаги <input id="steps" type="number" min="0" max="100000" step="1" placeholder="Не записано"></label><label class="field">Общий расход, ккал <input id="totalCalories" type="number" min="0" max="20000" step="1" placeholder="Не записано"></label><label class="field">Вес, кг <input id="weight" type="number" min="20" max="350" step="0.1" placeholder="Не записано"></label><label class="field">Талия, см <input id="waist" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label><label class="field">Бёдра, см <input id="hips" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label><label class="field">Грудь, см <input id="chest" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label></div><label class="field">Лекарства <button class="secondary" type="button" id="medsYesterday">Как вчера</button><textarea id="meds" placeholder="Только реально принятые лекарства"></textarea></label><label class="field">Питание <button class="secondary" type="button" id="foodYesterday">Как вчера</button><textarea id="food" placeholder="Что ела"></textarea></label><label class="field">Цикл <input id="cycle" maxlength="200" placeholder="Заметка о цикле"></label><button class="primary" type="submit">Сохранить запись за дату</button></form><div class="notice" id="sleepDebtNote">Долг сна рассчитывается по записанным дням.</div>
 <div class="card"><h3>🌀 Энтропия в комнате</h3><label class="field">Уровень игрового беспорядка: <output id="entropyValue">—</output><input id="entropyRange" class="color-slider" type="range" min="0" max="100" step="5"></label><p class="hint">Ползунок корректирует игровую оценку. Уборка уменьшает энтропию, время постепенно повышает. Это не измерение реального дома.</p></div></details><div id="ouraMount" class="oura-mount"></div></section><div id="lifeModalMask" class="life-modal-mask" hidden></div>
 
 
@@ -442,10 +442,14 @@ function estimatedFoodNeed(d){
  const hours=Math.max(0,currentMinute-lastMinute)/60;
  return Math.max(0,Math.min(100,Math.round(100-12*hours)));
 }
-function physicalCondition(r){
- // Game state, NOT a medical assessment. Oura Readiness is a measured app score.
- const readiness=r.ouraScores?.readiness;
- return Number.isFinite(readiness)?readiness:(Number.isFinite(r.condition)?r.condition:null);
+function physicalCondition(r,d=today()){
+ // In-game state, not a diagnosis. Today's Oura Readiness is preferred;
+ // yesterday's is used only as a labelled fallback until today's arrives.
+ const current=r.ouraScores?.readiness;
+ if(Number.isFinite(current))return current;
+ const previous=state.days[plusDays(d,-1)]?.ouraScores?.readiness;
+ if(Number.isFinite(previous))return previous;
+ return Number.isFinite(r.condition)?r.condition:null;
 }
 function hygieneCondition(r,date){
  const last=state.room?.lastShowerAt;
@@ -456,7 +460,7 @@ function hygieneCondition(r,date){
 }
 function derivedResource(r,d){
  const sleep=sleepAssessment(d).need;
- const vals=[sleep,r.mood,physicalCondition(r),hygieneCondition(r,d),r.nutrition==null?estimatedFoodNeed(d):r.nutrition];
+ const vals=[sleep,r.mood,physicalCondition(r,d),hygieneCondition(r,d),r.nutrition==null?estimatedFoodNeed(d):r.nutrition];
  const available=vals.filter(x=>typeof x==='number'&&Number.isFinite(x));
  return available.length?Math.round(available.reduce((a,b)=>a+b,0)/available.length):null;
 }
@@ -468,12 +472,12 @@ function sleepAssessment(date){const dates=Object.keys(state.days).filter(d=>d<=
  return {need:Math.max(0,Math.min(100,Math.round(100-Math.max(0,7.5-last)*12-Math.min(debt,20)*4))),debt,last}}
 function renderNeeds(){
  renderCrystal();const d=today(),r=currentRecord(d),g=$('needsGrid');g.replaceChildren();
- const sleep=sleepAssessment(d),resource=derivedResource(r,d),hygiene=hygieneCondition(r,d),physical=physicalCondition(r);
+ const sleep=sleepAssessment(d),resource=derivedResource(r,d),hygiene=hygieneCondition(r,d),physical=physicalCondition(r,d);
  metric(g,'💤 Потребность во сне',sleep.need,'%',null,'sleepHours');
  metric(g,'◆ Ресурс',resource,'%',null,'');
  metric(g,'☺ Настроение',r.mood,'%',null,'mood');
  metric(g,'♨ Гигиена',hygiene,'%',null,'hygiene');
- metric(g,'♥ Физическое состояние',physical,'%',null,'condition');
+ metric(g,'♥ Физическое состояние'+(Number.isFinite(r.ouraScores?.readiness)?' · Oura':Number.isFinite(state.days[plusDays(d,-1)]?.ouraScores?.readiness)?' · вчера':'') ,physical,'%',null,'condition');
  metric(g,'🍴 Питание',r.nutrition==null?estimatedFoodNeed(d):r.nutrition,'%',null,'nutrition');metric(g,'🌀 Энтропия · хаос',gameEntropy(),'%',null,'entropy');
  const steps=Number.isFinite(r.steps)?r.steps:null;
  metric(g,'🚶 Активность · шаги',steps==null?null:Math.min(100,Math.round(steps/10000*100)),'%',steps==null?'—':steps.toLocaleString('ru-RU')+' / 10 000','steps');
@@ -852,7 +856,7 @@ function renderHistory(){
       edit.onclick=()=>openCalendarEventEditor(event.id,event.occurrenceKey||event.date);
       const remove=document.createElement('button');
       remove.type='button';remove.className='danger-outline history-event-edit';remove.textContent='Удалить';
-      remove.onclick=()=>deleteEventLocal(event.id);
+      remove.onclick=()=>{openCalendarEventEditor(event.id,event.occurrenceKey||event.date);toast('Выбери область действия и нажми «Удалить»')};
       row.append(edit,remove);
     }
     panel.append(row);
@@ -1024,17 +1028,39 @@ function removeLocalCalendarEvent(id,hideGoogle=true){
   window.LifeSimsGoogleCalendarActions?.refreshHidden?.();
   return event;
 }
-function deleteEventLocal(id){
-  const event=(state.schedule||[]).find(x=>x.id===id);
-  if(!event)return toast('Мероприятие уже отсутствует');
-  const warn=event.repeat&&event.repeat!=='none'?' Будут убраны все повторения этой серии.':'';
-  const text=event.google
-    ? 'Убрать «'+event.title+'» только из LifeSims? В Google событие останется. При следующей синхронизации оно останется скрытым, пока ты его не восстановишь.'+warn
-    : 'Удалить «'+event.title+'» из LifeSims?'+warn;
-  if(!window.confirm(text))return;
-  try{removeLocalCalendarEvent(id,true);toast('Мероприятие убрано из LifeSims');}
-  catch(error){toast('Ошибка удаления: '+error.message)}
+function deleteEventLocal(id,instanceDate){
+ const event=(state.schedule||[]).find(x=>x.id===id);
+ if(!event)return toast('Мероприятие уже отсутствует');
+ const recurring=event.repeat&&event.repeat!=='none';
+ const currentlyEditing=$('eventEditId').value===id;
+ const key=instanceDate|| (currentlyEditing?$('eventOccurrenceDate').value:'');
+ const scope=recurring&&key?(currentlyEditing?$('eventScope').value:'one'):'all';
+ const message=scope==='one'?'Убрать только экземпляр «'+event.title+'» за '+key+'?':
+   scope==='future'?'Убрать «'+event.title+'» с '+key+' и все будущие повторения?':
+   'Удалить всю серию «'+event.title+'» из LifeSims?'+(event.google?' В Google событие останется.':'');
+ if(!confirm(message))return;
+ try{
+  if(scope==='all'||!recurring){removeLocalCalendarEvent(id,true);}
+  else if(scope==='one'){
+   if(!transact(()=>{
+    const entry=state.schedule.find(x=>x.id===id);
+    entry.excludedDates=[...new Set([...(entry.excludedDates||[]),key])];
+    if(entry.overrides)delete entry.overrides[key];
+   }))throw Error('Ошибка записи');
+   if(currentlyEditing){clearEventForm();$('calendarEventEditor').open=false}
+   renderSchedule();renderHistory();
+  }else if(scope==='future'){
+   if(!transact(()=>{
+    const entry=state.schedule.find(x=>x.id===id);
+    entry.repeatUntil=plusDays(key,-1);
+   }))throw Error('Ошибка записи');
+   if(currentlyEditing){clearEventForm();$('calendarEventEditor').open=false}
+   renderSchedule();renderHistory();
+  }
+  toast(scope==='all'?'Серия удалена из LifeSims':scope==='future'?'Будущие повторения убраны':'Экземпляр убран');
+ }catch(error){toast('Ошибка удаления: '+error.message)}
 }
+
 async function deleteEventInGoogle(id){
   const event=(state.schedule||[]).find(x=>x.id===id);
   if(!event?.google?.id)return toast('Это мероприятие не связано с Google');
