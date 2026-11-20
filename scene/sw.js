@@ -1,4 +1,4 @@
-const CACHE='lifesims-scene-v39';
+const CACHE='lifesims-scene-v40';
 const FILES=['./','./index.html','./room3d.js','./calendar-style.css','./oura-style.css','./food-log.css','./food-log.js','./oura-sync.js','./privacy.html','./terms.html','./manifest.webmanifest','../icon.svg'];
 const ENGINE='https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js';
 const ENGINE_CORE='https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.core.js';
