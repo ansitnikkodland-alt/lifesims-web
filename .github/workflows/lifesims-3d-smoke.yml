@@ -1,0 +1,61 @@
+name: LifeSims 3D smoke test
+on:
+  push:
+    paths:
+      - 'scene/index.html'
+      - 'scene/room3d.js'
+      - '.github/workflows/lifesims-3d-smoke.yml'
+  workflow_dispatch:
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser driver
+        run: npm install --no-save playwright-core@1.56.1
+      - name: Start local static server
+        run: |
+          python3 -m http.server 8765 > /tmp/lifesims_http.log 2>&1 &
+          sleep 2
+      - name: Verify actual 3D rendering
+        run: |
+          cat > .lifesims-3d-check.cjs <<'JS'
+          const {chromium}=require('playwright-core');
+          (async()=>{
+            const browser=await chromium.launch({
+              executablePath:'/usr/bin/google-chrome',headless:true,
+              args:['--no-sandbox','--use-gl=angle','--use-angle=swiftshader','--enable-unsafe-swiftshader']
+            });
+            const page=await browser.newPage({viewport:{width:390,height:844}});
+            const problems=[];
+            page.on('pageerror',e=>problems.push('PAGE: '+e.message));
+            page.on('console',m=>{if(m.type()==='error')problems.push('CONSOLE: '+m.text())});
+            await page.goto('http://127.0.0.1:8765/scene/',{waitUntil:'domcontentloaded'});
+            await page.waitForFunction(()=>window.LifeSims3D?.isReal3D===true,null,{timeout:40000});
+            const result=await page.evaluate(()=>{
+              const c=document.querySelector('#life3dCanvas'),room=document.querySelector('#scene');
+              return {active:room.classList.contains('scene3d-active'),
+                width:c?.width||0,height:c?.height||0,
+                hasWebGL:!!(c?.getContext('webgl2')||c?.getContext('webgl')),
+                bedModule:typeof window.LifeSims3DBridge?.snapshot==='function'};
+            });
+            console.log('3D smoke:',JSON.stringify(result));
+            if(problems.length)console.log('Browser warnings:',problems.join(' | ').slice(0,1200));
+            if(!result.active||!result.hasWebGL||result.width<100||!result.bedModule)
+              throw Error('3D scene not initialized');
+            await page.screenshot({path:'life3d-smoke.png'});
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
+          node .lifesims-3d-check.cjs
+      - name: Save screenshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lifesims-3d-smoke
+          path: life3d-smoke.png
+          if-no-files-found: ignore
