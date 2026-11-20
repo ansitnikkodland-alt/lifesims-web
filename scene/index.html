@@ -69,7 +69,7 @@
 </svg><div class="work-indicator" id="workIndicator" hidden role="status"><strong>Анюта на мероприятии</strong><span id="workName"></span><button id="returnHome" type="button">Вернуться домой</button></div><div class="sheetwrap" id="sheetWrap" aria-hidden="true"><div class="sheet" role="dialog" aria-modal="false" aria-labelledby="sheetTitle"><div class="sheethead"><h2 id="sheetTitle">Действия</h2><button id="closeSheet" aria-label="Закрыть меню">×</button></div><div class="sheetacts" id="sheetActions"></div></div></div><span class="sr-only" id="sceneStatus" aria-live="polite"></span></div>
 <nav class="nav" aria-label="Разделы"><button class="active" data-tab="needs">◈ Потребности</button><button data-tab="diary">▤ Дневник</button><button data-tab="history">▦ Календарь</button><button data-tab="data">⇩ Данные</button></nav>
 <div class="content"><div id="storageStatus" class="notice" role="status">Проверка локального хранения…</div>
-<section class="section active" id="needs"><div class="heading"><h2>Потребности</h2><button class="secondary" id="openNeedsEditor" type="button">Все показатели</button></div><div class="grid" id="needsGrid"></div><p class="hint">Нажми на любую потребность, чтобы изменить её показатель. Ресурс рассчитывается автоматически. Потребность во сне — игровая оценка по фактическому сну и накопленному недосыпу; при пробелах в датах процент не рассчитывается. Нажми на показатель для записи сна и недосыпа. Подключение Oura и импорт данных доступны ниже.</p><hr class="separator"><div class="card"><h3>Сегодня</h3><div id="todaySummary" class="muted">Нет записей</div></div><details id="needsEditor" class="card needs-editor"><summary>✎ Редактировать показатели дня</summary><div class="heading"><h3>Показатели и состояние</h3><input type="date" id="stateDate" aria-label="Дата записи"></div><p class="hint">Нажми на потребность выше, чтобы открыть нужное поле. Здесь также доступны сон, шаги, вес, лекарства и питание.</p><form id="stateForm"><div class="cols"><label class="field">Фактический сон, часов <input id="sleepHours" type="number" min="0" max="24" step="0.01" placeholder="Не записано"></label><label class="field">Недосып (ручная корректировка, ч) <input id="sleepDebtAdjustment" type="number" min="0" max="500" step="0.01" placeholder="Автоматический расчёт"></label><p class="hint">◆ Ресурс рассчитывается автоматически по сну, настроению, физическому состоянию, гигиене и питанию. Если данных недостаточно, показывается «—».</p><label class="field">Настроение: <output id="moodValue">—</output>% <input id="mood" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="moodUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Физическое состояние: <output id="conditionValue">—</output>% <input id="condition" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="conditionUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Гигиена: <output id="hygieneValue">—</output>% <input id="hygiene" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="hygieneUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Питание: <output id="nutritionValue">—</output>% <input id="nutrition" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="nutritionUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Шаги <input id="steps" type="number" min="0" max="100000" step="1" placeholder="Не записано"></label><label class="field">Общий расход, ккал <input id="totalCalories" type="number" min="0" max="20000" step="1" placeholder="Не записано"></label><label class="field">Вес, кг <input id="weight" type="number" min="20" max="350" step="0.1" placeholder="Не записано"></label><label class="field">Талия, см <input id="waist" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label><label class="field">Бёдра, см <input id="hips" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label><label class="field">Грудь, см <input id="chest" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label></div><label class="field">Лекарства <button class="secondary" type="button" id="medsYesterday">Как вчера</button><textarea id="meds" placeholder="Только реально принятые лекарства"></textarea></label><label class="field">Питание <button class="secondary" type="button" id="foodYesterday">Как вчера</button><textarea id="food" placeholder="Что ела"></textarea></label><label class="field">Цикл <input id="cycle" maxlength="200" placeholder="Заметка о цикле"></label><button class="primary" type="submit">Сохранить запись за дату</button></form><div class="notice" id="sleepDebtNote">Долг сна рассчитывается только из введённых дней; дни без записей не считаются нулевым сном.</div></details><div id="ouraMount" class="oura-mount"></div></section>
+<section class="section active" id="needs"><div class="heading"><h2>Потребности</h2><button class="secondary" id="openNeedsEditor" type="button">Все показатели</button></div><div class="grid" id="needsGrid"></div><p class="hint">Нажми на любую потребность, чтобы изменить её показатель. Ресурс автоматически рассчитывается по доступным оценкам: сон, восстановление Oura и записанные настроение, физическое состояние, гигиена и питание. Неизвестные показатели остаются пустыми и не подменяются вымышленными значениями. Потребность во сне — игровая оценка по фактическому сну и накопленному недосыпу. Подключение Oura доступно ниже.</p><hr class="separator"><div class="card"><h3>Сегодня</h3><div id="todaySummary" class="muted">Нет записей</div></div><details id="needsEditor" class="card needs-editor"><summary>✎ Редактировать показатели дня</summary><div class="heading"><h3>Показатели и состояние</h3><input type="date" id="stateDate" aria-label="Дата записи"></div><p class="hint">Нажми на потребность выше, чтобы открыть нужное поле. Здесь также доступны сон, шаги, вес, лекарства и питание.</p><form id="stateForm"><div class="cols"><label class="field">Фактический сон, часов <input id="sleepHours" type="number" min="0" max="24" step="0.01" placeholder="Не записано"></label><label class="field">Недосып (ручная корректировка, ч) <input id="sleepDebtAdjustment" type="number" min="0" max="500" step="0.01" placeholder="Автоматический расчёт"></label><p class="hint">◆ Ресурс рассчитывается автоматически по сну, настроению, физическому состоянию, гигиене и питанию. Если данных недостаточно, показывается «—».</p><label class="field">Настроение: <output id="moodValue">—</output>% <input id="mood" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="moodUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Физическое состояние: <output id="conditionValue">—</output>% <input id="condition" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="conditionUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Гигиена: <output id="hygieneValue">—</output>% <input id="hygiene" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="hygieneUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Питание: <output id="nutritionValue">—</output>% <input id="nutrition" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="nutritionUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Шаги <input id="steps" type="number" min="0" max="100000" step="1" placeholder="Не записано"></label><label class="field">Общий расход, ккал <input id="totalCalories" type="number" min="0" max="20000" step="1" placeholder="Не записано"></label><label class="field">Вес, кг <input id="weight" type="number" min="20" max="350" step="0.1" placeholder="Не записано"></label><label class="field">Талия, см <input id="waist" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label><label class="field">Бёдра, см <input id="hips" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label><label class="field">Грудь, см <input id="chest" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label></div><label class="field">Лекарства <button class="secondary" type="button" id="medsYesterday">Как вчера</button><textarea id="meds" placeholder="Только реально принятые лекарства"></textarea></label><label class="field">Питание <button class="secondary" type="button" id="foodYesterday">Как вчера</button><textarea id="food" placeholder="Что ела"></textarea></label><label class="field">Цикл <input id="cycle" maxlength="200" placeholder="Заметка о цикле"></label><button class="primary" type="submit">Сохранить запись за дату</button></form><div class="notice" id="sleepDebtNote">Долг сна рассчитывается только из введённых дней; дни без записей не считаются нулевым сном.</div></details><div id="ouraMount" class="oura-mount"></div></section>
 
 
 <section class="section" id="diary"><div class="heading"><h2>Дневник</h2><input type="date" id="diaryDate" aria-label="Дата дневника"></div><label class="field">Запись дня <textarea id="diaryText" rows="7" placeholder="Что произошло, что было важным, что хочется запомнить"></textarea></label><button class="primary" id="saveDiary">Сохранить дневник</button><p class="hint">Можно открыть прежнюю дату и исправить текст.</p></section>
@@ -211,7 +211,16 @@ function showNeedsEditor(field='',date=today()){
 }
 function xpTotal(){const origin=Object.values(state.legacySkills||{}).reduce((sum,x)=>sum+(Number.isFinite(+x)?+x:0),0);const earned=state.events.reduce((sum,e)=>sum+(e.kind==='complete'&&Number.isFinite(+e.xp)?+e.xp:0),0);return Math.max(0,Math.round(origin+earned))}
 function metric(el,name,value,suffix='%',displayValue=null,field=''){const root=document.createElement('button');root.type='button';root.className='meter need-action';root.setAttribute('aria-label','Редактировать: '+name);root.onclick=()=>showNeedsEditor(field,today());const s=document.createElement('span');const l=document.createElement('strong');l.textContent=name;const v=document.createElement('b');v.textContent=displayValue==null?(value==null?'—':String(value)+suffix):displayValue;s.append(l,v);const bar=document.createElement('div');bar.className='bar';if(value==null){const n=document.createElement('div');n.className='empty';bar.append(n)}else{const n=document.createElement('b');n.style.setProperty('--val',Math.min(100,Math.max(0,Number(value)))+'%');bar.append(n)}root.append(s,bar);el.append(root)}
-function derivedResource(r,d){const s=sleepAssessment(d);const vals=[s.need,...sliderFields.map(k=>r[k])];if(vals.some(v=>typeof v!=='number'||!Number.isFinite(v)))return null;return Math.round(vals.reduce((a,b)=>a+b,0)/vals.length)}
+function derivedResource(r,d){
+ // A game estimate derived only from actual available inputs, never from fabricated
+ // mood, hygiene, nutrition or physical condition. Oura readiness is an independent signal.
+ const s=sleepAssessment(d),vals=[];
+ if(typeof s.need==='number'&&Number.isFinite(s.need))vals.push(s.need);
+ for(const field of sliderFields){const value=r[field];if(typeof value==='number'&&Number.isFinite(value))vals.push(value)}
+ const readiness=r.ouraScores?.readiness;
+ if(typeof readiness==='number'&&Number.isFinite(readiness))vals.push(readiness);
+ return vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):null;
+}
 function renderCrystal(){const r=currentRecord(today());const v=derivedResource(r,today());const p=v==null?['#c2e9ff','#76c9ef','#2169b6']:v>65?['#c7fff0','#55dfa5','#0e9874']:v>35?['#fff2b1','#edbf53','#a57a15']:['#ffc2cd','#f4778c','#af405b'];const el=$('plumbob');el.style.setProperty('--gem-light',p[0]);el.style.setProperty('--gem-middle',p[1]);el.style.setProperty('--gem-dark',p[2]);el.title=v==null?'Ресурс не записан; нажми, чтобы записать':`Ресурс: ${v}%`}
 function sleepAssessment(date){const dates=Object.keys(state.days).filter(d=>d<=date&&state.days[d]?.sleepHours!=null).sort();if(!dates.length)return {need:null,debt:null,last:null};let debt=0,prev=null,gaps=false;for(const d of dates){const rec=state.days[d],hours=Number(rec.sleepHours);if(prev&&plusDays(prev,1)!==d)gaps=true;debt=Math.max(0,debt+7.5-hours);if(rec.sleepDebtAdjustment!=null)debt=Number(rec.sleepDebtAdjustment);prev=d}const last=Number(state.days[dates[dates.length-1]].sleepHours);if(dates[dates.length-1]!==date||gaps)return {need:null,debt:gaps?null:debt,last};return {need:Math.max(0,Math.min(100,Math.round(100-Math.max(0,7.5-last)*12-Math.min(debt,20)*4))),debt,last}}
 function renderNeeds(){renderCrystal();const d=today(),r=currentRecord(d),g=$('needsGrid');g.replaceChildren();const sleep=sleepAssessment(d);metric(g,'💤 Потребность во сне',sleep.need,'%',sleep.need==null?'—':sleep.need+'%','sleepHours');const resource=derivedResource(r,d);metric(g,'◆ Ресурс',resource,'%',null,'');metric(g,'☺ Настроение',r.mood,'%',null,'mood');metric(g,'♨ Гигиена',r.hygiene,'%',null,'hygiene');metric(g,'♥ Физическое состояние',r.condition,'%',null,'condition');metric(g,'🍴 Питание',r.nutrition,'%',null,'nutrition');$('resourceTop').textContent=resource==null?'—':resource+'%';$('xpTop').textContent=xpTotal()+' XP';const completed=state.events.filter(e=>e.date===d&&e.kind==='complete').length;const vals=[r.steps==null?'шаги не записаны':`Шаги: ${r.steps.toLocaleString('ru-RU')}`,r.totalCalories==null?'общий расход не записан':`Общий расход: ${r.totalCalories} ккал`,`Выполнено действий: ${completed}`];$('todaySummary').textContent=vals.join(' · ')}
@@ -1343,9 +1352,9 @@ const EXTRA_COLLECTIONS=[
 const el=id=>document.getElementById(id);
 const panel=document.createElement('div');panel.className='card oura-panel';
 panel.innerHTML=[
-'<h3>💍 Oura Ring · v25</h3>',
+'<h3>💍 Oura Ring · v26</h3>',
 '<div id="ouraToday" class="oura-today" role="status">Оценки Oura за сегодня пока не загружены.</div>',
-'<p class="hint">Первый импорт охватывает последние 7 дней. Для получения личных данных сначала нажми «Подключить Oura», разреши доступ на сайте Oura, затем «Проверить данные» и «Сохранить в LifeSims». Пульс, тренировки, стресс и другие доступные категории сохраняются отдельно; недоступные категории будут перечислены после проверки.</p>',
+'<p class="hint">После подключения Oura показатели за последние 7 дней загружаются и сохраняются автоматически, если включено автообновление ниже. При необходимости можно вручную нажать «Проверить данные», затем «Сохранить в LifeSims». Пульс, тренировки, стресс и другие разрешённые категории сохраняются отдельно.</p>',
 '<details id="ouraSettings" open><summary>Подключение Oura</summary>',
 '<p class="hint">Создай OAuth-приложение на <a href="https://developer.ouraring.com/applications" target="_blank" rel="noopener noreferrer">Oura Developer → Applications</a>. Добавь Redirect URI ниже. Секретный ключ (Client Secret) сюда вводить нельзя.</p>',
 '<label class="field">Redirect URI <input id="ouraRedirect" type="text" readonly></label>',
@@ -1359,7 +1368,7 @@ panel.innerHTML=[
 '<div id="ouraResults"></div>',
 '<p id="ouraScopeStatus" class="hint">Расширенные показатели запрашиваются только при разрешении соответствующей категории Oura.</p>',
 '<button type="button" class="secondary" id="ouraExportDetails">Скачать подробные данные за неделю (JSON)</button>',
-'<p class="hint">Ручные записи не заменяются данными Oura. OAuth-токен хранится только в сеансе этой вкладки, не в JSON. Автопроверка работает, только когда LifeSims открыт.</p>',
+'<p class="hint">Ручные записи не заменяются данными Oura. OAuth-токен хранится только в сеансе этой вкладки, не в JSON. Автообновление работает при подключённой Oura и открытом LifeSims; при новом сеансе браузера может потребоваться вход заново.</p>',
 '<p class="hint"><a href="./privacy.html" target="_blank" rel="noopener">Privacy Policy</a> · <a href="./terms.html" target="_blank" rel="noopener">Terms of Service</a></p>'
 ].join('');
 root.append(panel);
@@ -1392,12 +1401,17 @@ function takeAuthState(){
 }
 const status=v=>el('ouraStatus').textContent=v;
 function renderToday(){
- const r=bridge.getDays()[bridge.today()]||{},scores=r.ouraScores||{};
+ const days=bridge.getDays(),today=bridge.today();
+ const lastAvailable=Object.keys(days).filter(d=>d<=today&&d>=dateAdd(today,-6)&&
+   (days[d]?.ouraScores&&Object.keys(days[d].ouraScores).length||Array.isArray(days[d]?.ouraFields)&&days[d].ouraFields.length)).sort().pop();
+ const selected=days[today]?.ouraScores&&Object.keys(days[today].ouraScores).length?today:lastAvailable;
+ const r=selected?days[selected]:{},scores=r.ouraScores||{};
  const vals=[];
  if(Number.isFinite(scores.sleep))vals.push('Сон '+scores.sleep+'/100');
  if(Number.isFinite(scores.readiness))vals.push('Восстановление '+scores.readiness+'/100');
  if(Number.isFinite(scores.activity))vals.push('Активность '+scores.activity+'/100');
- el('ouraToday').textContent=vals.length?'Сегодня по Oura: '+vals.join(' · '):'Оценки Oura за сегодня пока не загружены.';
+ el('ouraToday').textContent=vals.length?'Oura за '+selected+': '+vals.join(' · '):
+  (lastAvailable?'Oura: показатели сна или активности есть за '+lastAvailable+'; оценки восстановления ещё не получены.':'Oura: за последние 7 дней показатели ещё не загружены.');
 }
 const connected=()=>token&&expiry>Date.now()+30000;
 function update(){
@@ -1670,15 +1684,19 @@ async function load(automatic=false){
   status('Подключение есть, но Oura не разрешила Daily. Переподключи Oura и включи Daily для загрузки сна, активности и шагов. Получены: '+grantedScopes.join(', '));
   return;
  }
- if(automatic&&!bridge.wasImported())return;
+ // First successful authorization also triggers automatic import.
  busy=true;update();
  try{
   const end=bridge.today(),start=dateAdd(end,-6);
   status('Загружаю сон и активность Oura за '+start+' — '+end+'…');
-  const sleep=await read('sleep',start,end);
-  const activity=await read('daily_activity',start,end);
-  const sleepScore=await read('daily_sleep',start,end);
-  const readiness=await read('daily_readiness',start,end);
+  // Independent endpoints should not make the whole weekly import fail if one
+  // category is unavailable. Report every failure instead of silently dropping it.
+  const baseNames=['sleep','daily_activity','daily_sleep','daily_readiness'];
+  const outcomes=await Promise.allSettled(baseNames.map(name=>read(name,start,end)));
+  const baseFailures=outcomes.flatMap((result,i)=>result.status==='rejected'?[baseNames[i]+': '+result.reason.message]:[]);
+  const arrays=outcomes.map(result=>result.status==='fulfilled'?result.value:[]);
+  if(outcomes.every(result=>result.status==='rejected'))throw Error('Oura не отдала ни одного показателя: '+baseFailures.join('; '));
+  const [sleep,activity,sleepScore,readiness]=arrays;
   const records=aggregate(sleep,activity,sleepScore,readiness);
   const baseCollections=[
     {name:'sleep',label:'Периоды сна',items:sleep},
@@ -1686,8 +1704,9 @@ async function load(automatic=false){
     {name:'daily_sleep',label:'Оценки сна',items:sleepScore},
     {name:'daily_readiness',label:'Оценки восстановления',items:readiness}
   ];
-  const {extra,failures}=await fetchExtras(start,end,baseCollections);
-  if(!records.length&&!extra.some(c=>c.items.length)){preview=null;renderPreview();status('Oura не вернула данные за этот период. Синхронизируй кольцо через приложение Oura.');return}
+  const {extra,failures:extraFailures}=await fetchExtras(start,end,baseCollections);
+  const failures=[...baseFailures,...extraFailures];
+  if(!records.length&&!extra.some(c=>c.items.length)){preview=null;renderPreview();status('Oura не вернула данные за этот период. Синхронизируй кольцо через приложение Oura.'+(failures.length?' Недоступно: '+failures.join('; '):''));return}
   preview={records,collections:extra,failures,from:start,to:end,snapshot:JSON.stringify(bridge.getDays())};
   renderPreview();
   el('ouraScopeStatus').textContent='Разрешённые категории: '+(grantedScopes.length?grantedScopes.join(', '):'Oura не перечислила — проверено по доступности API')+'. Получено: '+extra.length+
@@ -1704,13 +1723,13 @@ el('ouraApply').onclick=()=>{
 };
 renderToday();
 update();
-if(connected()&&el('ouraAuto').checked&&bridge.wasImported()){
+if(connected()&&el('ouraAuto').checked){
  const last=Number(setting(LAST_KEY)||0);
- if(!Number.isFinite(last)||Date.now()-last>6*60*60*1000){
-  saveSetting(LAST_KEY,String(Date.now()));
+ if(!bridge.wasImported()||!Number.isFinite(last)||Date.now()-last>6*60*60*1000){
+  // Don't premark a successful fetch: if it fails, allow a fresh attempt.
   load(true).catch(e=>status('⚠ Oura: '+e.message));
  }
 }
-window.LifeSimsOuraVersion='oura-v25-extapi-scopes';
+window.LifeSimsOuraVersion='oura-v26-auto-first-import-resource';
 })();
 </script></body></html>
