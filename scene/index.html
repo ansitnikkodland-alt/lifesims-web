@@ -660,10 +660,12 @@ function logShowerAction(action){
 }
 function cleanRoom(itemId=null){
  const stamp=new Date().toISOString(),name=itemId?'Убрала вещь':'Уборка комнаты';
+ const before=gameEntropy();
  if(!transact(()=>{
   state.room??={};
   state.room.lastCleanAt=stamp;
-  state.room.entropyOffset=(Number(state.room.entropyOffset)||0)-(itemId?8:6);
+  // Each cleaned object lowers disorder incrementally rather than zeroing it.
+  state.room.entropyOffset=Math.max(0,before-(itemId?8:6))-12;
   state.room.cleanedItems??={};
   if(itemId)state.room.cleanedItems[itemId]=today();
   state.events.push({id:uid(),kind:'clean',name,date:today(),at:stamp,xp:0});
@@ -680,6 +682,14 @@ function toggleBed(){
  if(transact(()=>{
   state.room??={};
   state.room.bedMadeOn=made?null:today();
+  if(!made){
+   const a=state.activities.find(x=>x.id==='bed_make');
+   if(a&&due(a,today())&&!done(a,today())){
+    a.completions??=[];
+    a.completions.push({date:today(),at:new Date().toISOString(),xp:a.xp||0});
+    state.events.push({id:uid(),kind:'complete',activityId:a.id,name:a.name,date:today(),at:new Date().toISOString(),xp:a.xp||0});
+   }
+  }
   state.events.push({id:uid(),kind:'bed',name:made?'Расправила кровать':'Заправила кровать',date:today(),at:new Date().toISOString(),xp:0});
  })){renderAll();toast(made?'Кровать снова раскрыта':'Кровать заправлена')}
  else toast('Не удалось сохранить состояние кровати');
@@ -839,7 +849,7 @@ const b=document.createElement('button'),span=document.createElement('span'),sm=
 const a=state.activities.find(x=>x.id===c.id);sm.textContent=c.open?'Открыть':a&&done(a,today())?'✓ Готово':`+${c.xp} XP`;
 b.append(span,sm);b.onclick=()=>{closeSheet();if(c.open){if(c.id==='bed_sleep')openSingleMetric('sleepHours',today());else if(c.open==='state')showNeedsEditor('',today());else openTab(c.open,true);return}if(!a){toast('Действие не найдено');return}complete(a,today())};$('sheetActions').append(b)
 }
-for(const a of state.activities.filter(a=>a.object===object&&due(a,today()))){
+for(const a of state.activities.filter(a=>a.object===object&&due(a,today())&&!(object==='bed'&&a.id==='bed_make'))){
  const btn=document.createElement('button'),span=document.createElement('span'),small=document.createElement('small');
  span.textContent=a.name;small.textContent=done(a,today())?'✓ Уже сделано':'+ '+(a.xp||0)+' XP';
  btn.append(span,small);btn.onclick=()=>{closeSheet();complete(a,today())};$('sheetActions').append(btn);
@@ -1303,7 +1313,9 @@ function renderDayAgenda(){
   const tasks=state.activities.filter(a=>a&&!a.legacyDone&&due(a,date)&&
     (a.kind!=='habit'||a.createdDate||date>=(state.createdAt||'').slice(0,10)));
   const completed=(state.events||[]).filter(e=>e.date===date);
-  $('agendaSubtitle').textContent=occurrences.length+' мероприятий · '+tasks.length+' дел и привычек';
+  const taskCount=tasks.filter(a=>a.kind!=='habit').length;
+  const habitCount=tasks.length-taskCount;
+  $('agendaSubtitle').textContent=occurrences.length+' мероприятий · '+taskCount+' дел · '+habitCount+' привычек';
   const body=$('agendaBody');body.replaceChildren();
   function title(label){const h=document.createElement('div');h.className='agenda-group-title';h.textContent=label;body.append(h)}
   function eventLine(item,allDay){
@@ -1336,8 +1348,11 @@ function renderDayAgenda(){
   const timed=occurrences.filter(e=>!e.allDay).sort((a,b)=>a.startsAt-b.startsAt);
   if(timed.length){title('По времени');for(const e of timed)eventLine(e,false)}
   if(tasks.length){
-    title('Дела и привычки');
-    for(const task of tasks){
+    for(const [kind,header] of [['task','Дела'],['habit','Привычки']]){
+     const group=tasks.filter(a=>(a.kind==='habit'?'habit':'task')===kind);
+     if(!group.length)continue;
+     title(header);
+     for(const task of group){
       const row=document.createElement('div');row.className='agenda-entry';
       const check=document.createElement('button');check.type='button';check.className='agenda-check';
       const finished=done(task,date);check.textContent=finished?'✓':'○';check.disabled=finished;
@@ -1352,6 +1367,7 @@ function renderDayAgenda(){
       edit.setAttribute('aria-label','Изменить дело '+task.name);
       edit.onclick=()=>{closeDayAgenda();openActivityEditor(task.id)};
       row.append(edit);body.append(row);
+     }
     }
   }
   if(completed.length){
