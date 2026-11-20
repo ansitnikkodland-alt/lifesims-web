@@ -79,7 +79,7 @@
 <form id="mealForm" class="card">
 <h3 id="mealFormTitle">Записать приём пищи</h3>
 <label class="field">Что съела или выпила<textarea id="mealDescription" rows="2" maxlength="600" placeholder="Например: гречка с овощами, курица, чай с сахаром"></textarea></label>
-<div class="food-actions"><button id="mealVoice" type="button" class="secondary">🎙 Голосом</button><label class="food-photo-button secondary">📷 Фото блюда<input id="mealPhoto" type="file" accept="image/*" capture="environment"></label><button type="button" class="secondary" id="mealRepeat">↻ Как раньше</button></div>
+<div class="food-actions"><button id="mealVoice" type="button" class="secondary">🎙 Голосом</button><label class="food-photo-button secondary">📷 Камера<input id="mealPhoto" type="file" accept="image/*" capture="environment"></label><label class="food-photo-button secondary">🖼 Галерея<input id="mealGallery" type="file" accept="image/*"></label><button type="button" class="secondary" id="mealRepeat">↻ Как раньше</button></div>
 <div id="mealPhotoPreview" class="food-photo-preview" hidden></div>
 <p class="hint">Фото прикрепляется к записи; для определения блюда по фотографии пока нужно указать название. Автоматическое визуальное распознавание без отдельной модели недоступно.</p>
 <div class="cols"><label class="field">Вес порции, г (примерно)<input id="mealGrams" type="number" min="1" max="10000" step="1" placeholder="Обычно 150–300"></label><label class="field">Время<input id="mealTime" type="time" required></label></div>
@@ -388,6 +388,15 @@ function renderDayAgenda(){
       line.append(icon,info);body.append(line);
     }
   }
+  const meals=(state.foodMeals||[]).filter(m=>m.date===date).sort((a,b)=>a.time.localeCompare(b.time));
+  if(meals.length){
+    title('🍽 Питание · съедено ≈'+Math.round(meals.reduce((s,m)=>s+(Number(m.kcal)||0),0))+' ккал');
+    for(const meal of meals){const line=document.createElement('div');line.className='agenda-entry';
+      const tm=document.createElement('span');tm.className='agenda-time';tm.textContent=meal.time;
+      const info=document.createElement('div');info.className='agenda-event-main';info.textContent=meal.title+(meal.kcal!=null?' · ≈'+meal.kcal+' ккал':'');
+      line.append(tm,info);body.append(line);
+    }
+  }
   const rec=state.days[date];
   if(rec && Object.keys(rec).some(k=>rec[k]!=null&&k!=='updatedAt')){
     title('Записи состояния');
@@ -438,7 +447,7 @@ function renderHistory(){
       const completed=state.events.some(e=>e.date===day&&['complete','legacy','work_start','work_end'].includes(e.kind))||taskCompletionDates.has(day);
       const hasTasks=state.activities.some(a=>a&&!a.legacyDone&&due(a,day)&&!done(a,day)&&
         (a.kind!=='habit'||a.createdDate||day>=(state.createdAt||'').slice(0,10)));
-      const hasNotes=!!state.days[day];
+      const hasNotes=!!state.days[day]||(state.foodMeals||[]).some(m=>m.date===day);
       const hasEvent=plannedDays.has(day);
       button.className=(day===chosen?'selected ':'')+(day===today()?'today ':'')+
         (hasNotes||completed||hasEvent||hasTasks?'marked':'');
@@ -491,6 +500,9 @@ function renderHistory(){
     if(rec.cycle)vals.push('Цикл: '+rec.cycle);
     if(rec.diary)vals.push('Дневник: '+rec.diary);
     if(vals.length){addHistoryLine(panel,chosen,'📝 '+vals.join(' · '));count++}
+  }
+  for(const meal of (state.foodMeals||[]).filter(m=>m.date===chosen).sort((a,b)=>a.time.localeCompare(b.time))){
+    addHistoryLine(panel,chosen,'🍽 '+meal.time+' · '+meal.title+(meal.kcal!=null?' · ≈'+meal.kcal+' ккал':''));count++;
   }
   for(const ev of state.events.filter(x=>x.date===chosen)){
     const text=ev.kind==='legacy'?'↩ '+ev.name+' · '+ev.legacyXP+' XP (старая версия)':
