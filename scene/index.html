@@ -1343,7 +1343,7 @@ const EXTRA_COLLECTIONS=[
 const el=id=>document.getElementById(id);
 const panel=document.createElement('div');panel.className='card oura-panel';
 panel.innerHTML=[
-'<h3>💍 Oura Ring · v24</h3>',
+'<h3>💍 Oura Ring · v25</h3>',
 '<div id="ouraToday" class="oura-today" role="status">Оценки Oura за сегодня пока не загружены.</div>',
 '<p class="hint">Первый импорт охватывает последние 7 дней. Для получения личных данных сначала нажми «Подключить Oura», разреши доступ на сайте Oura, затем «Проверить данные» и «Сохранить в LifeSims». Пульс, тренировки, стресс и другие доступные категории сохраняются отдельно; недоступные категории будут перечислены после проверки.</p>',
 '<details id="ouraSettings" open><summary>Подключение Oura</summary>',
@@ -1461,7 +1461,9 @@ function callback(){
   status('Oura вернула неполную авторизацию.');
   return true;
  }
- const scopes=(params.get('scope')||'').split(/\s+/).filter(Boolean);
+ // Oura sometimes returns granted scopes as 'extapi:daily', whereas the API documents 'daily'.
+ // Canonicalize only the known prefix; keep other unknown scopes visible, never invent consent.
+ const scopes=(params.get('scope')||'').split(/\s+/).filter(Boolean).map(s=>s.startsWith('extapi:')?s.slice(7):s);
  const dailyDenied=scopes.length>0&&!scopes.includes('daily');
  const seconds=Number(params.get('expires_in'));
  if(!Number.isFinite(seconds)||seconds<=0){
@@ -1476,7 +1478,7 @@ function callback(){
 const returned=callback();
 if(!returned){
  try{const cached=JSON.parse(session(TOKEN_KEY)||'null');
- if(cached&&typeof cached.token==='string'&&cached.expiry>Date.now()+30000){token=cached.token;expiry=cached.expiry;grantedScopes=Array.isArray(cached.scopes)?cached.scopes:['daily'];status('✓ Oura подключена в этом сеансе.')}}
+ if(cached&&typeof cached.token==='string'&&cached.expiry>Date.now()+30000){token=cached.token;expiry=cached.expiry;grantedScopes=Array.isArray(cached.scopes)?cached.scopes.filter(s=>typeof s==='string').map(s=>s.startsWith('extapi:')?s.slice(7):s):[];status('✓ Oura подключена в этом сеансе. Доступные категории: '+(grantedScopes.length?grantedScopes.join(', '):'Oura не перечислила')+'. Нажми «Проверить данные».')}}
  catch(_){}
 }
 el('ouraDisconnect').onclick=()=>{clearToken();status('Текущий сеанс Oura закрыт. Данные LifeSims не удалены. При необходимости отзови доступ в настройках Oura.')};
@@ -1709,6 +1711,6 @@ if(connected()&&el('ouraAuto').checked&&bridge.wasImported()){
   load(true).catch(e=>status('⚠ Oura: '+e.message));
  }
 }
-window.LifeSimsOuraVersion='oura-v24-cache-refresh';
+window.LifeSimsOuraVersion='oura-v25-extapi-scopes';
 })();
 </script></body></html>
