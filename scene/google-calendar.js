@@ -22,7 +22,7 @@
   panel.id = 'googleCalendarPanel';
   panel.innerHTML =
     '<h3>📅 Google Календарь</h3>' +
-    '<p class="hint">События выбранных календарей Google → LifeSims. Вариант двусторонней записи изменяет только основной календарь. Удалений нет, без интернета местные записи остаются.</p>' +
+    '<p class="hint">События выбранных календарей Google → LifeSims. Двусторонний режим позволяет создавать и редактировать события в основном календаре. Удаление в Google доступно только по отдельному подтверждению из редактора события.</p>' +
     '<p class="hint">После входа нажми «Проверить изменения», затем «Применить изменения». Иначе события не появятся в «Календаре». По умолчанию Google доступен только для чтения.</p>' +
     '<details><summary>Технические настройки (обычно не нужны)</summary>' +
     '<label class="field">OAuth Client ID<input id="gcClient" type="text" spellcheck="false" autocomplete="off" value="431544105696-rvvpicrjlrff400pafjb8tp3805lpqj8.apps.googleusercontent.com"></label>' +
@@ -36,7 +36,9 @@
     '<div class="row"><button type="button" class="secondary" id="gcPreview" disabled>Проверить изменения</button>' +
     '<button type="button" class="primary" id="gcApply" disabled>Применить изменения</button></div>' +
     '<p id="gcStatus" class="hint" role="status" aria-live="polite">Google не подключён.</p>' +
-    '<div id="gcChanges"></div><p class="hint">Синхронизация выполняется только по кнопке, пока действует разрешение Google. ' +
+    '<div id="gcChanges"></div>' +
+    '<details id="gcHiddenPanel"><summary>Скрытые из LifeSims события Google</summary><div id="gcHiddenList"></div></details>' +
+    '<p class="hint">Синхронизация выполняется только по кнопке, пока действует разрешение Google. ' +
     'Окно просмотра: от 365 дней назад до 400 дней вперёд. Повторяющиеся события загружаются по отдельным датам, с изменёнными экземплярами; ' +
     'целодневные события поддерживаются. Для списка календарей Google запрашивает отдельное разрешение на чтение названий календарей. ' +
     'Перед первой синхронизацией скачай резервную копию JSON.</p>';
@@ -45,6 +47,7 @@
   const el = id => document.getElementById(id);
   // Always use the verified project client; an obsolete localStorage value could prevent login.
   el('gcClient').value = DEFAULT_CLIENT_ID;
+  renderHidden();
 
   let token = '', expiry = 0, preview = null, busy = false, authorizedMode = '';
   let availableCalendars = [];
@@ -57,6 +60,25 @@
   }
   let googleLibraryReady = false;
   function status(message) { el('gcStatus').textContent = message; }
+  function renderHidden(){
+    const target=el('gcHiddenList');target.replaceChildren();
+    const hidden=bridge.getHidden?.()||[];
+    if(!hidden.length){target.textContent='Скрытых событий нет.';return}
+    for(const item of hidden){
+      const line=document.createElement('div');line.className='gc-hidden-row';
+      const title=document.createElement('span');
+      title.textContent=(item.title||'Событие')+' · '+(item.calendarId==='primary'?'Основной календарь':'Другой календарь');
+      const button=document.createElement('button');button.type='button';button.className='secondary';
+      button.textContent='Восстановить';button.onclick=()=>{
+        try{
+          bridge.restoreHidden(item.calendarId,item.id);
+          invalidatePreview();renderHidden();
+          status('Событие разрешено к повторному импорту. Нажми «Проверить изменения» и «Применить изменения».');
+        }catch(error){status('⚠ '+error.message)}
+      };
+      line.append(title,button);target.append(line);
+    }
+  }
   function ready() {
     const authenticated = !!token && Date.now() < expiry - 30000;
     if (!authenticated) { token = ''; expiry = 0; }
@@ -421,6 +443,51 @@
     try { await task(); } catch (e) { status('⚠ ' + e.message); }
     finally { busy = false; ready(); }
   }
+  // Remote event deletion is an explicit, authenticated operation: never a sync side effect.
+  async function deleteEventInGoogle(localId){
+    if(busy)throw Error('Синхронизация ещё выполняется. Заверши её перед удалением.');
+    const event=bridge.getSchedule().find(x=>x.id===localId);
+    if(!event?.google?.id)throw Error('Это мероприятие не связано с Google.');
+    if(!bridge.canWrite())throw Error('Локальное сохранение недоступно. Удаление в Google отменено.');
+    if(!token||Date.now()>expiry-30000||authorizedMode!=='both'){
+      el('gcMode').value='both';
+      el('calendarGoogleEditor').open=true;
+      el('calendarGoogleEditor').scrollIntoView({behavior:'smooth',block:'start'});
+      status('Чтобы удалить событие в Google, выбери «Двусторонняя», нажми «Подключить Google» и разреши изменение событий. Затем открой мероприятие и нажми удаление ещё раз.');
+      throw Error('Требуется повторное подключение Google с правом изменения событий.');
+    }
+    const calendarId=event.google.calendarId||'primary';
+    const cal=availableCalendars.find(x=>calendarId==='primary'?x.primary:x.id===calendarId);
+    if(!cal||!['owner','writer'].includes(cal.role)){
+      throw Error('Нет подтверждённого права редактирования этого календаря. Можно убрать событие только из LifeSims.');
+    }
+    busy=true;ready();
+    try {
+      const path=eventsUrl(calendarId)+'/'+encodeURIComponent(event.google.id);
+      const fresh=await api('GET',path);
+      if(fresh.status==='cancelled')throw Error('Событие уже отменено в Google. Удали его только из LifeSims.');
+      if(event.google.etag&&fresh.etag&&event.google.etag!==fresh.etag){
+        throw Error('Событие в Google изменилось после последнего импорта. Сначала обнови синхронизацию.');
+      }
+      const series=event.repeat&&event.repeat!=='none'&&!event.google.seriesId;
+      const warning=series?' Это удалит всю серию повторяющихся мероприятий.':' Если это отдельный экземпляр повторяющегося события, будет удалён только этот экземпляр.';
+      const confirmText='Удалить «'+event.title+'» из Google Календаря «'+(cal.name||'Google')+'» и из LifeSims?'+
+        warning+' Участники Google могут получить уведомление. Действие нельзя автоматически отменить.';
+      if(!window.confirm(confirmText))return false;
+      status('Удаляю мероприятие в Google…');
+      await api('DELETE',path+'?sendUpdates=all',undefined,fresh.etag||event.google.etag);
+      try{bridge.removeLocalEvent(localId)}
+      catch(err){
+        status('⚠ В Google удалено, но в LifeSims не удалось сохранить удаление: '+err.message);
+        throw Error('В Google удалено; локальную запись нужно убрать отдельно.');
+      }
+      invalidatePreview();
+      renderHidden();
+      status('✓ Удалено из Google и LifeSims: '+event.title);
+      return true;
+    }finally{busy=false;ready()}
+  }
+  window.LifeSimsGoogleCalendarActions={deleteEvent:deleteEventInGoogle,refreshHidden:renderHidden};
   el('gcPreview').addEventListener('click', () => withBusy(async () => {
     invalidatePreview();
     if (!bridge.canWrite()) throw Error('Локальные данные недоступны для записи. Сначала восстанови сохранение LifeSims.');
@@ -479,7 +546,8 @@
     }
     flush();
     invalidatePreview();
-    status('✓ Синхронизировано ' + applied + ' мероприятий. В «Календаре» отображаются сохранённые события по датам. Ничего не удалено; можно скачать резервную копию JSON.');
+    renderHidden();
+    status('✓ Синхронизировано ' + applied + ' мероприятий. В «Календаре» отображаются сохранённые события по датам. Удалений не было; можно скачать резервную копию JSON.');
   }));
   ready();
   window.LifeSimsGoogleCalendarVersion = 'inline-v11';
