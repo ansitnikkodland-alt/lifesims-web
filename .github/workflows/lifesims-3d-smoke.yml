@@ -67,7 +67,9 @@ jobs:
               console.log('3D ITEM',kind,JSON.stringify(point));
               if(!point||point.x<0||point.y<0||point.x>390||point.y>844)throw Error(kind+' offscreen');
               await page.mouse.click(point.x,point.y);
-              await page.waitForSelector('#sheetWrap.open',{timeout:5000});
+              await page.waitForFunction(()=>document.querySelector('#sheetWrap')?.classList.contains('open'),null,{timeout:5000});
+              const visible=await page.locator('#sheetActions > button').first().isVisible();
+              if(!visible)throw Error('3D '+kind+' radial action not visible');
               const text=await page.locator('#sheetActions').innerText();
               if(!text.includes(expected))throw Error('3D '+kind+' action missing: '+text.slice(0,150));
               await page.locator('#closeSheet').click();
