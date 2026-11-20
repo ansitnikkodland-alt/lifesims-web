@@ -280,7 +280,7 @@ const defs=[
 {id:'sim_diary',object:'sim',name:'Записать в дневник',xp:0,repeat:'daily',open:'diary'},
 {id:'sofa_rest',object:'sofa',name:'Отдохнуть',xp:5,repeat:'daily',skill:'Здоровье'}];
 const labels={window:'🪟 Окно — работа',bed:'🛏 Кровать',books:'📚 Книжная полка',desk:'💻 Компьютер',sink:'🚰 Раковина',sim:'👤 Персонаж',sofa:'🛋 Диван',shower:'🚿 Душевая кабина'};
-const base=()=>({schema:VERSION,createdAt:new Date().toISOString(),days:{},activities:defs.filter(a=>a.xp>0).map(a=>({...a,kind:'habit',completions:[]})),events:[],schedule:[],googleHidden:[],foodMeals:[],room:{work:null},legacySkills:{},legacyCopy:null});
+const base=()=>({schema:VERSION,createdAt:new Date().toISOString(),days:{},activities:defs.filter(a=>a.xp>0).map(a=>({...a,kind:'habit',completions:[]})),events:[],schedule:[],googleHidden:[],foodMeals:[],room:{work:null,lastShowerDateReported:'2026-11-18'},legacySkills:{},legacyCopy:null});
 let state,storageOK=true,storageBlocked=false,activeDay=today(),historyView='month',selectedTab='needs';
 function normalize(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.schema!==VERSION||!raw.days||typeof raw.days!=='object'||Array.isArray(raw.days)||!Array.isArray(raw.activities)||!Array.isArray(raw.events))throw Error('Неизвестный или повреждённый формат');const safe=base();return {...safe,...raw,foodMeals:Array.isArray(raw.foodMeals)?raw.foodMeals.filter(x=>x&&typeof x==='object'&&typeof x.id==='string'&&typeof x.date==='string'):[],googleHidden:Array.isArray(raw.googleHidden)?raw.googleHidden.filter(x=>x&&typeof x.calendarId==='string'&&typeof x.id==='string').map(x=>({calendarId:x.calendarId,id:x.id,title:typeof x.title==='string'?x.title:'',hiddenAt:typeof x.hiddenAt==='string'?x.hiddenAt:''})):[],schedule:Array.isArray(raw.schedule)?raw.schedule:(Array.isArray(raw.legacyCopy?.events)?raw.legacyCopy.events.map((e,i)=>({id:'legacy-schedule-'+i,title:e.title||'Мероприятие',startsAt:e.startsAt,endsAt:e.endsAt,repeat:e.repeat==='weekly'?'weekly':'none',weekdays:e.repeat==='weekly'&&e.startsAt?[((new Date(e.startsAt.slice(0,10)+'T12:00:00').getDay()+6)%7)+1]:[]})):[]),room:(raw.room&&typeof raw.room==='object'&&!Array.isArray(raw.room))?{...safe.room,...raw.room}:safe.room};}
 function migrate(old){const s=base();s.legacyCopy=old;s.legacySkills=(old.skills&&typeof old.skills==='object'&&!Array.isArray(old.skills))?old.skills:{};
@@ -392,7 +392,7 @@ function logShowerAction(action){
  if(!transact(()=>{
   state.room??={};
   if(isWash){state.room.lastCleanAt=now;state.room.entropyOffset=Math.min(0,(state.room.entropyOffset||0)-12)}
-  else{state.room.lastShowerAt=now}
+  else{state.room.lastShowerAt=now;state.room.lastShowerDateReported=today()}
   state.events.push({id:uid(),kind:isWash?'clean':'shower',name,date:today(),at:now,xp:0});
  }))return toast('Не удалось сохранить действие');
  toast('✓ '+name+' · записано в историю');renderAll();
@@ -563,8 +563,8 @@ function openSingleMetric(field,date=today()){
   }
  }else if(field==='hygiene'){
   addNumber('Текущая гигиена',hygieneCondition(r,date)==null?null:hygieneCondition(r,date)+'%');
-  const last=state.room?.lastShowerAt;
-  note('Последний записанный душ: '+(last?new Date(last).toLocaleString('ru-RU'):'нет записи')+'. Гигиена снижается по времени после душа.');
+  const reference=showerReference();
+  note('Последний душ: '+(reference?.source==='logged'?new Date(reference.at).toLocaleString('ru-RU'):reference?.source==='reported'?'18 ноября (среда), время не указано':'нет записи')+'. Гигиена снижается со временем; при записи только даты используется расчёт по календарным дням.');
   singleMetricField(date,'hygiene');
   addButton('Сохранить гигиену',()=>commitValue(['hygiene']));
   if(date===today())addButton('🚿 Приняла душ',()=>{logShowerAction('take');dialog.close()});
@@ -606,11 +606,31 @@ function physicalCondition(r,d=today()){
  if(Number.isFinite(previous))return previous;
  return Number.isFinite(r.condition)?r.condition:null;
 }
+function showerReference(){
+ // A date supplied by the user can be used without fabricating a time of day.
+ const recorded=state.room?.lastShowerAt;
+ if(typeof recorded==='string'&&Number.isFinite(Date.parse(recorded))){
+  const d=new Date(recorded);const day=dayStr(d);
+  const reported=state.room?.lastShowerDateReported;
+  if(!reported||day>=reported)return {day,at:Date.parse(recorded),source:'logged'};
+ }
+ const reported=state.room?.lastShowerDateReported;
+ if(typeof reported==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(reported))return {day:reported,at:null,source:'reported'};
+ return null;
+}
 function hygieneCondition(r,date){
- const last=state.room?.lastShowerAt;
- if(typeof last!=='string'||!Number.isFinite(Date.parse(last)))return Number.isFinite(r.hygiene)?r.hygiene:null;
- const hours=Math.max(0,((date===today()?Date.now():asDay(plusDays(date,1)).getTime())-Date.parse(last))/3600000);
- const automatic=Math.max(0,Math.min(100,Math.round(100-Math.max(0,hours-12)*1.6)));
+ const last=showerReference();
+ if(!last||date<last.day)return Number.isFinite(r.hygiene)?r.hygiene:null;
+ let automatic;
+ if(last.source==='reported'){
+  // No invented shower time. One local calendar day elapsed -> 32 points less.
+  const days=Math.max(0,Math.round((asDay(date)-asDay(last.day))/86400000));
+  automatic=Math.max(0,100-days*32);
+ }else{
+  const hours=date===today()?Math.max(0,(Date.now()-last.at)/3600000):Math.max(0,(asDay(plusDays(date,1))-last.at)/3600000);
+  automatic=Math.max(0,Math.min(100,Math.round(100-Math.max(0,hours-12)*1.6)));
+ }
+ // A manual value may lower, but not silently mask, elapsed-time decay.
  return Number.isFinite(r.hygiene)?Math.min(r.hygiene,automatic):automatic;
 }
 function derivedResource(r,d){
