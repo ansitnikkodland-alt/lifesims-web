@@ -1321,7 +1321,7 @@ const bridge=window.LifeSimsOuraBridge,root=document.getElementById('ouraMount')
 if(!bridge||!root)return;
 const AUTH='https://cloud.ouraring.com/oauth/authorize', API='https://api.ouraring.com/v2/usercollection/';
 const REDIRECT='https://ansitnikkodland-alt.github.io/lifesims-web/scene/';
-const ID_KEY='lifesims-oura-client-id',STATE_KEY='lifesims-oura-state',TOKEN_KEY='lifesims-oura-session',AUTO_KEY='lifesims-oura-auto',LAST_KEY='lifesims-oura-last-check';
+const ID_KEY='lifesims-oura-client-id',STATE_KEY='lifesims-oura-state',STATE_FALLBACK_KEY='lifesims-oura-auth-pending',TOKEN_KEY='lifesims-oura-session',AUTO_KEY='lifesims-oura-auto',LAST_KEY='lifesims-oura-last-check';
 let token='',expiry=0,preview=null,busy=false,grantedScopes=[];
 const EXTRA_COLLECTIONS=[
  {name:'heartrate',scope:'heartrate',time:true,label:'Пульс'},
@@ -1367,6 +1367,27 @@ const saveSetting=(k,v)=>{try{localStorage.setItem(k,v)}catch(_){}};
 const session=(k)=>{try{return sessionStorage.getItem(k)}catch(_){return null}};
 const saveSession=(k,v)=>sessionStorage.setItem(k,v);
 const dropSession=k=>{try{sessionStorage.removeItem(k)}catch(_){}};
+function storeAuthState(value){
+ let stored=false;
+ try{saveSession(STATE_KEY,value);stored=true}catch(_){}
+ // Android may return from the Oura consent screen in another browser tab.
+ // Persist ONLY the random, short-lived CSRF state, never an access token.
+ try{localStorage.setItem(STATE_FALLBACK_KEY,JSON.stringify({state:value,created:Date.now()}));stored=true}catch(_){}
+ return stored;
+}
+function takeAuthState(){
+ const current=session(STATE_KEY);
+ dropSession(STATE_KEY);
+ let fallback=null;
+ try{
+  const raw=localStorage.getItem(STATE_FALLBACK_KEY);
+  localStorage.removeItem(STATE_FALLBACK_KEY);
+  if(raw){const record=JSON.parse(raw);if(typeof record.state==='string'&&Number.isFinite(record.created)&&Date.now()-record.created>=0&&Date.now()-record.created<=10*60*1000)fallback=record.state}
+ }catch(_){}
+ // A mismatch between the two stores is suspicious; fail closed.
+ if(current&&fallback&&current!==fallback)return null;
+ return current||fallback;
+}
 const status=v=>el('ouraStatus').textContent=v;
 function renderToday(){
  const r=bridge.getDays()[bridge.today()]||{},scores=r.ouraScores||{};
@@ -1401,9 +1422,13 @@ el('ouraConnect').onclick=()=>{
  }
  const id=el('ouraClientId').value.trim();
  if(!/^[a-zA-Z0-9_-]{8,128}$/.test(id))return status('Укажи публичный Client ID своего приложения Oura.');
- try{saveSession(STATE_KEY,randomState());}catch(_){return status('Нужно разрешить sessionStorage в Chrome.')}
+ let challenge;
+ try{challenge=randomState()}catch(_){return status('Для авторизации нужен защищённый браузер (HTTPS).')}
+ if(!storeAuthState(challenge))return status('Браузер запрещает хранить состояние входа. Разреши данные сайтов для LifeSims в Chrome.');
  saveSetting(ID_KEY,id);
- const params=new URLSearchParams({response_type:'token',client_id:id,redirect_uri:REDIRECT,scope:'daily heartrate tag workout session spo2 personal',state:session(STATE_KEY)});
+ // Without scope Oura requests all scopes available to this OAuth application.
+ // Users still explicitly approve access on the Oura consent screen.
+ const params=new URLSearchParams({response_type:'token',client_id:id,redirect_uri:REDIRECT,state:challenge});
  location.assign(AUTH+'?'+params.toString());
 };
 function callback(){
@@ -1420,7 +1445,7 @@ function callback(){
   for(const field of ['error','error_description','error_uri','state'])clean.searchParams.delete(field);
   history.replaceState(history.state,'',clean.pathname+clean.search);
  }catch(_){}
- const expected=session(STATE_KEY);dropSession(STATE_KEY);
+ const expected=takeAuthState();
  if(!expected||params.get('state')!==expected){
   status('Недействительное состояние входа Oura. Начни подключение заново.');
   return true;
@@ -1434,7 +1459,7 @@ function callback(){
   return true;
  }
  const scopes=(params.get('scope')||'').split(/\s+/).filter(Boolean);
- if(!scopes.includes('daily')){
+ if(scopes.length&&!scopes.includes('daily')){
   status('Не дано разрешение daily. Подключи Oura заново и разреши ежедневные данные.');
   return true;
  }
@@ -1496,7 +1521,7 @@ async function fetchExtras(from,to,baseCollections){
  const extra=baseCollections.map(x=>({name:x.name,label:x.label,items:x.items,scope:'daily'}));
  const failures=[];
  for(const collection of EXTRA_COLLECTIONS){
-  if(!grantedScopes.includes(collection.scope))continue;
+  if(grantedScopes.length&&!grantedScopes.includes(collection.scope))continue;
   status('Загружаю Oura: '+collection.label+'…');
   try{
    const items=await read(collection.name,from,to,!!collection.time,!!collection.snapshot);
@@ -1655,7 +1680,7 @@ async function load(automatic=false){
   if(!records.length&&!extra.some(c=>c.items.length)){preview=null;renderPreview();status('Oura не вернула данные за этот период. Синхронизируй кольцо через приложение Oura.');return}
   preview={records,collections:extra,failures,from:start,to:end,snapshot:JSON.stringify(bridge.getDays())};
   renderPreview();
-  el('ouraScopeStatus').textContent='Разрешённые категории: '+grantedScopes.join(', ')+'. Получено: '+extra.length+
+  el('ouraScopeStatus').textContent='Разрешённые категории: '+(grantedScopes.length?grantedScopes.join(', '):'Oura не перечислила — проверено по доступности API')+'. Получено: '+extra.length+
     '. Недоступно: '+failures.length+(failures.length?' ('+failures.map(x=>x.split(':')[0]).join(', ')+')':'');
   status('✓ Oura: найдено '+records.length+' дней с основными показателями и '+extra.filter(c=>c.items.length).length+' непустых категорий за неделю. '+(automatic?'Автоматически обновляю показатели…':'Проверь и нажми «Сохранить в LifeSims».'));
   if(automatic)await apply(true);
@@ -1672,6 +1697,6 @@ if(connected()&&el('ouraAuto').checked&&bridge.wasImported()){
   load(true).catch(e=>status('⚠ Oura: '+e.message));
  }
 }
-window.LifeSimsOuraVersion='oura-v20-authorize';
+window.LifeSimsOuraVersion='oura-v21-oauth-android-state';
 })();
 </script></body></html>
