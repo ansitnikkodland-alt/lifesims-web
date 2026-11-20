@@ -237,8 +237,8 @@ function scheduleHistoryOccurrences(from,to){
       const suppressed=event.google?.supersededRange;
       if(nextMidnight>occStart && !(suppressed&&date>=suppressed.from&&date<=suppressed.to)){
         entries.push({id:event.id,date,title:event.title,startsAt:occStart,endsAt:occEnd,
-          google:!!event.google,repeat:event.repeat==='weekly',allDay:!!event.allDay,
-          sourceName:event.google?.sourceName||'LifeSims',color:event.google?.color||'#4285f4'});
+          google:!!event.google,repeat:event.repeat&&event.repeat!=='none',allDay:!!event.allDay,
+          sourceName:event.google?.sourceName||'LifeSims',color:event.color||event.google?.color||'#4285f4'});
       }
       date=plusDays(date,1);
     }
@@ -256,16 +256,19 @@ function scheduleHistoryOccurrences(from,to){
       .map(Number).filter(n=>Number.isInteger(n)&&n>=1&&n<=7);
     const weekdays=new Set(selected.length?selected:[((baseStart.getDay()+6)%7)+1]);
     const originalDay=event.startsAt.slice(0,10);
+    const origin=asDay(originalDay);
     let candidate=plusDays(from,-Math.min(400,Math.ceil(duration/86400000)+1));
     if(candidate<originalDay)candidate=originalDay;
     const localTime=event.startsAt.slice(11);
     for(let date=candidate;date<=to;date=plusDays(date,1)){
-      const weekday=((asDay(date).getDay()+6)%7)+1;
-      if(!weekdays.has(weekday))continue;
+      const dt=asDay(date),weekday=((dt.getDay()+6)%7)+1;
+      const matches=event.repeat==='daily'||
+        (event.repeat==='weekly'&&weekdays.has(weekday))||
+        (event.repeat==='monthly'&&dt.getDate()===origin.getDate())||
+        (event.repeat==='yearly'&&dt.getDate()===origin.getDate()&&dt.getMonth()===origin.getMonth());
+      if(!matches)continue;
       const occurrenceStart=new Date(date+'T'+localTime).getTime();
-      if(Number.isFinite(occurrenceStart)){
-        addOccurrence(event,occurrenceStart,occurrenceStart+duration);
-      }
+      if(Number.isFinite(occurrenceStart))addOccurrence(event,occurrenceStart,occurrenceStart+duration);
     }
   }
   return entries.sort((a,b)=>a.date.localeCompare(b.date)||a.startsAt-b.startsAt||a.title.localeCompare(b.title,'ru'));
@@ -306,9 +309,13 @@ function renderDayAgenda(){
       (allDay?'':' · '+timeOf(item.startsAt)+'–'+timeOf(item.endsAt));
     main.append(name,meta);row.append(time,color,main);
     if(item.id){
-      const edit=document.createElement('button');edit.className='agenda-edit';edit.type='button';edit.textContent='Изменить';
+      const edit=document.createElement('button');edit.className='agenda-edit';edit.type='button';edit.textContent='✎';
+      edit.setAttribute('aria-label','Редактировать мероприятие '+item.title);
       edit.onclick=()=>{closeDayAgenda();openCalendarEventEditor(item.id)};
-      row.append(edit);
+      const remove=document.createElement('button');remove.type='button';remove.className='agenda-delete';remove.textContent='🗑';
+      remove.setAttribute('aria-label','Удалить мероприятие '+item.title);
+      remove.onclick=()=>deleteEventLocal(item.id);
+      row.append(edit,remove);
     }
     body.append(row);
   }
@@ -468,7 +475,10 @@ function renderHistory(){
       const edit=document.createElement('button');
       edit.type='button';edit.className='secondary history-event-edit';edit.textContent='Изменить';
       edit.onclick=()=>openCalendarEventEditor(event.id);
-      row.append(edit);
+      const remove=document.createElement('button');
+      remove.type='button';remove.className='danger-outline history-event-edit';remove.textContent='Удалить';
+      remove.onclick=()=>deleteEventLocal(event.id);
+      row.append(edit,remove);
     }
     panel.append(row);
     count++;
@@ -652,7 +662,13 @@ $('dayAgendaOverlay').addEventListener('click',e=>{if(e.target===$('dayAgendaOve
 $('agendaAddEvent').onclick=()=>{closeDayAgenda();openNewCalendarEvent()};
 $('agendaAddTask').onclick=()=>{closeDayAgenda();openNewCalendarTask()};$('openCalendarGoogle').onclick=()=>{$('calendarGoogleEditor').open=true;$('calendarGoogleEditor').scrollIntoView({behavior:'smooth',block:'start'})};$('diaryDate').onchange=()=>fillDiary($('diaryDate').value);$('exportData').onclick=backup;$('downloadHTML').onclick=downloadHTML;$('importData').onclick=restore;$('confirmImport').onclick=confirmImport;$('cancelImport').onclick=()=>{pendingImport=null;$('importConfirmPanel').hidden=true;importMessage('Импорт отменён. Текущий прогресс не изменён.')};$('importFile').onchange=()=>{pendingImport=null;$('importConfirmPanel').hidden=true;importMessage('Файл выбран. Нажми «Проверить файл JSON».')};
 for(const a of defs.filter(a=>a.xp>0)){const opt=document.createElement('option');opt.value=a.id;opt.textContent=a.name;$('taskAction').append(opt)}
-$('eventRepeat').onchange=()=>{$('eventWeekdays').hidden=$('eventRepeat').value!=='weekly'};$('eventForm').onsubmit=saveEvent;$('eventCancel').onclick=clearEventForm;for(const k of sliderFields){$(k).addEventListener('input',()=>{$(k+'Unknown').checked=false;updateSlider(k)});$(k+'Unknown').addEventListener('change',()=>updateSlider(k))}for(const [k,button] of [['meds','medsYesterday'],['food','foodYesterday']])$(button).onclick=()=>{const d=$('stateDate').value||today(),y=currentRecord(plusDays(d,-1))[k];if(!y)return toast('За вчера нет записи');$(k).value=y;toast('Скопировано из предыдущего дня — проверь перед сохранением')};for(const id of ['stateDate','taskDate','diaryDate','historyDate'])$(id).value=activeDay;load();fillState(activeDay);fillDiary(activeDay);renderAll();
+$('eventRepeat').onchange=()=>{$('eventWeekdays').hidden=$('eventRepeat').value!=='weekly'};$('eventForm').onsubmit=saveEvent;
+$('eventCancel').onclick=()=>{clearEventForm();$('calendarEventEditor').open=false};
+$('eventAllDay').onchange=toggleEventDates;
+
+$('eventDeleteLocal').onclick=()=>deleteEventLocal($('eventEditId').value);
+$('eventDeleteGoogle').onclick=()=>deleteEventInGoogle($('eventEditId').value);
+$('eventDuplicate').onclick=()=>duplicateCalendarEvent($('eventEditId').value);for(const k of sliderFields){$(k).addEventListener('input',()=>{$(k+'Unknown').checked=false;updateSlider(k)});$(k+'Unknown').addEventListener('change',()=>updateSlider(k))}for(const [k,button] of [['meds','medsYesterday'],['food','foodYesterday']])$(button).onclick=()=>{const d=$('stateDate').value||today(),y=currentRecord(plusDays(d,-1))[k];if(!y)return toast('За вчера нет записи');$(k).value=y;toast('Скопировано из предыдущего дня — проверь перед сохранением')};for(const id of ['stateDate','taskDate','diaryDate','historyDate'])$(id).value=activeDay;load();fillState(activeDay);fillDiary(activeDay);renderAll();
 if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
 window.LifeSimsCalendarBridge={
   getSchedule:()=>JSON.parse(JSON.stringify(state.schedule||[])),
