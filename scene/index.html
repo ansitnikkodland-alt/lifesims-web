@@ -1350,7 +1350,7 @@ panel.innerHTML=[
 '<button type="button" class="secondary" id="ouraCopyRedirect">Скопировать Redirect URI</button>',
 '<label class="field">Oura Client ID <input id="ouraClientId" autocomplete="off" spellcheck="false" placeholder="Только публичный Client ID"></label>',
 '<div class="row"><button type="button" class="primary" id="ouraConnect">Подключить Oura</button><button type="button" class="secondary" id="ouraDisconnect" disabled>Отключить на устройстве</button></div></details>',
-'<label class="field">За какой период получить данные <select id="ouraDays"><option value="7" selected>7 дней</option><option value="30">30 дней</option><option value="90">90 дней</option></select></label>',
+'<p class="hint">Период синхронизации: только последние 7 календарных дней (включая сегодня). Ранее сохранённые данные остаются в истории.</p>',
 '<label class="oura-auto"><input id="ouraAuto" type="checkbox"> Обновлять при открытии LifeSims (не чаще раза в 6 часов)</label>',
 '<div class="row"><button type="button" class="secondary" id="ouraPreview" disabled>Проверить данные</button><button type="button" class="primary" id="ouraApply" disabled>Сохранить в LifeSims</button></div>',
 '<p id="ouraStatus" class="hint" role="status" aria-live="polite">Oura не подключена.</p>',
@@ -1383,13 +1383,12 @@ function update(){
 }
 function clearToken(){token='';expiry=0;preview=null;grantedScopes=[];dropSession(TOKEN_KEY);update()}
 el('ouraClientId').value=setting(ID_KEY)||'';
-el('ouraAuto').checked=setting(AUTO_KEY)==='yes';
+el('ouraAuto').checked=setting(AUTO_KEY)!=='no';
 el('ouraCopyRedirect').onclick=async()=>{
  try{await navigator.clipboard.writeText(REDIRECT);status('Адрес скопирован.')}
  catch(_){el('ouraRedirect').focus();el('ouraRedirect').select();status('Выдели и скопируй адрес.')}
 };
 el('ouraAuto').onchange=()=>saveSetting(AUTO_KEY,el('ouraAuto').checked?'yes':'no');
-el('ouraDays').onchange=()=>{preview=null;renderPreview();update()};
 el('ouraExportDetails').onclick=()=>exportDetailed().catch(e=>status('⚠ Экспорт Oura: '+e.message));
 function randomState(){
  if(!crypto?.getRandomValues)throw Error('Нужен защищённый браузер.');
@@ -1408,20 +1407,46 @@ el('ouraConnect').onclick=()=>{
  location.assign(AUTH+'?'+params.toString());
 };
 function callback(){
- const hash=location.hash||'';
- if(!/(?:^#|&)access_token=/.test(hash)&&!/(?:^#|&)error=/.test(hash))return false;
- const params=new URLSearchParams(hash.slice(1));
- try{history.replaceState(history.state,'',location.pathname+location.search)}catch(_){}
+ const hashParams=new URLSearchParams((location.hash||'').replace(/^#/,''));
+ const queryParams=new URLSearchParams(location.search);
+ const fromHash=hashParams.has('access_token')||hashParams.has('error');
+ if(!fromHash&&!queryParams.has('error'))return false;
+ const params=fromHash?hashParams:queryParams;
+ // Oura sends access tokens in the fragment, but refused authorization can return ?error=.
+ // Remove sensitive URL fragments and OAuth error details before displaying messages.
+ try{
+  const clean=new URL(location.href);
+  clean.hash='';
+  for(const field of ['error','error_description','error_uri','state'])clean.searchParams.delete(field);
+  history.replaceState(history.state,'',clean.pathname+clean.search);
+ }catch(_){}
  const expected=session(STATE_KEY);dropSession(STATE_KEY);
- if(!expected||params.get('state')!==expected){status('Недействительное состояние входа Oura. Начни подключение заново.');return true}
- if(params.has('error')){status('Oura отказала в доступе: '+String(params.get('error')).slice(0,90));return true}
- if(params.get('token_type')?.toLowerCase()!=='bearer'||!params.get('access_token')){status('Oura вернула неполную авторизацию.');return true}
- if(!(params.get('scope')||'').split(/\s+/).includes('daily')){status('Не дано разрешение daily. Подключи Oura заново и разреши ежедневные данные.');return true}
+ if(!expected||params.get('state')!==expected){
+  status('Недействительное состояние входа Oura. Начни подключение заново.');
+  return true;
+ }
+ if(params.has('error')){
+  status('Oura отказала в доступе: '+String(params.get('error')).slice(0,90));
+  return true;
+ }
+ if(params.get('token_type')?.toLowerCase()!=='bearer'||!params.get('access_token')){
+  status('Oura вернула неполную авторизацию.');
+  return true;
+ }
+ const scopes=(params.get('scope')||'').split(/\s+/).filter(Boolean);
+ if(!scopes.includes('daily')){
+  status('Не дано разрешение daily. Подключи Oura заново и разреши ежедневные данные.');
+  return true;
+ }
  const seconds=Number(params.get('expires_in'));
- if(!Number.isFinite(seconds)||seconds<=0){status('Не указан срок токена Oura; нужно подключение заново.');return true}
- token=params.get('access_token');expiry=Date.now()+seconds*1000;grantedScopes=(params.get('scope')||'').split(/\s+/).filter(Boolean);
+ if(!Number.isFinite(seconds)||seconds<=0){
+  status('Не указан срок токена Oura; нужно подключение заново.');
+  return true;
+ }
+ token=params.get('access_token');expiry=Date.now()+seconds*1000;grantedScopes=scopes;
  try{saveSession(TOKEN_KEY,JSON.stringify({token,expiry,scopes:grantedScopes}))}catch(_){}
- status('✓ Oura подключена. Нажми «Проверить данные».');update();return true;
+ status('✓ Oura подключена. Нажми «Проверить данные».');update();
+ return true;
 }
 const returned=callback();
 if(!returned){
@@ -1440,8 +1465,8 @@ async function read(name,start,end,time=false,snapshot=false){
   if(++pages>10)throw Error('Слишком много страниц Oura; сократи период.');
   const q=snapshot?new URLSearchParams():time?new URLSearchParams({
     start_datetime:new Date(start+'T00:00:00').toISOString(),
-    end_datetime:new Date(end+'T23:59:59').toISOString()
-  }):new URLSearchParams({start_date:start,end_date:end});
+    end_datetime:new Date(dateAdd(end,1)+'T00:00:00').toISOString()
+  }):new URLSearchParams({start_date:start,end_date:dateAdd(end,1)});
   if(next)q.set('next_token',next);
   let res;
   try{res=await fetch(API+name+'?'+q,{headers:{Authorization:'Bearer '+token},cache:'no-store'})}
@@ -1452,7 +1477,16 @@ async function read(name,start,end,time=false,snapshot=false){
   if(!res.ok)throw Error('Oura '+name+': ошибка '+res.status);
   const obj=await res.json();
   if(!Array.isArray(obj.data))throw Error('Неожиданные данные Oura '+name);
-  data.push(...obj.data);if(data.length>5000)throw Error('Слишком много записей Oura.');
+  // End dates can be exclusive or inclusive depending on collection.
+  // Request through tomorrow, then trim by the Oura record's calendar day.
+  const withinWeek=item=>{
+   if(snapshot)return true;
+   const day=typeof item?.day==='string'?item.day:
+     typeof item?.timestamp==='string'?item.timestamp.slice(0,10):
+     typeof item?.start_datetime==='string'?item.start_datetime.slice(0,10):null;
+   return !day||(day>=start&&day<=end);
+  };
+  data.push(...obj.data.filter(withinWeek));if(data.length>5000)throw Error('Слишком много записей Oura.');
   next=obj.next_token||'';
  }while(next);
  return data;
@@ -1493,10 +1527,27 @@ async function saveDetails(collections,from,to){
   await new Promise((resolve,reject)=>{
    const tx=db.transaction('collections','readwrite');
    const store=tx.objectStore('collections');
-   store.clear(); // Only the selected date range remains in the detailed store.
+   // Merge by stable record ID or date/time: repeat sync must not create duplicates
+   // and old weeks must not disappear when the seven-day window moves.
    for(const item of collections){
     if(item.items.length>5000)throw Error('Слишком много записей '+item.name);
-    store.put({name:item.name,label:item.label,from,to,savedAt:new Date().toISOString(),items:item.items});
+    const req=store.get(item.name);
+    req.onsuccess=()=>{
+     const previous=req.result;
+     const existing=Array.isArray(previous?.items)?previous.items:[];
+     const merged=new Map();
+     const recordKey=record=>record?.id!=null?'id:'+record.id:
+       record?.timestamp?'ts:'+record.timestamp:
+       record?.start_datetime?'start:'+record.start_datetime:
+       record?.day?'day:'+record.day:'raw:'+JSON.stringify(record);
+     for(const record of [...existing,...item.items])merged.set(recordKey(record),record);
+     if(merged.size>100000){tx.abort();return}
+     store.put({name:item.name,label:item.label,
+       from:previous?.from&&previous.from<from?previous.from:from,
+       to:previous?.to&&previous.to>to?previous.to:to,
+       savedAt:new Date().toISOString(),items:[...merged.values()]});
+    };
+    req.onerror=()=>tx.abort();
    }
    tx.oncomplete=resolve;
    tx.onerror=()=>reject(Error('Недостаточно места для подробностей Oura в IndexedDB.'));
@@ -1519,7 +1570,7 @@ async function exportDetailed(){
  const data=JSON.stringify({format:'LifeSims Oura detail backup v1',exportedAt:new Date().toISOString(),collections:details},null,2);
  const blob=new Blob([data],{type:'application/json'});
  const url=URL.createObjectURL(blob);
- const a=document.createElement('a');a.href=url;a.download='lifesims-oura-week.json';
+ const a=document.createElement('a');a.href=url;a.download='lifesims-oura-details.json';
  document.body.append(a);a.click();a.remove();
  setTimeout(()=>URL.revokeObjectURL(url),1000);
  status('Подробности Oura сохранены в файл. Он содержит данные о здоровье — храни его приватно.');
@@ -1574,7 +1625,7 @@ async function apply(automatic=false){
  const selected=preview;
  const done=bridge.importDays(selected.records);
  let note='';
- try{await saveDetails(selected.collections,selected.from,selected.to);note=' Подробности за 7 дней сохранены отдельно.'}
+ try{await saveDetails(selected.collections,selected.from,selected.to);note=' Подробные данные добавлены в историю.'}
  catch(e){note=' ⚠ Подробности не сохранились: '+e.message}
  renderToday();
  preview=null;renderPreview();saveSetting(LAST_KEY,String(Date.now()));
@@ -1587,7 +1638,7 @@ async function load(automatic=false){
  if(automatic&&!bridge.wasImported())return;
  busy=true;update();
  try{
-  const end=bridge.today(),start=dateAdd(end,1-Number(el('ouraDays').value));
+  const end=bridge.today(),start=dateAdd(end,-6);
   status('Загружаю сон и активность Oura за '+start+' — '+end+'…');
   const sleep=await read('sleep',start,end);
   const activity=await read('daily_activity',start,end);
@@ -1621,6 +1672,6 @@ if(connected()&&el('ouraAuto').checked&&bridge.wasImported()){
   load(true).catch(e=>status('⚠ Oura: '+e.message));
  }
 }
-window.LifeSimsOuraVersion='oura-v1';
+window.LifeSimsOuraVersion='oura-v19-week7';
 })();
 </script></body></html>
