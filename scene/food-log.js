@@ -73,7 +73,8 @@ const total=(a,key)=>Math.round(a.reduce((n,r)=>n+(Number(r[key])||0),0)*10)/10;
 const entries=()=>bridge.list();
 function estimate(text,grams){
  const norm=String(text).toLowerCase().replace(/ё/g,'е');
- const weightInText=norm.match(/(\d+(?:[.,]\d+)?)\s*(?:г|гр|g|мл|ml)\b/);
+ const weightInText=norm.match(/(\d+(?:[.,]\d+)?)\s*(?:г|гр|g|мл|ml)(?![а-яa-z])/);
+ const units=norm.match(/(?:^|\s)(\d{1,2})\s*(?:шт|штук|штуки|яйца|яйцо|банана|яблока)(?![а-яa-z])/);
  const explicit=Number(grams)|| (weightInText?Number(weightInText[1].replace(',','.')):null);
  const selected=[];
  for(const row of ROWS){
@@ -86,7 +87,7 @@ function estimate(text,grams){
  // Only one per detected overlapping phrase such as milk and yogurt.
  found=found.filter(r=>!found.some(other=>r!==other&&other.match.includes(r.match)&&other.match.length>r.match.length));
  let typical=found.reduce((s,r)=>s+r.grams,0);
- let portion=explicit&&explicit>=1&&explicit<=10000?explicit:Math.max(typical,200);
+ let portion=explicit&&explicit>=1&&explicit<=10000?explicit:(units&&found.length===1?Math.min(20,Number(units[1]))*typical:(typical||200));
  let density=found.length?found.reduce((s,r)=>s+r.grams*r.kcal,0)/typical:165;
  const macros={kcal:0,p:0,f:0,c:0};
  if(found.length){
