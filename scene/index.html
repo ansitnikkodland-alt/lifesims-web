@@ -108,17 +108,17 @@
 <rect class="hot" tabindex="0" role="button" aria-label="Персонаж — действия" data-object="sim" x="336" y="182" width="151" height="522"/>
 <rect class="hot" tabindex="0" role="button" aria-label="Диван — действия" data-object="sofa" x="814" y="531" width="210" height="237"/>
 </svg><div class="work-indicator" id="workIndicator" hidden role="status"><strong>Анюта на мероприятии</strong><span id="workName"></span><button id="returnHome" type="button">Вернуться домой</button></div><div class="sheetwrap" id="sheetWrap" aria-hidden="true"><div class="sheet" role="dialog" aria-modal="false" aria-labelledby="sheetTitle"><div class="sheethead"><h2 id="sheetTitle">Действия</h2><button id="closeSheet" aria-label="Закрыть меню">×</button></div><div class="sheetacts" id="sheetActions"></div></div></div><span class="sr-only" id="sceneStatus" aria-live="polite"></span></div>
-<nav class="nav" aria-label="Разделы"><button class="active" data-tab="needs">◈ Потребности</button><button data-tab="diary">▤ Дневник</button><button data-tab="food">🍽 Питание</button><button data-tab="history">▦ Календарь</button><button data-tab="data">⇩ Данные</button></nav>
+<nav class="nav" aria-label="Разделы"><button class="active" data-tab="needs">◈ Потребности</button><button data-tab="diary">▤ Дневник</button><button data-tab="history">▦ Календарь</button><button data-tab="data">⇩ Данные</button></nav>
 <div class="content"><div id="storageStatus" class="notice" role="status">Проверка локального хранения…</div>
-<section class="section active" id="needs"><div class="heading"><h2>Потребности</h2><button class="secondary" id="openNeedsEditor" type="button">Все показатели</button></div><div class="grid" id="needsGrid"></div><p class="hint">Нажми на любую потребность, чтобы изменить её показатель. Ресурс автоматически рассчитывается по доступным оценкам: сон, восстановление Oura и записанные настроение, физическое состояние, гигиена и питание. Неизвестные показатели остаются пустыми. Если записана еда, питание оценивается только по времени после последнего приёма пищи (игровая сытость, не качество рациона). Ручное значение питания имеет приоритет. Потребность во сне — игровая оценка по фактическому сну и накопленному недосыпу. Подключение Oura доступно ниже.</p><hr class="separator"><div class="card"><h3>Сегодня</h3><div id="todaySummary" class="muted">Нет записей</div></div><details id="needsEditor" class="card needs-editor"><summary>✎ Редактировать показатели дня</summary><div class="heading"><h3>Показатели и состояние</h3><input type="date" id="stateDate" aria-label="Дата записи"></div><p class="hint">Нажми на потребность выше, чтобы открыть нужное поле. Здесь также доступны сон, шаги, вес, лекарства и питание.</p><form id="stateForm"><div class="cols"><label class="field">Фактический сон, часов <input id="sleepHours" type="number" min="0" max="24" step="0.01" placeholder="Не записано"></label><label class="field">Недосып (ручная корректировка, ч) <input id="sleepDebtAdjustment" type="number" min="0" max="500" step="0.01" placeholder="Автоматический расчёт"></label><p class="hint">◆ Ресурс рассчитывается автоматически по сну, настроению, физическому состоянию, гигиене и питанию. Если данных недостаточно, показывается «—».</p><label class="field">Настроение: <output id="moodValue">—</output>% <input id="mood" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="moodUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Физическое состояние: <output id="conditionValue">—</output>% <input id="condition" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="conditionUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Гигиена: <output id="hygieneValue">—</output>% <input id="hygiene" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="hygieneUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Питание: <output id="nutritionValue">—</output>% <input id="nutrition" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="nutritionUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Шаги <input id="steps" type="number" min="0" max="100000" step="1" placeholder="Не записано"></label><label class="field">Общий расход, ккал <input id="totalCalories" type="number" min="0" max="20000" step="1" placeholder="Не записано"></label><label class="field">Вес, кг <input id="weight" type="number" min="20" max="350" step="0.1" placeholder="Не записано"></label><label class="field">Талия, см <input id="waist" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label><label class="field">Бёдра, см <input id="hips" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label><label class="field">Грудь, см <input id="chest" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label></div><label class="field">Лекарства <button class="secondary" type="button" id="medsYesterday">Как вчера</button><textarea id="meds" placeholder="Только реально принятые лекарства"></textarea></label><label class="field">Питание <button class="secondary" type="button" id="foodYesterday">Как вчера</button><textarea id="food" placeholder="Что ела"></textarea></label><label class="field">Цикл <input id="cycle" maxlength="200" placeholder="Заметка о цикле"></label><button class="primary" type="submit">Сохранить запись за дату</button></form><div class="notice" id="sleepDebtNote">Долг сна рассчитывается только из введённых дней; дни без записей не считаются нулевым сном.</div></details><div id="ouraMount" class="oura-mount"></div></section>
+<section class="section active" id="needs"><div class="heading"><h2>Потребности</h2><button class="secondary" id="openNeedsEditor" type="button">Все показатели</button></div><div class="grid" id="needsGrid"></div><p class="hint">Нажми на любую потребность, чтобы изменить её показатель. Ресурс автоматически рассчитывается по доступным оценкам: сон, восстановление Oura и записанные настроение, физическое состояние, гигиена и питание. Неизвестные показатели остаются пустыми. Если записана еда, питание оценивается только по времени после последнего приёма пищи (игровая сытость, не качество рациона). Ручное значение питания имеет приоритет. Потребность во сне — игровая оценка по фактическому сну и накопленному недосыпу. Подключение Oura доступно ниже.</p><hr class="separator"><div class="card"><h3>Сегодня</h3><div id="todaySummary" class="muted">Нет записей</div></div><details id="needsEditor" class="card needs-editor"><summary>✎ Показатели дня</summary><button type="button" id="needsClose" class="secondary needs-popup-close">× Закрыть</button><div class="heading"><h3>Показатели и состояние</h3><input type="date" id="stateDate" aria-label="Дата записи"></div><p class="hint">Нажми на потребность выше, чтобы открыть нужное поле. Здесь также доступны сон, шаги, вес, лекарства и питание.</p><form id="stateForm"><div class="cols"><label class="field">Фактический сон, часов <input id="sleepHours" type="number" min="0" max="24" step="0.01" placeholder="Не записано"></label><label class="field">Недосып (ручная корректировка, ч) <input id="sleepDebtAdjustment" type="number" min="0" max="500" step="0.01" placeholder="Автоматический расчёт"></label><p class="hint">◆ Ресурс рассчитывается автоматически по сну, настроению, физическому состоянию, гигиене и питанию. Если данных недостаточно, показывается «—».</p><label class="field">Настроение: <output id="moodValue">—</output>% <input id="mood" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="moodUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Физическое состояние: <output id="conditionValue">—</output>% <input id="condition" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="conditionUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Гигиена: <output id="hygieneValue">—</output>% <input id="hygiene" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="hygieneUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Питание: <output id="nutritionValue">—</output>% <input id="nutrition" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="nutritionUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Шаги <input id="steps" type="number" min="0" max="100000" step="1" placeholder="Не записано"></label><label class="field">Общий расход, ккал <input id="totalCalories" type="number" min="0" max="20000" step="1" placeholder="Не записано"></label><label class="field">Вес, кг <input id="weight" type="number" min="20" max="350" step="0.1" placeholder="Не записано"></label><label class="field">Талия, см <input id="waist" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label><label class="field">Бёдра, см <input id="hips" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label><label class="field">Грудь, см <input id="chest" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label></div><label class="field">Лекарства <button class="secondary" type="button" id="medsYesterday">Как вчера</button><textarea id="meds" placeholder="Только реально принятые лекарства"></textarea></label><label class="field">Питание <button class="secondary" type="button" id="foodYesterday">Как вчера</button><textarea id="food" placeholder="Что ела"></textarea></label><label class="field">Цикл <input id="cycle" maxlength="200" placeholder="Заметка о цикле"></label><button class="primary" type="submit">Сохранить запись за дату</button></form><div class="notice" id="sleepDebtNote">Долг сна рассчитывается только из введённых дней; дни без записей не считаются нулевым сном.</div></details><div id="ouraMount" class="oura-mount"></div></section><div id="lifeModalMask" class="life-modal-mask" hidden></div>
 
 
-<section class="section" id="food">
-<div class="heading"><h2>🍽 Питание · v28</h2><input id="mealDay" type="date" aria-label="Дата журнала питания"></div>
+<section class="section food-popup" id="food" aria-label="Журнал питания" role="dialog" aria-modal="true">
+<div class="heading"><h2>🍽 Питание</h2><input id="mealDay" type="date" aria-label="Дата журнала питания"><button id="foodDismiss" type="button" class="secondary" aria-label="Закрыть питание">×</button></div>
 <div class="food-total card"><div class="food-total-number"><span id="mealTotalKcal">—</span><small>ккал съедено · приблизительно</small></div><div id="mealTotalMacros" class="muted"></div><p class="hint">Съеденные калории — отдельно от общего расхода энергии, полученного из Oura. Оценки блюд ориентировочные, могут существенно отличаться от реального состава.</p></div>
 <form id="mealForm" class="card">
 <h3 id="mealFormTitle">Записать приём пищи</h3>
-<label class="field">Что съела или выпила<textarea id="mealDescription" rows="2" maxlength="600" placeholder="Например: гречка с овощами, курица, чай с сахаром"></textarea></label>
+<label class="field">Что съела или выпила<textarea id="mealDescription" rows="2" maxlength="600" placeholder="Например: гречка с овощами, курица, чай с сахаром"></textarea></label><div id="mealSuggestions" class="meal-suggestions" hidden></div>
 <div class="food-actions"><button id="mealVoice" type="button" class="secondary">🎙 Голосом</button><label class="food-photo-button secondary">📷 Камера<input id="mealPhoto" type="file" accept="image/*" capture="environment"></label><label class="food-photo-button secondary">🖼 Галерея<input id="mealGallery" type="file" accept="image/*"></label><button type="button" class="secondary" id="mealRepeat">↻ Как раньше</button></div>
 <div id="mealPhotoPreview" class="food-photo-preview" hidden></div>
 <p class="hint">Фото прикрепляется к записи; для определения блюда по фотографии пока нужно указать название. Автоматическое визуальное распознавание без отдельной модели недоступно.</p>
@@ -323,26 +323,27 @@ function openTab(tab,jump=false){
   document.querySelectorAll('.section').forEach(section=>section.classList.toggle('active',section.id===tab));
   document.querySelectorAll('[data-tab]').forEach(b=>b.classList.toggle('active',b.dataset.tab===tab));
   if(tab==='needs')renderNeeds();
-  if(tab==='food')window.LifeSimsFood?.render();
+
   if(tab==='history')renderHistory();
   if(tab==='diary')fillDiary($('diaryDate').value||activeDay);
   if(jump)requestAnimationFrame(()=>document.querySelector('.nav').scrollIntoView({behavior:'smooth',block:'start'}));
 }
 function showNeedsEditor(field='',date=today()){
-  openTab('needs',true);fillState(date);$('needsEditor').open=true;
+  openTab('needs',false);fillState(date);$('needsEditor').open=true;$('lifeModalMask').hidden=false;
   requestAnimationFrame(()=>{
     // An empty slider remains intentionally "Не записано"; focus its checkbox
     // instead of moving keyboard focus to a disabled range input.
     const unknown=field&&sliderFields.includes(field)&&$(field+'Unknown').checked;
     const target=unknown?$(field+'Unknown'):(field?$(field):$('stateDate'));
     if(target){
-      target.scrollIntoView({behavior:'smooth',block:'center'});
+      // Avoid moving the underlying page behind the popup.
+      target.scrollIntoView({behavior:'auto',block:'nearest'});
       if(field)target.focus({preventScroll:true});
     }
   });
 }
 function xpTotal(){const origin=Object.values(state.legacySkills||{}).reduce((sum,x)=>sum+(Number.isFinite(+x)?+x:0),0);const earned=state.events.reduce((sum,e)=>sum+(e.kind==='complete'&&Number.isFinite(+e.xp)?+e.xp:0),0);return Math.max(0,Math.round(origin+earned))}
-function metric(el,name,value,suffix='%',displayValue=null,field=''){const root=document.createElement('button');root.type='button';root.className='meter need-action';root.setAttribute('aria-label','Редактировать: '+name);root.onclick=()=>showNeedsEditor(field,today());const s=document.createElement('span');const l=document.createElement('strong');l.textContent=name;const v=document.createElement('b');v.textContent=displayValue==null?(value==null?'—':String(value)+suffix):displayValue;s.append(l,v);const bar=document.createElement('div');bar.className='bar';if(value==null){const n=document.createElement('div');n.className='empty';bar.append(n)}else{const n=document.createElement('b');n.style.setProperty('--val',Math.min(100,Math.max(0,Number(value)))+'%');bar.append(n)}root.append(s,bar);el.append(root)}
+function metric(el,name,value,suffix='%',displayValue=null,field=''){const root=document.createElement('button');root.type='button';root.className='meter need-action';root.setAttribute('aria-label','Редактировать: '+name);root.onclick=()=>{if(field==='nutrition')window.LifeSimsFood?.open?.();else showNeedsEditor(field,today())};const s=document.createElement('span');const l=document.createElement('strong');l.textContent=name;const v=document.createElement('b');v.textContent=displayValue==null?(value==null?'—':String(value)+suffix):displayValue;s.append(l,v);const bar=document.createElement('div');bar.className='bar';if(value==null){const n=document.createElement('div');n.className='empty';bar.append(n)}else{const n=document.createElement('b');n.style.setProperty('--val',Math.min(100,Math.max(0,Number(value)))+'%');bar.append(n)}root.append(s,bar);el.append(root)}
 function estimatedFoodNeed(d){
  // In-game satiety from time of the most recently logged meal, never a judgement
  // of food quality or adequate caloric intake. Missing entries mean "unknown".
@@ -354,15 +355,23 @@ function estimatedFoodNeed(d){
  const hours=Math.max(0,currentMinute-lastMinute)/60;
  return Math.max(0,Math.min(100,Math.round(100-12*hours)));
 }
-function derivedResource(r,d){
- // A game estimate derived only from actual available inputs, never from fabricated
- // mood, hygiene, nutrition or physical condition. Oura readiness is an independent signal.
- const s=sleepAssessment(d),vals=[];
- if(typeof s.need==='number'&&Number.isFinite(s.need))vals.push(s.need);
- for(const field of sliderFields){const value=field==='nutrition'&&r.nutrition==null?estimatedFoodNeed(d):r[field];if(typeof value==='number'&&Number.isFinite(value))vals.push(value)}
+function physicalCondition(r){
+ // Game state, NOT a medical assessment. Oura Readiness is a measured app score.
  const readiness=r.ouraScores?.readiness;
- if(typeof readiness==='number'&&Number.isFinite(readiness))vals.push(readiness);
- return vals.length?Math.round(vals.reduce((a,b)=>a+b,0)/vals.length):null;
+ return Number.isFinite(readiness)?readiness:(Number.isFinite(r.condition)?r.condition:null);
+}
+function hygieneCondition(r,date){
+ const last=state.room?.lastShowerAt;
+ if(typeof last!=='string'||!Number.isFinite(Date.parse(last)))return Number.isFinite(r.hygiene)?r.hygiene:null;
+ const hours=Math.max(0,((date===today()?Date.now():asDay(plusDays(date,1)).getTime())-Date.parse(last))/3600000);
+ const automatic=Math.max(0,Math.min(100,Math.round(100-Math.max(0,hours-12)*1.6)));
+ return Number.isFinite(r.hygiene)?Math.min(r.hygiene,automatic):automatic;
+}
+function derivedResource(r,d){
+ const sleep=sleepAssessment(d).need;
+ const vals=[sleep,r.mood,physicalCondition(r),hygieneCondition(r,d),r.nutrition==null?estimatedFoodNeed(d):r.nutrition];
+ const available=vals.filter(x=>typeof x==='number'&&Number.isFinite(x));
+ return available.length?Math.round(available.reduce((a,b)=>a+b,0)/available.length):null;
 }
 function renderCrystal(){const r=currentRecord(today());const v=derivedResource(r,today());const p=v==null?['#c2e9ff','#76c9ef','#2169b6']:v>65?['#c7fff0','#55dfa5','#0e9874']:v>35?['#fff2b1','#edbf53','#a57a15']:['#ffc2cd','#f4778c','#af405b'];const el=$('plumbob');el.style.setProperty('--gem-light',p[0]);el.style.setProperty('--gem-middle',p[1]);el.style.setProperty('--gem-dark',p[2]);el.title=v==null?'Ресурс не записан; нажми, чтобы записать':`Ресурс: ${v}%`}
 function sleepAssessment(date){const dates=Object.keys(state.days).filter(d=>d<=date&&state.days[d]?.sleepHours!=null).sort();if(!dates.length)return {need:null,debt:null,last:null};let debt=0,prev=null,gaps=false;for(const d of dates){const rec=state.days[d],hours=Number(rec.sleepHours);if(prev&&plusDays(prev,1)!==d)gaps=true;debt=Math.max(0,debt+7.5-hours);if(rec.sleepDebtAdjustment!=null)debt=Number(rec.sleepDebtAdjustment);prev=d}const last=Number(state.days[dates[dates.length-1]].sleepHours);if(dates[dates.length-1]!==date)return {need:null,debt:gaps?null:debt,last};
@@ -370,7 +379,43 @@ function sleepAssessment(date){const dates=Object.keys(state.days).filter(d=>d<=
  // still supports a transparent, partial estimate of the sleep need.
  if(gaps)return {need:Math.max(0,Math.min(100,Math.round(100-Math.max(0,7.5-last)*12))),debt:null,last,partial:true};
  return {need:Math.max(0,Math.min(100,Math.round(100-Math.max(0,7.5-last)*12-Math.min(debt,20)*4))),debt,last}}
-function renderNeeds(){renderCrystal();const d=today(),r=currentRecord(d),g=$('needsGrid');g.replaceChildren();const sleep=sleepAssessment(d);metric(g,'💤 Потребность во сне',sleep.need,'%',sleep.need==null?'—':sleep.need+'%','sleepHours');const resource=derivedResource(r,d);metric(g,'◆ Ресурс',resource,'%',null,'');metric(g,'☺ Настроение',r.mood,'%',null,'mood');metric(g,'♨ Гигиена',r.hygiene,'%',null,'hygiene');metric(g,'♥ Физическое состояние',r.condition,'%',null,'condition');metric(g,'🍴 Питание',r.nutrition==null?estimatedFoodNeed(d):r.nutrition,'%',null,'nutrition');$('resourceTop').textContent=resource==null?'—':resource+'%';$('xpTop').textContent=xpTotal()+' XP';const completed=state.events.filter(e=>e.date===d&&e.kind==='complete').length;const vals=[r.steps==null?'шаги не записаны':`Шаги: ${r.steps.toLocaleString('ru-RU')}`,r.totalCalories==null?'общий расход не записан':`Общий расход: ${r.totalCalories} ккал`,`Выполнено действий: ${completed}`];const consumed=(state.foodMeals||[]).filter(m=>m.date===d).reduce((s,m)=>s+(Number(m.kcal)||0),0);if((state.foodMeals||[]).some(m=>m.date===d))vals.push('Съедено: ≈'+Math.round(consumed)+' ккал');if(Number.isFinite(r.ouraScores?.readiness))vals.push(`Восстановление Oura: ${r.ouraScores.readiness}/100`);$('todaySummary').textContent=vals.join(' · ')}
+function renderNeeds(){
+ renderCrystal();const d=today(),r=currentRecord(d),g=$('needsGrid');g.replaceChildren();
+ const sleep=sleepAssessment(d),resource=derivedResource(r,d),hygiene=hygieneCondition(r,d),physical=physicalCondition(r);
+ metric(g,'💤 Потребность во сне',sleep.need,'%',null,'sleepHours');
+ metric(g,'◆ Ресурс',resource,'%',null,'');
+ metric(g,'☺ Настроение',r.mood,'%',null,'mood');
+ metric(g,'♨ Гигиена',hygiene,'%',null,'hygiene');
+ metric(g,'♥ Физическое состояние',physical,'%',null,'condition');
+ metric(g,'🍴 Питание',r.nutrition==null?estimatedFoodNeed(d):r.nutrition,'%',null,'nutrition');
+ const steps=Number.isFinite(r.steps)?r.steps:null;
+ metric(g,'🚶 Активность · шаги',steps==null?null:Math.min(100,Math.round(steps/10000*100)),'%',steps==null?'—':steps.toLocaleString('ru-RU')+' / 10 000','steps');
+ // Comparable sliders use the larger of the two observed amounts, not a fabricated calorie goal.
+ const eatenMeals=(state.foodMeals||[]).filter(m=>m.date===d&&Number.isFinite(Number(m.kcal)));
+ const eaten=eatenMeals.length?Math.round(eatenMeals.reduce((n,m)=>n+Number(m.kcal),0)):null;
+ const spent=Number.isFinite(r.totalCalories)?r.totalCalories:null;
+ const scale=Math.max(eaten||0,spent||0,1);
+ const pair=document.createElement('div');pair.className='calorie-pair';
+ for(const [name,value,callback] of [
+  ['🍽 Съедено',eaten,()=>window.LifeSimsFood?.open?.()],
+  ['🔥 Израсходовано',spent,()=>showNeedsEditor('totalCalories',d)]
+ ]){
+  const btn=document.createElement('button');btn.className='meter need-action';btn.type='button';btn.onclick=callback;
+  const title=document.createElement('span');const strong=document.createElement('strong');strong.textContent=name;
+  const num=document.createElement('b');num.textContent=value==null?'—':'≈ '+value+' ккал';title.append(strong,num);
+  const bar=document.createElement('div');bar.className='bar';
+  if(value==null){const empty=document.createElement('div');empty.className='empty';bar.append(empty)}
+  else{const fill=document.createElement('b');fill.style.setProperty('--val',Math.min(100,Math.round(value/scale*100))+'%');bar.append(fill)}
+  btn.append(title,bar);pair.append(btn);
+ }
+ g.append(pair);
+ $('resourceTop').textContent=resource==null?'—':resource+'%';$('xpTop').textContent=xpTotal()+' XP';
+ const completed=state.events.filter(e=>e.date===d&&e.kind==='complete').length;
+ const vals=[steps==null?'шаги не записаны':'Шаги: '+steps.toLocaleString('ru-RU'),spent==null?'общий расход не записан':'Общий расход: '+spent+' ккал','Выполнено действий: '+completed];
+ if(eaten!=null)vals.push('Съедено: ≈'+eaten+' ккал');
+ if(Number.isFinite(r.ouraScores?.readiness))vals.push('Восстановление Oura: '+r.ouraScores.readiness+'/100');
+ $('todaySummary').textContent=vals.join(' · ');
+}
 function fillDiary(d){$('diaryDate').value=d;$('diaryText').value=currentRecord(d).diary||''}
 function saveDiary(){const d=$('diaryDate').value||today(),old=currentRecord(d),text=$('diaryText').value;if(old.diary===text)return toast('Изменений нет');if(setDay(d,{...old,diary:text,updatedAt:new Date().toISOString()})){activeDay=d;toast('Дневник сохранён за '+d);renderAll()}}
 function updateDebt(){const d=$('stateDate').value||today(),s=sleepAssessment(d),r=currentRecord(d);$('sleepDebtNote').textContent='Сон за дату: '+(r.sleepHours==null?'не записан':r.sleepHours+' ч')+'. Недосып: '+(s.debt==null?'неизвестен (есть пропуски дат)':s.debt.toFixed(2)+' ч')+'. Потребность: '+(s.need==null?'неизвестна':s.need+'%'+(s.partial?' (только по последней ночи, без неизвестного долга)':'')) +'. Норма 7–8 ч, расчётный ориентир 7,5 ч. Процент — игровая оценка, не медицинская.'}
