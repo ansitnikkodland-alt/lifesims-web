@@ -1,8 +1,10 @@
-const CACHE='lifesims-scene-v38';
-const FILES=['./','./index.html','./calendar-style.css','./oura-style.css','./food-log.css','./food-log.js','./oura-sync.js','./privacy.html','./terms.html','./manifest.webmanifest','../icon.svg'];
+const CACHE='lifesims-scene-v39';
+const FILES=['./','./index.html','./room3d.js','./calendar-style.css','./oura-style.css','./food-log.css','./food-log.js','./oura-sync.js','./privacy.html','./terms.html','./manifest.webmanifest','../icon.svg'];
+const ENGINE='https://cdn.jsdelivr.net/npm/three@0.186.1/build/three.module.js';
 self.addEventListener('install',event=>{
  event.waitUntil(caches.open(CACHE)
   .then(cache=>cache.addAll(FILES.map(path=>new Request(path,{cache:'reload'}))))
+  .then(()=>caches.open(CACHE).then(cache=>cache.add(ENGINE).catch(()=>{})))
   .then(()=>self.skipWaiting()));
 });
 self.addEventListener('activate',event=>{
@@ -13,6 +15,13 @@ self.addEventListener('activate',event=>{
 });
 self.addEventListener('fetch',event=>{
  const request=event.request, url=new URL(request.url);
+ if(request.method==='GET'&&url.href===ENGINE){
+  event.respondWith(fetch(request).then(response=>{
+   if(response.ok){const copy=response.clone();event.waitUntil(caches.open(CACHE).then(cache=>cache.put(request,copy)))}
+   return response;
+  }).catch(()=>caches.match(request).then(r=>r||Response.error())));
+  return;
+ }
  if(request.method!=='GET'||url.origin!==self.location.origin)return;
  // Navigation must use the current online HTML, not a stale PWA or HTTP cache copy.
  if(request.mode==='navigate'){
