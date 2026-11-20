@@ -285,14 +285,14 @@ function due(a,d){
  if(a.repeat==='daily')return true;
  if(a.repeat==='weekly'){
   const weekdays=Array.isArray(a.weekdays)?a.weekdays.map(Number).filter(n=>n>=1&&n<=7):[];
-  if(!weekdays.length)return ((asDay(d).getDay()+6)%7)===((asDay(a.createdDate||d).getDay()+6)%7);
+  if(!weekdays.length){const anchor=a.createdDate||(state.createdAt||'').slice(0,10)||d;return ((asDay(d).getDay()+6)%7)===((asDay(anchor).getDay()+6)%7)}
   return weekdays.includes(((asDay(d).getDay()+6)%7)+1);
  }
  return false;
 }
-function done(a,d){if(a.legacyDone)return true;const cm=Array.isArray(a.completions)?a.completions:[];if(a.repeat==='once')return cm.length>0;if(a.repeat==='weekly')return cm.some(c=>weekKey(c.date)===weekKey(d));return cm.some(c=>c.date===d)}
+function done(a,d){if(a.legacyDone)return true;const cm=Array.isArray(a.completions)?a.completions:[];if(a.repeat==='once')return cm.length>0;if(a.repeat==='weekly')return cm.some(c=>Array.isArray(a.weekdays)&&a.weekdays.length>1?c.date===d:weekKey(c.date)===weekKey(d));return cm.some(c=>c.date===d)}
 function complete(a,date){if(done(a,date))return toast('Уже выполнено — XP второй раз не начисляются');if(!due(a,date))return toast('Дело ещё не запланировано');const xp=Number.isFinite(a.xp)?a.xp:0;const stamp=new Date().toISOString();if(transact(()=>{a.completions??=[];a.completions.push({date,at:stamp,xp});
- if(a.object==='shower'&&/душ|мытьс|помыть себя/i.test(a.name)){state.room??={};state.room.lastShowerAt=stamp}
+ if(a.object==='shower'&&/принят.*душ|принять душ|помытьс|приняла душ/i.test(a.name)){state.room??={};state.room.lastShowerAt=stamp}
  if(/уборк|помыть|убрать|постират|мыть посуд|разобрать|пропылесос/i.test(a.name)){state.room??={};state.room.lastCleanAt=stamp;state.room.entropyOffset=Math.min(0,(state.room.entropyOffset||0)-4)}
  state.events.push({id:uid(),kind:'complete',activityId:a.id,name:a.name,date,at:stamp,xp})})){toast(`✓ ${a.name}${xp?' · +'+xp+' XP':''}`);$('sceneStatus').textContent='✓ '+a.name;renderAll()}}
 function renderActivities(){const d=$('taskDate').value||today();const list=$('taskList');list.replaceChildren();const relevant=state.activities.filter(a=>{if(a.legacyDone)return false;if(a.kind==='habit'&&!a.createdDate&&d<(state.createdAt||'').slice(0,10)&&!(a.completions||[]).some(c=>c.date===d))return false;return due(a,d)});if(!relevant.length){list.textContent='На эту дату дел нет';return}for(const a of relevant){const finished=done(a,d),el=document.createElement('div');el.className='item'+(finished?' done':'');const btn=document.createElement('button');btn.className='check';btn.textContent=finished?'✓':'○';btn.disabled=finished;btn.setAttribute('aria-label',`Выполнить ${a.name}`);btn.onclick=()=>complete(a,d);const text=document.createElement('div');text.className='itemtext';const title=document.createElement('strong');title.textContent=a.name;const sub=document.createElement('small');
@@ -693,7 +693,11 @@ function renderDayAgenda(){
       const name=document.createElement('div');name.className='agenda-event-title';name.textContent=task.name;
       const meta=document.createElement('div');meta.className='agenda-event-meta';
       meta.textContent=(task.kind==='habit'?'Привычка':'Дело')+' · '+(finished?'выполнено':'запланировано');
-      main.append(name,meta);row.append(check,main);body.append(row);
+      main.append(name,meta);row.append(check,main);
+      const edit=document.createElement('button');edit.className='agenda-edit';edit.type='button';edit.textContent='✎';
+      edit.setAttribute('aria-label','Изменить дело '+task.name);
+      edit.onclick=()=>{closeDayAgenda();openActivityEditor(task.id)};
+      row.append(edit);body.append(row);
     }
   }
   if(completed.length){
@@ -975,6 +979,7 @@ function saveEvent(e){
    if(i<0)state.schedule.push(next);
    else{
     // For whole-series edits keep the original start day; change its clock time.
+    if(old.google)next.localEditedAll=true;
     if(old.repeat&&old.repeat!=='none'&&scope==='all'){
      const day=old.startsAt.slice(0,10),startTime=startsAt.slice(11),duration=Date.parse(endsAt)-Date.parse(startsAt);
      next.startsAt=day+'T'+startTime;
@@ -1110,7 +1115,16 @@ window.LifeSimsCalendarBridge={
       for(const entry of entries){
         const i=state.schedule.findIndex(x=>x.id===entry.id);
         if(i<0)state.schedule.push(entry);
-        else state.schedule[i]=entry;
+        else{
+         const prior=state.schedule[i],merged={...entry};
+         // Preserve local occurrence exceptions when Google sync refreshes its source.
+         for(const key of ['overrides','repeatUntil','excludedDates'])if(prior[key]!=null)merged[key]=prior[key];
+         if(prior.localEditedAll){
+          for(const key of ['title','startsAt','endsAt','repeat','weekdays','location','description','color','allDay'])merged[key]=prior[key];
+          merged.localEditedAll=true;
+         }
+         state.schedule[i]=merged;
+        }
       }
     });
     if(!ok)throw Error('Не удалось сохранить синхронизированное мероприятие в браузере');
