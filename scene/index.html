@@ -1330,7 +1330,7 @@ panel.innerHTML=[
 '<div id="ouraToday" class="oura-today" role="status">Оценки Oura за сегодня пока не загружены.</div>',
 '<p class="hint">Фактический сон, шаги и калории, оценки сна и восстановления. Потребность во сне LifeSims рассчитывает отдельно.</p>',
 '<details id="ouraSettings" open><summary>Подключение Oura</summary>',
-'<p class="hint">Создай OAuth-приложение на <a href="https://cloud.ouraring.com/" target="_blank" rel="noopener noreferrer">Oura Cloud → My Applications</a>. Добавь Redirect URI ниже. Секретный ключ (Client Secret) сюда вводить нельзя.</p>',
+'<p class="hint">Создай OAuth-приложение на <a href="https://developer.ouraring.com/applications" target="_blank" rel="noopener noreferrer">Oura Developer → Applications</a>. Добавь Redirect URI ниже. Секретный ключ (Client Secret) сюда вводить нельзя.</p>',
 '<label class="field">Redirect URI <input id="ouraRedirect" type="text" readonly></label>',
 '<button type="button" class="secondary" id="ouraCopyRedirect">Скопировать Redirect URI</button>',
 '<label class="field">Oura Client ID <input id="ouraClientId" autocomplete="off" spellcheck="false" placeholder="Только публичный Client ID"></label>',
@@ -1340,7 +1340,8 @@ panel.innerHTML=[
 '<div class="row"><button type="button" class="secondary" id="ouraPreview" disabled>Проверить данные</button><button type="button" class="primary" id="ouraApply" disabled>Сохранить в LifeSims</button></div>',
 '<p id="ouraStatus" class="hint" role="status" aria-live="polite">Oura не подключена.</p>',
 '<div id="ouraResults"></div>',
-'<p class="hint">Ручные записи не заменяются данными Oura. OAuth-токен хранится только в сеансе этой вкладки, не в JSON. Автопроверка работает, только когда LifeSims открыт.</p>'
+'<p class="hint">Ручные записи не заменяются данными Oura. OAuth-токен хранится только в сеансе этой вкладки, не в JSON. Автопроверка работает, только когда LifeSims открыт.</p>',
+'<p class="hint"><a href="./privacy.html" target="_blank" rel="noopener">Privacy Policy</a> · <a href="./terms.html" target="_blank" rel="noopener">Terms of Service</a></p>'
 ].join('');
 root.append(panel);
 el('ouraRedirect').value=REDIRECT;
