@@ -1332,7 +1332,8 @@ window.LifeSimsOuraBridge={
 'use strict';
 const bridge=window.LifeSimsOuraBridge,root=document.getElementById('ouraMount');
 if(!bridge||!root)return;
-const AUTH='https://cloud.ouraring.com/oauth/authorize', API='https://api.ouraring.com/v2/usercollection/';
+const AUTH='https://cloud.ouraring.com/oauth/authorize', API='https://lifesims-oura-bridge.onrender.com/v1/oura/';
+// Secure read-only server bridge to Oura. Access tokens are passed for each request, not stored on the server.
 // All nine data categories enabled in the Oura developer application (no email or personal profile).
 const REQUESTED_SCOPES='daily heartrate tag workout session spo2 ring_configuration stress heart_health';
 const REDIRECT='https://ansitnikkodland-alt.github.io/lifesims-web/scene/';
@@ -1356,7 +1357,7 @@ const EXTRA_COLLECTIONS=[
 const el=id=>document.getElementById(id);
 const panel=document.createElement('div');panel.className='card oura-panel';
 panel.innerHTML=[
-'<h3>💍 Oura Ring · v26</h3>',
+'<h3>💍 Oura Ring · v27</h3>',
 '<div id="ouraToday" class="oura-today" role="status">Оценки Oura за сегодня пока не загружены.</div>',
 '<p class="hint">После подключения Oura показатели за последние 7 дней загружаются и сохраняются автоматически, если включено автообновление ниже. При необходимости можно вручную нажать «Проверить данные», затем «Сохранить в LifeSims». Пульс, тренировки, стресс и другие разрешённые категории сохраняются отдельно.</p>',
 '<details id="ouraSettings" open><summary>Подключение Oura</summary>',
@@ -1515,10 +1516,11 @@ async function read(name,start,end,time=false,snapshot=false){
   if(next)q.set('next_token',next);
   let res;
   try{res=await fetch(API+name+'?'+q,{headers:{Authorization:'Bearer '+token},cache:'no-store'})}
-  catch(_){throw Error('Нет доступа к Oura API из браузера (интернет или CORS). Если API блокирует запрос, потребуется защищённый сервер.')}
+  catch(_){throw Error('Нет ответа от сервера LifeSims Oura. Бесплатный сервер может запускаться после паузы или соединение недоступно. Проверь интернет и повтори.')}
   if(res.status===401){clearToken();throw Error('Время доступа Oura истекло; подключи заново.')}
   if(res.status===403)throw Error('Oura запретила доступ. Проверь разрешение daily и подписку.');
-  if(res.status===429)throw Error('Достигнут лимит Oura; повтори позже.');
+  if(res.status===429)throw Error('Достигнут лимит запросов к Oura; повтори позже.');
+  if(res.status===502||res.status===503)throw Error('Сервер LifeSims не смог связаться с Oura ('+res.status+'). Повтори после восстановления связи.');
   if(!res.ok)throw Error('Oura '+name+': ошибка '+res.status);
   const obj=await res.json();
   if(!Array.isArray(obj.data))throw Error('Неожиданные данные Oura '+name);
@@ -1742,6 +1744,6 @@ if(connected()&&el('ouraAuto').checked){
   load(true).catch(e=>status('⚠ Oura: '+e.message));
  }
 }
-window.LifeSimsOuraVersion='oura-v26-auto-first-import-resource';
+window.LifeSimsOuraVersion='oura-v27-https-bridge';
 })();
 </script></body></html>
