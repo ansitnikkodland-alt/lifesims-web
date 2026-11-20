@@ -6,7 +6,21 @@ if(!bridge||!root)return;
 const AUTH='https://cloud.ouraring.com/oauth/authorize', API='https://api.ouraring.com/v2/usercollection/';
 const REDIRECT='https://ansitnikkodland-alt.github.io/lifesims-web/scene/';
 const ID_KEY='lifesims-oura-client-id',STATE_KEY='lifesims-oura-state',TOKEN_KEY='lifesims-oura-session',AUTO_KEY='lifesims-oura-auto',LAST_KEY='lifesims-oura-last-check';
-let token='',expiry=0,preview=null,busy=false;
+let token='',expiry=0,preview=null,busy=false,grantedScopes=[];
+const EXTRA_COLLECTIONS=[
+ {name:'heartrate',scope:'heartrate',time:true,label:'Пульс'},
+ {name:'workout',scope:'workout',label:'Тренировки'},
+ {name:'enhanced_tag',scope:'tag',label:'Отметки'},
+ {name:'session',scope:'session',label:'Сессии'},
+ {name:'daily_spo2',scope:'spo2',label:'SpO₂'},
+ {name:'daily_stress',scope:'stress',label:'Стресс'},
+ {name:'daily_resilience',scope:'stress',label:'Устойчивость'},
+ {name:'daily_cardiovascular_age',scope:'heart_health',label:'Сердечно-сосудистый возраст'},
+ {name:'vo2_max',scope:'heart_health',label:'VO₂ max'},
+ {name:'sleep_time',scope:'daily',label:'Рекомендации по сну'},
+ {name:'rest_mode_period',scope:'daily',label:'Режим отдыха'},
+ {name:'ring_battery_level',scope:'ring_configuration',time:true,label:'Заряд кольца'}
+];
 const el=id=>document.getElementById(id);
 const panel=document.createElement('div');panel.className='card oura-panel';
 panel.innerHTML=[
@@ -24,6 +38,8 @@ panel.innerHTML=[
 '<div class="row"><button type="button" class="secondary" id="ouraPreview" disabled>Проверить данные</button><button type="button" class="primary" id="ouraApply" disabled>Сохранить в LifeSims</button></div>',
 '<p id="ouraStatus" class="hint" role="status" aria-live="polite">Oura не подключена.</p>',
 '<div id="ouraResults"></div>',
+'<p id="ouraScopeStatus" class="hint">Расширенные показатели запрашиваются только при разрешении соответствующей категории Oura.</p>',
+'<button type="button" class="secondary" id="ouraExportDetails">Скачать подробные данные за неделю (JSON)</button>',
 '<p class="hint">Ручные записи не заменяются данными Oura. OAuth-токен хранится только в сеансе этой вкладки, не в JSON. Автопроверка работает, только когда LifeSims открыт.</p>',
 '<p class="hint"><a href="./privacy.html" target="_blank" rel="noopener">Privacy Policy</a> · <a href="./terms.html" target="_blank" rel="noopener">Terms of Service</a></p>'
 ].join('');
@@ -48,7 +64,7 @@ function update(){
  el('ouraConnect').disabled=busy;el('ouraDisconnect').disabled=busy||!connected();
  el('ouraPreview').disabled=busy||!connected();el('ouraApply').disabled=busy||!preview?.records.length;
 }
-function clearToken(){token='';expiry=0;preview=null;dropSession(TOKEN_KEY);update()}
+function clearToken(){token='';expiry=0;preview=null;grantedScopes=[];dropSession(TOKEN_KEY);update()}
 el('ouraClientId').value=setting(ID_KEY)||'';
 el('ouraAuto').checked=setting(AUTO_KEY)==='yes';
 el('ouraCopyRedirect').onclick=async()=>{
@@ -57,6 +73,7 @@ el('ouraCopyRedirect').onclick=async()=>{
 };
 el('ouraAuto').onchange=()=>saveSetting(AUTO_KEY,el('ouraAuto').checked?'yes':'no');
 el('ouraDays').onchange=()=>{preview=null;renderPreview();update()};
+el('ouraExportDetails').onclick=()=>exportDetailed().catch(e=>status('⚠ Экспорт Oura: '+e.message));
 function randomState(){
  if(!crypto?.getRandomValues)throw Error('Нужен защищённый браузер.');
  const bytes=new Uint8Array(24);crypto.getRandomValues(bytes);
@@ -85,14 +102,14 @@ function callback(){
  if(!(params.get('scope')||'').split(/\s+/).includes('daily')){status('Не дано разрешение daily. Подключи Oura заново и разреши ежедневные данные.');return true}
  const seconds=Number(params.get('expires_in'));
  if(!Number.isFinite(seconds)||seconds<=0){status('Не указан срок токена Oura; нужно подключение заново.');return true}
- token=params.get('access_token');expiry=Date.now()+seconds*1000;
- try{saveSession(TOKEN_KEY,JSON.stringify({token,expiry}))}catch(_){}
+ token=params.get('access_token');expiry=Date.now()+seconds*1000;grantedScopes=(params.get('scope')||'').split(/\s+/).filter(Boolean);
+ try{saveSession(TOKEN_KEY,JSON.stringify({token,expiry,scopes:grantedScopes}))}catch(_){}
  status('✓ Oura подключена. Нажми «Проверить данные».');update();return true;
 }
 const returned=callback();
 if(!returned){
  try{const cached=JSON.parse(session(TOKEN_KEY)||'null');
- if(cached&&typeof cached.token==='string'&&cached.expiry>Date.now()+30000){token=cached.token;expiry=cached.expiry;status('✓ Oura подключена в этом сеансе.')}}
+ if(cached&&typeof cached.token==='string'&&cached.expiry>Date.now()+30000){token=cached.token;expiry=cached.expiry;grantedScopes=Array.isArray(cached.scopes)?cached.scopes:['daily'];status('✓ Oura подключена в этом сеансе.')}}
  catch(_){}
 }
 el('ouraDisconnect').onclick=()=>{clearToken();status('Текущий сеанс Oura закрыт. Данные LifeSims не удалены. При необходимости отзови доступ в настройках Oura.')};
@@ -100,11 +117,15 @@ const dateAdd=(date,delta)=>{
  const p=date.split('-').map(Number),d=new Date(p[0],p[1]-1,p[2]+delta,12);
  return [d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
 };
-async function read(name,start,end){
+async function read(name,start,end,time=false){
  let data=[],next='',pages=0;
  do{
   if(++pages>10)throw Error('Слишком много страниц Oura; сократи период.');
-  const q=new URLSearchParams({start_date:start,end_date:end});if(next)q.set('next_token',next);
+  const q=time?new URLSearchParams({
+    start_datetime:new Date(start+'T00:00:00').toISOString(),
+    end_datetime:new Date(end+'T23:59:59').toISOString()
+  }):new URLSearchParams({start_date:start,end_date:end});
+  if(next)q.set('next_token',next);
   let res;
   try{res=await fetch(API+name+'?'+q,{headers:{Authorization:'Bearer '+token},cache:'no-store'})}
   catch(_){throw Error('Нет доступа к Oura API из браузера (интернет или CORS). Если API блокирует запрос, потребуется защищённый сервер.')}
@@ -118,6 +139,73 @@ async function read(name,start,end){
   next=obj.next_token||'';
  }while(next);
  return data;
+}
+
+async function fetchExtras(from,to,baseCollections){
+ const extra=baseCollections.map(x=>({name:x.name,label:x.label,items:x.items,scope:'daily'}));
+ const failures=[];
+ for(const collection of EXTRA_COLLECTIONS){
+  if(!grantedScopes.includes(collection.scope))continue;
+  status('Загружаю Oura: '+collection.label+'…');
+  try{
+   const items=await read(collection.name,from,to,!!collection.time);
+   extra.push({...collection,items});
+  }catch(e){
+   // Optional endpoint failure must never conceal missing data or discard daily metrics.
+   if(!token)throw e; // Expired authorization cancels the entire request.
+   failures.push(collection.label+': '+e.message);
+  }
+ }
+ return {extra,failures};
+}
+function openDetailsDb(){
+ return new Promise((resolve,reject)=>{
+  if(!window.indexedDB)return reject(Error('IndexedDB недоступна; подробные показатели не будут сохранены.'));
+  const request=window.indexedDB.open('lifesims-oura-details',1);
+  request.onupgradeneeded=()=>{
+   if(!request.result.objectStoreNames.contains('collections'))
+     request.result.createObjectStore('collections',{keyPath:'name'});
+  };
+  request.onsuccess=()=>resolve(request.result);
+  request.onerror=()=>reject(Error('Не удалось открыть локальное хранилище Oura.'));
+ });
+}
+async function saveDetails(collections,from,to){
+ const db=await openDetailsDb();
+ try{
+  await new Promise((resolve,reject)=>{
+   const tx=db.transaction('collections','readwrite');
+   const store=tx.objectStore('collections');
+   store.clear(); // Only the selected date range remains in the detailed store.
+   for(const item of collections){
+    if(item.items.length>5000)throw Error('Слишком много записей '+item.name);
+    store.put({name:item.name,label:item.label,from,to,savedAt:new Date().toISOString(),items:item.items});
+   }
+   tx.oncomplete=resolve;
+   tx.onerror=()=>reject(Error('Недостаточно места для подробностей Oura в IndexedDB.'));
+   tx.onabort=()=>reject(Error('Запись подробностей Oura отменена браузером.'));
+  });
+ }finally{db.close()}
+}
+async function exportDetailed(){
+ const db=await openDetailsDb();
+ let details;
+ try{
+  details=await new Promise((resolve,reject)=>{
+   const tx=db.transaction('collections','readonly');
+   const req=tx.objectStore('collections').getAll();
+   req.onsuccess=()=>resolve(req.result);
+   req.onerror=()=>reject(Error('Не удалось прочитать подробные данные Oura.'));
+  });
+ }finally{db.close()}
+ if(!details.length)throw Error('Подробные данные не сохранены. Сначала подключи Oura и импортируй последнюю неделю.');
+ const data=JSON.stringify({format:'LifeSims Oura detail backup v1',exportedAt:new Date().toISOString(),collections:details},null,2);
+ const blob=new Blob([data],{type:'application/json'});
+ const url=URL.createObjectURL(blob);
+ const a=document.createElement('a');a.href=url;a.download='lifesims-oura-week.json';
+ document.body.append(a);a.click();a.remove();
+ setTimeout(()=>URL.revokeObjectURL(url),1000);
+ status('Подробности Oura сохранены в файл. Он содержит данные о здоровье — храни его приватно.');
 }
 function number(v,min,max){const n=Number(v);return v!=null&&Number.isFinite(n)&&n>=min&&n<=max?n:null}
 function aggregate(sleep,activity,dailySleep,readiness){
