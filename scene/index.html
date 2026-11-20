@@ -1320,6 +1320,8 @@ window.LifeSimsOuraBridge={
 const bridge=window.LifeSimsOuraBridge,root=document.getElementById('ouraMount');
 if(!bridge||!root)return;
 const AUTH='https://cloud.ouraring.com/oauth/authorize', API='https://api.ouraring.com/v2/usercollection/';
+// All nine data categories enabled in the Oura developer application (no email or personal profile).
+const REQUESTED_SCOPES='daily heartrate tag workout session spo2 ring_configuration stress heart_health';
 const REDIRECT='https://ansitnikkodland-alt.github.io/lifesims-web/scene/';
 const ID_KEY='lifesims-oura-client-id',STATE_KEY='lifesims-oura-state',STATE_FALLBACK_KEY='lifesims-oura-auth-pending',TOKEN_KEY='lifesims-oura-session',AUTO_KEY='lifesims-oura-auto',LAST_KEY='lifesims-oura-last-check';
 let token='',expiry=0,preview=null,busy=false,grantedScopes=[];
@@ -1329,14 +1331,14 @@ const EXTRA_COLLECTIONS=[
  {name:'enhanced_tag',scope:'tag',label:'Отметки'},
  {name:'session',scope:'session',label:'Сессии'},
  {name:'daily_spo2',scope:'spo2',label:'SpO₂'},
- {name:'daily_stress',scope:'daily',label:'Стресс'},
- {name:'daily_resilience',scope:'daily',label:'Устойчивость'},
- {name:'daily_cardiovascular_age',scope:'daily',label:'Сердечно-сосудистый возраст'},
- {name:'vo2_max',scope:'daily',label:'VO₂ max'},
+ {name:'daily_stress',scope:'stress',label:'Стресс'},
+ {name:'daily_resilience',scope:'stress',label:'Устойчивость'},
+ {name:'daily_cardiovascular_age',scope:'heart_health',label:'Сердечно-сосудистый возраст'},
+ {name:'vo2_max',scope:'heart_health',label:'VO₂ max'},
  {name:'sleep_time',scope:'daily',label:'Рекомендации по сну'},
  {name:'rest_mode_period',scope:'daily',label:'Режим отдыха'},
- {name:'ring_battery_level',scope:'daily',time:true,label:'Заряд кольца'},
- {name:'ring_configuration',scope:'daily',snapshot:true,label:'Текущая конфигурация кольца'}
+ {name:'ring_battery_level',scope:'ring_configuration',time:true,label:'Заряд кольца'},
+ {name:'ring_configuration',scope:'ring_configuration',snapshot:true,label:'Текущая конфигурация кольца'}
 ];
 const el=id=>document.getElementById(id);
 const panel=document.createElement('div');panel.className='card oura-panel';
@@ -1426,9 +1428,9 @@ el('ouraConnect').onclick=()=>{
  try{challenge=randomState()}catch(_){return status('Для авторизации нужен защищённый браузер (HTTPS).')}
  if(!storeAuthState(challenge))return status('Браузер запрещает хранить состояние входа. Разреши данные сайтов для LifeSims в Chrome.');
  saveSetting(ID_KEY,id);
- // Without scope Oura requests all scopes available to this OAuth application.
- // Users still explicitly approve access on the Oura consent screen.
- const params=new URLSearchParams({response_type:'token',client_id:id,redirect_uri:REDIRECT,state:challenge});
+ // Explicitly request each enabled data category. Oura returns the scopes actually consented to.
+ const params=new URLSearchParams({response_type:'token',client_id:id,redirect_uri:REDIRECT,scope:REQUESTED_SCOPES,state:challenge});
+ status('Переход на Oura: подтверди Daily (сон и активность) и другие категории, затем вернись в LifeSims.');
  location.assign(AUTH+'?'+params.toString());
 };
 function callback(){
@@ -1460,7 +1462,7 @@ function callback(){
  }
  const scopes=(params.get('scope')||'').split(/\s+/).filter(Boolean);
  if(scopes.length&&!scopes.includes('daily')){
-  status('Не дано разрешение daily. Подключи Oura заново и разреши ежедневные данные.');
+  status('Oura вернула доступ без Daily (сон, шаги, активность). Выданы категории: '+scopes.join(', ')+'. Нажми «Подключить Oura» и в окне согласия включи Daily.');
   return true;
  }
  const seconds=Number(params.get('expires_in'));
@@ -1697,6 +1699,6 @@ if(connected()&&el('ouraAuto').checked&&bridge.wasImported()){
   load(true).catch(e=>status('⚠ Oura: '+e.message));
  }
 }
-window.LifeSimsOuraVersion='oura-v21-oauth-android-state';
+window.LifeSimsOuraVersion='oura-v22-explicit-all-scopes';
 })();
 </script></body></html>
