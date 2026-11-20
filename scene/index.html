@@ -441,7 +441,7 @@ body{background:#091428}
  border-color:#858b85!important;border-width:2px!important;border-radius:4px 6px 0 0!important;
  box-shadow:inset -3px 0 #e3e6da85,3px 2px 10px #17131370!important}
 #scene #sceneFridge .fridge-door i{right:8px!important;top:25%!important;max-height:30px}
-#scene #bathNiche.bath-niche{position:absolute;left:49.6%;top:0;width:10.7%;height:27%;
+#scene #bathNiche.bath-niche{position:absolute;left:49.6%;top:0;width:10.7%;height:22%;
  overflow:hidden;z-index:3;pointer-events:none;transform:skewY(-2deg);
  box-shadow:inset 2px 0 3px #1a242550,2px 4px 7px #181b2180;
  border:2px solid #697a80;background:linear-gradient(125deg,#59636b,#87999f 60%,#52636a)}
@@ -459,10 +459,10 @@ body{background:#091428}
  border-radius:50%;background:linear-gradient(#d1e1e4,#788f96);box-shadow:0 2px 2px #1c2e32}
 #bathNiche .bath-water{position:absolute;left:35%;top:34%;width:25%;height:45%;opacity:.33;
  background:repeating-linear-gradient(94deg,transparent 0 7px,#b1e6ef 7px 8px,transparent 8px 13px)}
-#scene #showerCabin.shower-cabin{left:49.5%!important;top:0!important;width:11%!important;height:27%!important;
+#scene #showerCabin.shower-cabin{left:49.5%!important;top:0!important;width:11%!important;height:22%!important;
  z-index:24!important;border:0!important;box-shadow:none!important;background:transparent!important;
  cursor:pointer!important;min-height:44px!important}
-#scene #sceneToilet.scene-toilet{position:absolute;left:54%;top:18.5%;width:52px;height:57px;
+#scene #sceneToilet.scene-toilet{position:absolute;left:49.8%;top:15%;width:52px;height:57px;
  z-index:25;background:transparent;border:0;padding:0;cursor:pointer;transform:scale(.85);
  filter:drop-shadow(2px 3px 2px #28232280)}
 #sceneToilet .toilet-cistern{position:absolute;top:1px;left:19px;width:25px;height:19px;
@@ -499,15 +499,15 @@ body{background:#091428}
  background:none!important;pointer-events:none!important}
 #sheetWrap .sheethead{position:fixed!important;left:var(--radial-x,50vw)!important;
  top:var(--radial-y,50vh)!important;transform:translate(-50%,-50%)!important;
- z-index:4;min-width:100px;max-width:118px;min-height:46px;display:flex;gap:3px;
+ z-index:4;min-width:130px;max-width:144px;min-height:56px;display:flex;gap:3px;
  align-items:center;justify-content:space-between;border-radius:23px;
  padding:6px 6px 6px 11px;margin:0!important;
  background:#18385bec;border:1px solid #7da8d5;box-shadow:0 5px 18px #041329ab;
  pointer-events:auto}
 #sheetWrap .sheethead h2{font-size:12px!important;line-height:1.15!important;
  font-weight:700;margin:0!important;flex:1;min-width:0;overflow-wrap:anywhere;text-align:center;color:#eef8ff}
-#sheetWrap .sheethead button{margin:0!important;flex-shrink:0!important;min-width:30px!important;
- width:30px!important;height:30px!important;border-radius:50%!important;font-size:18px!important;
+#sheetWrap .sheethead button{margin:0!important;flex-shrink:0!important;min-width:44px!important;
+ width:44px!important;height:44px!important;border-radius:50%!important;font-size:18px!important;
  background:#426692!important;border:1px solid #b7d1e8!important;color:#fff!important;
  padding:0!important;pointer-events:auto!important;cursor:pointer}
 #sheetWrap .sheetacts{display:contents!important}
@@ -900,7 +900,7 @@ function placeSheet(anchor){
  const notes=[...$('sheetActions').querySelectorAll(':scope > .hint')];
  const count=buttons.length,rows=Math.max(1,Math.ceil(count/2));
  const bw=Math.min(128,Math.max(94,Math.round(vw*.28)));
- const offset=bw/2+58, margin=offset+bw/2+7;
+ const offset=bw/2+75, margin=offset+bw/2+7;
  const rawX=(rect.left+rect.right)/2,rawY=(rect.top+rect.bottom)/2;
  const limitX=Math.min(margin,vw/2);
  const cx=Math.max(limitX,Math.min(vw-limitX,rawX));
