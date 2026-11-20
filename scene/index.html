@@ -1329,21 +1329,21 @@ const EXTRA_COLLECTIONS=[
  {name:'enhanced_tag',scope:'tag',label:'Отметки'},
  {name:'session',scope:'session',label:'Сессии'},
  {name:'daily_spo2',scope:'spo2',label:'SpO₂'},
- {name:'daily_stress',scope:'stress',label:'Стресс'},
- {name:'daily_resilience',scope:'stress',label:'Устойчивость'},
- {name:'daily_cardiovascular_age',scope:'heart_health',label:'Сердечно-сосудистый возраст'},
- {name:'vo2_max',scope:'heart_health',label:'VO₂ max'},
+ {name:'daily_stress',scope:'daily',label:'Стресс'},
+ {name:'daily_resilience',scope:'daily',label:'Устойчивость'},
+ {name:'daily_cardiovascular_age',scope:'daily',label:'Сердечно-сосудистый возраст'},
+ {name:'vo2_max',scope:'daily',label:'VO₂ max'},
  {name:'sleep_time',scope:'daily',label:'Рекомендации по сну'},
  {name:'rest_mode_period',scope:'daily',label:'Режим отдыха'},
- {name:'ring_battery_level',scope:'ring_configuration',time:true,label:'Заряд кольца'},
- {name:'ring_configuration',scope:'ring_configuration',snapshot:true,label:'Текущая конфигурация кольца'}
+ {name:'ring_battery_level',scope:'daily',time:true,label:'Заряд кольца'},
+ {name:'ring_configuration',scope:'daily',snapshot:true,label:'Текущая конфигурация кольца'}
 ];
 const el=id=>document.getElementById(id);
 const panel=document.createElement('div');panel.className='card oura-panel';
 panel.innerHTML=[
 '<h3>💍 Oura Ring</h3>',
 '<div id="ouraToday" class="oura-today" role="status">Оценки Oura за сегодня пока не загружены.</div>',
-'<p class="hint">Первый импорт охватывает только последние 7 дней. Разрешения Oura могут включать пульс, тренировки, стресс и другие данные. Пока числовые поля LifeSims заполняются из ежедневных данных; расширенные категории подключаются отдельно и не выдаются за выполненную синхронизацию.</p>',
+'<p class="hint">Первый импорт охватывает последние 7 дней. Для получения личных данных сначала нажми «Подключить Oura», разреши доступ на сайте Oura, затем «Проверить данные» и «Сохранить в LifeSims». Пульс, тренировки, стресс и другие доступные категории сохраняются отдельно; недоступные категории будут перечислены после проверки.</p>',
 '<details id="ouraSettings" open><summary>Подключение Oura</summary>',
 '<p class="hint">Создай OAuth-приложение на <a href="https://developer.ouraring.com/applications" target="_blank" rel="noopener noreferrer">Oura Developer → Applications</a>. Добавь Redirect URI ниже. Секретный ключ (Client Secret) сюда вводить нельзя.</p>',
 '<label class="field">Redirect URI <input id="ouraRedirect" type="text" readonly></label>',
@@ -1403,7 +1403,7 @@ el('ouraConnect').onclick=()=>{
  if(!/^[a-zA-Z0-9_-]{8,128}$/.test(id))return status('Укажи публичный Client ID своего приложения Oura.');
  try{saveSession(STATE_KEY,randomState());}catch(_){return status('Нужно разрешить sessionStorage в Chrome.')}
  saveSetting(ID_KEY,id);
- const params=new URLSearchParams({response_type:'token',client_id:id,redirect_uri:REDIRECT,scope:'daily heartrate tag workout session spo2 ring_configuration stress heart_health',state:session(STATE_KEY)});
+ const params=new URLSearchParams({response_type:'token',client_id:id,redirect_uri:REDIRECT,scope:'daily heartrate tag workout session spo2 personal',state:session(STATE_KEY)});
  location.assign(AUTH+'?'+params.toString());
 };
 function callback(){
@@ -1672,6 +1672,6 @@ if(connected()&&el('ouraAuto').checked&&bridge.wasImported()){
   load(true).catch(e=>status('⚠ Oura: '+e.message));
  }
 }
-window.LifeSimsOuraVersion='oura-v19-week7';
+window.LifeSimsOuraVersion='oura-v20-authorize';
 })();
 </script></body></html>
