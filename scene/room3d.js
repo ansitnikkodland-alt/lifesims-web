@@ -23,7 +23,7 @@ renderer.toneMappingExposure=1.32;
 
 const world=new T.Scene();world.background=new T.Color('#14213b');
 const camera=new T.OrthographicCamera(-6.9,6.9,5.6,-5.6,.1,70);
-let azimuth=.72,elevation=.83,zoom=1;
+let azimuth=.72,elevation=.83,zoom=1.18;
 const lookAt=new T.Vector3(0,1.08,.04);
 function cameraPlace(){
  const radius=19;
@@ -358,7 +358,7 @@ const wrap=document.createElement('div');wrap.id='life3dControls';
 const rotateBtn=document.createElement('button');rotateBtn.type='button';rotateBtn.textContent='↻ Повернуть 3D';rotateBtn.setAttribute('aria-label','Повернуть 3D-комнату');
 rotateBtn.onclick=()=>{azimuth+=.36;cameraPlace()};
 wrap.append(rotateBtn);
-const zoomIn=document.createElement('button');zoomIn.type='button';zoomIn.textContent='＋';
+const zoomIn=document.createElement('button');zoomIn.type='button';zoomIn.textContent='+';
 zoomIn.setAttribute('aria-label','Приблизить 3D-комнату');
 zoomIn.onclick=()=>{zoom=Math.min(1.8,zoom+.18);applySize()};
 const zoomOut=document.createElement('button');zoomOut.type='button';zoomOut.textContent='−';
@@ -367,10 +367,33 @@ zoomOut.onclick=()=>{zoom=Math.max(.78,zoom-.18);applySize()};
 wrap.append(zoomIn,zoomOut);
 const hint=document.createElement('span');hint.textContent='Нажми на предмет · проведи вбок, чтобы повернуть';
 wrap.append(hint);
+function projectedHit(action,part){
+ const point=new T.Vector3();part.getWorldPosition(point);
+ point.y+=action==='shower'?1.3:action==='fridge'?1.0:action==='toilet'?.5:0;
+ point.project(camera);
+ const r=can.getBoundingClientRect();
+ return {x:r.left+(point.x+1)*r.width/2,y:r.top+(1-point.y)*r.height/2};
+}
+function findObjectPoint(action){
+ let obj=null;world.traverse(item=>{if(!obj&&item.userData.action===action&&item.visible)obj=item});
+ if(!obj)return null;
+ return projectedHit(action,obj);
+}
 function positionForHit(e){
  const r=renderer.domElement.getBoundingClientRect();
  pointer.x=((e.clientX-r.left)/r.width)*2-1;
  pointer.y=-((e.clientY-r.top)/r.height)*2+1;
+ camera.updateMatrixWorld();
+ // Small 3D items keep a 44-60px accessible tap region on a phone.
+ let best=null,distance=32;
+ for(const part of allHit){
+  const action=part.userData.action;
+  if(!part.visible||!['phone','fridge','shower','toilet','catLitter','resource','clutter'].includes(action))continue;
+  const at=projectedHit(action,part);
+  const d=Math.hypot(e.clientX-at.x,e.clientY-at.y);
+  if(d<distance){distance=d;best={object:action,part}}
+ }
+ if(best)return best;
  ray.setFromCamera(pointer,camera);
  const hits=ray.intersectObjects(world.children,true);
  for(const hit of hits){
@@ -453,7 +476,7 @@ function sync(snapshot){
  world.background.set(night?'#121b31':'#253751');
  const sky=shapes.get('sky');sky.color.set(night?'#2d3957':'#638bb5');
 }
-window.LifeSims3D={sync,rotate:()=>{azimuth+=.3;cameraPlace()},isReal3D:true};
+window.LifeSims3D={sync,rotate:()=>{azimuth+=.3;cameraPlace()},getObjectPoint:findObjectPoint,isReal3D:true};
 host.append(can,wrap);
 applySize();resize.observe(host);
 sync(bridge.snapshot());
