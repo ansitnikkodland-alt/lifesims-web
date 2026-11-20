@@ -903,18 +903,27 @@ function placeSheet(anchor){
  const offset=bw/2+75, margin=offset+bw/2+7;
  const rawX=(rect.left+rect.right)/2,rawY=(rect.top+rect.bottom)/2;
  const limitX=Math.min(margin,vw/2);
- const cx=Math.max(limitX,Math.min(vw-limitX,rawX));
+ // One or two actions can sit directly beside the clicked item.
+ // Larger menus use a centered two-column radial layout to avoid overflow.
+ const nearX=rawX+(rawX<vw/2?95:-95);
+ const cx=count<=2
+  ?Math.max(bw/2+12,Math.min(vw-bw/2-12,nearX))
+  :Math.max(limitX,Math.min(vw-limitX,rawX));
  const extent=(rows-1)*53/2+32;
  const limitY=Math.min(vh/2,extent+30);
- const cy=Math.max(limitY,Math.min(vh-limitY,rawY));
+ const cy=count<=2?Math.max(95,Math.min(vh-95,rawY))
+  :Math.max(limitY,Math.min(vh-limitY,rawY));
  const wrap=$('sheetWrap'),header=wrap.querySelector('.sheethead');
  header.style.left=cx+'px';header.style.top=cy+'px';
  wrap.style.setProperty('--radial-x',cx+'px');
  wrap.style.setProperty('--radial-y',cy+'px');
  buttons.forEach((button,i)=>{
   let x,y;
-  if(count===1){x=cx;y=cy+69}
-  else{
+  if(count<=2){
+   x=cx;
+   const primaryDown=cy<vh-112;
+   y=cy+(i===0?(primaryDown?65:-65):(primaryDown?-65:65));
+  }else{
    const column=i%2,row=Math.floor(i/2);
    x=cx+(column===0?-offset:offset);
    y=cy+(row-(rows-1)/2)*53;
