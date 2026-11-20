@@ -803,6 +803,45 @@ window.LifeSimsOuraBridge={
   return {fields:changedFields,days:changedDays};
  }
 };
+
+window.LifeSimsFoodBridge={
+ today,
+ list:()=>JSON.parse(JSON.stringify(state.foodMeals||[])),
+ upsert(meal){
+  if(storageBlocked||!storageOK)throw Error('Сохранение недоступно. Сделай резервную копию LifeSims.');
+  if(!meal||typeof meal!=='object'||typeof meal.title!=='string'||!meal.title.trim()||meal.title.length>600)throw Error('Укажи название блюда.');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(meal.date)||!/^\d{2}:\d{2}$/.test(meal.time))throw Error('Укажи дату и время.');
+  const numeric=['grams','kcal','protein','fat','carbs'];
+  for(const field of numeric){
+   if(meal[field]!=null&&(!Number.isFinite(Number(meal[field]))||Number(meal[field])<0||Number(meal[field])>20000))throw Error('Неправильное значение '+field);
+  }
+  const previous=(state.foodMeals||[]).find(x=>x.id===meal.id);
+  const record={
+   id:previous?.id||uid(),date:meal.date,time:meal.time,title:meal.title.trim(),
+   grams:meal.grams==null?null:Number(meal.grams),
+   kcal:meal.kcal==null?null:Math.round(Number(meal.kcal)),
+   protein:meal.protein==null?null:Math.round(Number(meal.protein)*10)/10,
+   fat:meal.fat==null?null:Math.round(Number(meal.fat)*10)/10,
+   carbs:meal.carbs==null?null:Math.round(Number(meal.carbs)*10)/10,
+   estimate:meal.estimate!==false,method:['text','voice','photo','manual'].includes(meal.method)?meal.method:'text',
+   photoThumb:typeof meal.photoThumb==='string'&&/^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(meal.photoThumb)&&meal.photoThumb.length<=22000?meal.photoThumb:(previous?.photoThumb||null),
+   createdAt:previous?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()
+  };
+  const success=transact(()=>{
+   state.foodMeals??=[];
+   const index=state.foodMeals.findIndex(x=>x.id===record.id);
+   if(index<0)state.foodMeals.push(record);else state.foodMeals[index]=record;
+  });
+  if(!success)throw Error('Не удалось сохранить еду; проверь свободное место и резервную копию.');
+  renderNeeds();
+  return JSON.parse(JSON.stringify(record));
+ },
+ remove(id){
+  if(!(state.foodMeals||[]).some(x=>x.id===id))throw Error('Запись уже отсутствует.');
+  if(!transact(()=>{state.foodMeals=state.foodMeals.filter(x=>x.id!==id)}))throw Error('Не удалось удалить запись.');
+  renderNeeds();
+ },
+};
 })();
 </script><script>
 /* LifeSims Google Calendar sync. OAuth tokens remain in memory; no background writes. */
@@ -1361,44 +1400,6 @@ window.LifeSimsOuraBridge={
   el('gcConnect').dataset.authHandler = 'inline-v12';
 })();
 
-window.LifeSimsFoodBridge={
- today,
- list:()=>JSON.parse(JSON.stringify(state.foodMeals||[])),
- upsert(meal){
-  if(storageBlocked||!storageOK)throw Error('Сохранение недоступно. Сделай резервную копию LifeSims.');
-  if(!meal||typeof meal!=='object'||typeof meal.title!=='string'||!meal.title.trim()||meal.title.length>600)throw Error('Укажи название блюда.');
-  if(!/^\d{4}-\d{2}-\d{2}$/.test(meal.date)||!/^\d{2}:\d{2}$/.test(meal.time))throw Error('Укажи дату и время.');
-  const numeric=['grams','kcal','protein','fat','carbs'];
-  for(const field of numeric){
-   if(meal[field]!=null&&(!Number.isFinite(Number(meal[field]))||Number(meal[field])<0||Number(meal[field])>20000))throw Error('Неправильное значение '+field);
-  }
-  const previous=(state.foodMeals||[]).find(x=>x.id===meal.id);
-  const record={
-   id:previous?.id||uid(),date:meal.date,time:meal.time,title:meal.title.trim(),
-   grams:meal.grams==null?null:Number(meal.grams),
-   kcal:meal.kcal==null?null:Math.round(Number(meal.kcal)),
-   protein:meal.protein==null?null:Math.round(Number(meal.protein)*10)/10,
-   fat:meal.fat==null?null:Math.round(Number(meal.fat)*10)/10,
-   carbs:meal.carbs==null?null:Math.round(Number(meal.carbs)*10)/10,
-   estimate:meal.estimate!==false,method:['text','voice','photo','manual'].includes(meal.method)?meal.method:'text',
-   photoThumb:typeof meal.photoThumb==='string'&&/^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(meal.photoThumb)&&meal.photoThumb.length<=22000?meal.photoThumb:(previous?.photoThumb||null),
-   createdAt:previous?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()
-  };
-  const success=transact(()=>{
-   state.foodMeals??=[];
-   const index=state.foodMeals.findIndex(x=>x.id===record.id);
-   if(index<0)state.foodMeals.push(record);else state.foodMeals[index]=record;
-  });
-  if(!success)throw Error('Не удалось сохранить еду; проверь свободное место и резервную копию.');
-  renderNeeds();
-  return JSON.parse(JSON.stringify(record));
- },
- remove(id){
-  if(!(state.foodMeals||[]).some(x=>x.id===id))throw Error('Запись уже отсутствует.');
-  if(!transact(()=>{state.foodMeals=state.foodMeals.filter(x=>x.id!==id)}))throw Error('Не удалось удалить запись.');
-  renderNeeds();
- },
-};
 
 </script>
 <script src="./food-log.js?v=28"></script>
