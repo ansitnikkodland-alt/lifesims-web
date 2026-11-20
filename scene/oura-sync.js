@@ -249,14 +249,20 @@ function renderPreview(){
   ].filter(Boolean).join(' · ');ul.append(li);
  }
  box.append(ul);
+ if(preview.collections){const msg=document.createElement('p');msg.className='hint';msg.textContent='Дополнительные категории: '+preview.collections.map(c=>c.label+' ('+c.items.length+')').join(', ');box.append(msg)}
 }
-function apply(automatic=false){
+async function apply(automatic=false){
  if(!preview)return;
  if(preview.snapshot!==JSON.stringify(bridge.getDays())){preview=null;renderPreview();throw Error('Показатели LifeSims изменились. Проверь данные Oura ещё раз.')}
- const done=bridge.importDays(preview.records);
+ const selected=preview;
+ const done=bridge.importDays(selected.records);
+ let note='';
+ try{await saveDetails(selected.collections,selected.from,selected.to);note=' Подробности за 7 дней сохранены отдельно.'}
+ catch(e){note=' ⚠ Подробности не сохранились: '+e.message}
  renderToday();
  preview=null;renderPreview();saveSetting(LAST_KEY,String(Date.now()));
- status('✓ Oura: обновлено '+done.fields+' показателей за '+done.days+' дней; ручные записи не перезаписаны.'+(automatic?' Автопроверка выполнена.':''));
+ status('✓ Oura: обновлено '+done.fields+' показателей за '+done.days+' дней; ручные записи не перезаписаны.'+note+
+   (selected.failures.length?' Недоступные категории: '+selected.failures.join('; '):'')+(automatic?' Автопроверка завершена.':''));
  update();
 }
 async function load(automatic=false){
@@ -272,13 +278,23 @@ async function load(automatic=false){
   const readiness=await read('daily_readiness',start,end);
   const records=aggregate(sleep,activity,sleepScore,readiness);
   if(!records.length){preview=null;renderPreview();status('Oura не вернула данные за этот период. Синхронизируй кольцо через приложение Oura.');return}
-  preview={records,snapshot:JSON.stringify(bridge.getDays())};renderPreview();
-  status('✓ Oura: найдено '+records.length+' дней данных. '+(automatic?'Обновляю только автоматически полученные или пустые поля…':'Нажми «Сохранить в LifeSims».'));
-  if(automatic)apply(true);
+  const baseCollections=[
+    {name:'sleep',label:'Периоды сна',items:sleep},
+    {name:'daily_activity',label:'Активность по дням',items:activity},
+    {name:'daily_sleep',label:'Оценки сна',items:sleepScore},
+    {name:'daily_readiness',label:'Оценки восстановления',items:readiness}
+  ];
+  const {extra,failures}=await fetchExtras(start,end,baseCollections);
+  preview={records,collections:extra,failures,from:start,to:end,snapshot:JSON.stringify(bridge.getDays())};
+  renderPreview();
+  el('ouraScopeStatus').textContent='Разрешённые категории: '+grantedScopes.join(', ')+'. Получено: '+extra.length+
+    '. Недоступно: '+failures.length+(failures.length?' ('+failures.map(x=>x.split(':')[0]).join(', ')+')':'');
+  status('✓ Oura: найдено '+records.length+' дней за неделю. '+(automatic?'Автоматически обновляю показатели…':'Проверь и нажми «Сохранить в LifeSims».'));
+  if(automatic)await apply(true);
  }finally{busy=false;update()}
 }
 el('ouraPreview').onclick=()=>load(false).catch(e=>status('⚠ '+e.message));
-el('ouraApply').onclick=()=>{try{apply(false)}catch(e){status('⚠ '+e.message)}};
+el('ouraApply').onclick=()=>{apply(false).catch(e=>status('⚠ '+e.message))};
 renderToday();
 update();
 if(connected()&&el('ouraAuto').checked&&bridge.wasImported()){
