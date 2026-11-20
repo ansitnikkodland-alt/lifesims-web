@@ -35,7 +35,21 @@ jobs:
             page.on('pageerror',e=>problems.push('PAGE: '+e.message));
             page.on('console',m=>{if(m.type()==='error')problems.push('CONSOLE: '+m.text())});
             await page.goto('http://127.0.0.1:8765/scene/',{waitUntil:'domcontentloaded'});
-            await page.waitForFunction(()=>window.LifeSims3D?.isReal3D===true,null,{timeout:40000});
+            try{
+              await page.waitForFunction(()=>window.LifeSims3D?.isReal3D===true,null,{timeout:16000});
+            }catch(error){
+              const debug=await page.evaluate(()=>({
+                bridge:!!window.LifeSims3DBridge,
+                scene3D:!!window.LifeSims3D,
+                scriptSrc:[...document.querySelectorAll('script[type=module]')].map(e=>e.src),
+                pageReady:document.readyState,
+                htmlVersion:document.querySelector('.topbar small')?.textContent,
+                webgl:!!document.createElement('canvas').getContext('webgl2')
+              }));
+              console.error('3D DEBUG:',JSON.stringify(debug));
+              console.error('PAGE ERRORS:',problems.join(' | ').slice(0,4000));
+              throw error;
+            }
             const result=await page.evaluate(()=>{
               const c=document.querySelector('#life3dCanvas'),room=document.querySelector('#scene');
               return {active:room.classList.contains('scene3d-active'),
