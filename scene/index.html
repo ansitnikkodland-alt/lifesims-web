@@ -1402,7 +1402,8 @@ function renderToday(){
 const connected=()=>token&&expiry>Date.now()+30000;
 function update(){
  el('ouraConnect').disabled=busy;el('ouraDisconnect').disabled=busy||!connected();
- el('ouraPreview').disabled=busy||!connected();el('ouraApply').disabled=busy||!preview||(!preview.records.length&&!preview.collections?.some(c=>c.items.length));
+ // Keep actions tappable so they can explain prerequisites instead of silently doing nothing.
+ el('ouraPreview').disabled=busy;el('ouraApply').disabled=busy;
 }
 function clearToken(){token='';expiry=0;preview=null;grantedScopes=[];dropSession(TOKEN_KEY);update()}
 el('ouraClientId').value=setting(ID_KEY)||'';
@@ -1461,10 +1462,7 @@ function callback(){
   return true;
  }
  const scopes=(params.get('scope')||'').split(/\s+/).filter(Boolean);
- if(scopes.length&&!scopes.includes('daily')){
-  status('Oura вернула доступ без Daily (сон, шаги, активность). Выданы категории: '+scopes.join(', ')+'. Нажми «Подключить Oura» и в окне согласия включи Daily.');
-  return true;
- }
+ const dailyDenied=scopes.length>0&&!scopes.includes('daily');
  const seconds=Number(params.get('expires_in'));
  if(!Number.isFinite(seconds)||seconds<=0){
   status('Не указан срок токена Oura; нужно подключение заново.');
@@ -1472,7 +1470,7 @@ function callback(){
  }
  token=params.get('access_token');expiry=Date.now()+seconds*1000;grantedScopes=scopes;
  try{saveSession(TOKEN_KEY,JSON.stringify({token,expiry,scopes:grantedScopes}))}catch(_){}
- status('✓ Oura подключена. Нажми «Проверить данные».');update();
+ status(dailyDenied?'Oura авторизована, но доступ Daily (сон, шаги, активность) не предоставлен. Получены категории: '+scopes.join(', ')+'. Нажми «Подключить Oura» и разреши Daily в окне Oura.':'✓ Oura подключена. Нажми «Проверить данные».');update();
  return true;
 }
 const returned=callback();
@@ -1661,7 +1659,15 @@ async function apply(automatic=false){
  update();
 }
 async function load(automatic=false){
- if(busy||!connected())return;
+ if(busy)return;
+ if(!connected()){
+  status('Сначала нажми «Подключить Oura» и закончи вход на сайте Oura. Без успешной авторизации проверить данные нельзя.');
+  return;
+ }
+ if(grantedScopes.length&&!grantedScopes.includes('daily')){
+  status('Подключение есть, но Oura не разрешила Daily. Переподключи Oura и включи Daily для загрузки сна, активности и шагов. Получены: '+grantedScopes.join(', '));
+  return;
+ }
  if(automatic&&!bridge.wasImported())return;
  busy=true;update();
  try{
@@ -1689,7 +1695,11 @@ async function load(automatic=false){
  }finally{busy=false;update()}
 }
 el('ouraPreview').onclick=()=>load(false).catch(e=>status('⚠ '+e.message));
-el('ouraApply').onclick=()=>{apply(false).catch(e=>status('⚠ '+e.message))};
+el('ouraApply').onclick=()=>{
+ if(!connected()){status('Сохранение недоступно: Oura ещё не подключена. Сначала подключи Oura и нажми «Проверить данные».');return;}
+ if(!preview||(!preview.records.length&&!preview.collections?.some(c=>c.items.length))){status('Пока нечего сохранять. Нажми «Проверить данные» и дождись результатов Oura за неделю.');return;}
+ apply(false).catch(e=>status('⚠ '+e.message));
+};
 renderToday();
 update();
 if(connected()&&el('ouraAuto').checked&&bridge.wasImported()){
@@ -1699,6 +1709,6 @@ if(connected()&&el('ouraAuto').checked&&bridge.wasImported()){
   load(true).catch(e=>status('⚠ Oura: '+e.message));
  }
 }
-window.LifeSimsOuraVersion='oura-v22-explicit-all-scopes';
+window.LifeSimsOuraVersion='oura-v23-interactive-diagnostics';
 })();
 </script></body></html>
