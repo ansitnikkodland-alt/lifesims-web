@@ -203,11 +203,12 @@
   function signature(event) {
     const values=[
       String(event.title || ''), String(event.startsAt || ''), String(event.endsAt || ''),
-      event.repeat === 'weekly' ? 'weekly' : 'none',
+      ['daily','weekly','monthly','yearly'].includes(event.repeat) ? event.repeat : 'none',
       event.repeat === 'weekly' ? [...(event.weekdays || [])].map(Number).sort((a, b) => a - b) : []
     ];
     // Keep legacy timed-event signatures compatible with previously synced data.
     if(event.allDay)values.push('all-day');
+    if(event.location||event.description)values.push([String(event.location||''),String(event.description||'')]);
     return JSON.stringify(values);
   }
   function project(event) {
@@ -237,7 +238,8 @@
     const startsAt=allDay?event.start.date+'T00:00':localDate(event.start.dateTime);
     const endsAt=allDay?event.end.date+'T00:00':localDate(event.end.dateTime);
     if (!startsAt || !endsAt || endsAt <= startsAt) return null;
-    return { title: event.summary || 'Без названия', startsAt, endsAt, repeat, weekdays, allDay };
+    return { title:event.summary||'Без названия',startsAt,endsAt,repeat,weekdays,allDay,
+      location:event.location||'',description:event.description||'' };
   }
   function toGoogle(event) {
     const start = new Date(event.startsAt), end = new Date(event.endsAt);
@@ -259,11 +261,16 @@
     const dateOnly=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
     const payload = {
       summary: event.title,
+      location: event.location || '',
+      description: event.description || '',
       start: event.allDay ? {date:dateOnly(start)} : {dateTime:start.toISOString(),timeZone:tz},
       end: event.allDay ? {date:dateOnly(end)} : {dateTime:end.toISOString(),timeZone:tz}
     };
     if (event.repeat === 'weekly') payload.recurrence = ['RRULE:FREQ=WEEKLY;BYDAY=' +
       [...new Set(event.weekdays)].map(n => weekdayCodes[n - 1]).join(',')];
+    else if(event.repeat==='daily')payload.recurrence=['RRULE:FREQ=DAILY'];
+    else if(event.repeat==='monthly')payload.recurrence=['RRULE:FREQ=MONTHLY;BYMONTHDAY='+start.getDate()];
+    else if(event.repeat==='yearly')payload.recurrence=['RRULE:FREQ=YEARLY;BYMONTH='+(start.getMonth()+1)+';BYMONTHDAY='+start.getDate()];
     else payload.recurrence = [];
     return payload;
   }
@@ -352,13 +359,15 @@
     const changes = [], claimed = new Set(), remoteIds = new Set();
     const selectedIds=new Set(getChosen().map(c=>c.primary?'primary':c.id));
     const migrated=new Set();
+    const hidden=new Set((bridge.getHidden?.()||[]).map(x=>eventKey(x.calendarId,x.id)));
     let conflicts = 0, orphaned = 0;
     const mapped=new Map(locals.filter(x=>x.google?.id).map(x=>[eventKey(x.google.calendarId||'primary',x.google.id),x]));
-    const legacySeries=new Map(locals.filter(x=>x.google?.id&&x.repeat==='weekly')
+    const legacySeries=new Map(locals.filter(x=>x.google?.id&&x.repeat&&x.repeat!=='none')
       .map(x=>[eventKey(x.google.calendarId||'primary',x.google.id),x]));
     for (const remote of remoteData.supported) {
       const key=eventKey(remote.calendarId,remote.id);
       remoteIds.add(key);
+      if(hidden.has(key))continue; // User explicitly hid this event locally; don't re-import it.
       if(remote.seriesId){
         const prior=legacySeries.get(eventKey(remote.calendarId,remote.seriesId));
         if(prior&&!migrated.has(prior.id)&&!prior.google?.supersededRange){
@@ -402,7 +411,9 @@
       if(local.google?.id && selectedIds.has(cid)&&!local.google?.supersededRange&&
         !remoteIds.has(eventKey(cid,local.google.id)))orphaned++;
     }
-    return { mode, changes, conflicts, orphaned, skipped: remoteData.skipped, snapshot: JSON.stringify(locals), from: remoteData.from,to:remoteData.to,calendars:remoteData.chosenCount,seen:remoteData.visible };
+    return { mode, changes, conflicts, orphaned, skipped: remoteData.skipped,
+      snapshot: JSON.stringify(locals), hiddenSnapshot: JSON.stringify(bridge.getHidden?.()||[]),
+      from: remoteData.from,to:remoteData.to,calendars:remoteData.chosenCount,seen:remoteData.visible };
   }
   async function withBusy(task) {
     if (busy) return;
@@ -424,7 +435,8 @@
   }));
   el('gcApply').addEventListener('click', () => withBusy(async () => {
     if (!preview || !preview.changes.length) return;
-    if (preview.snapshot !== JSON.stringify(bridge.getSchedule())) {
+    if (preview.snapshot !== JSON.stringify(bridge.getSchedule()) ||
+        preview.hiddenSnapshot !== JSON.stringify(bridge.getHidden?.()||[])) {
       invalidatePreview();
       throw Error('Мероприятия изменились после проверки. Проверь изменения заново.');
     }
