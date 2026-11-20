@@ -1668,7 +1668,7 @@ async function apply(automatic=false){
  if(!preview)return;
  if(preview.snapshot!==JSON.stringify(bridge.getDays())){preview=null;renderPreview();throw Error('Показатели LifeSims изменились. Проверь данные Oura ещё раз.')}
  const selected=preview;
- const done=bridge.importDays(selected.records);
+ const done=selected.earlyImport||bridge.importDays(selected.records);
  let note='';
  try{await saveDetails(selected.collections,selected.from,selected.to);note=' Подробные данные добавлены в историю.'}
  catch(e){note=' ⚠ Подробности не сохранились: '+e.message}
@@ -1708,10 +1708,18 @@ async function load(automatic=false){
     {name:'daily_sleep',label:'Оценки сна',items:sleepScore},
     {name:'daily_readiness',label:'Оценки восстановления',items:readiness}
   ];
+  // Make the core metrics visible in the Sim immediately, before optional
+  // categories (pulse, stress, workouts) finish loading.
+  let earlyImport=null;
+  if(automatic&&records.length){
+   earlyImport=bridge.importDays(records);
+   renderToday();
+   status('✓ Автоматически внесены основные показатели Oura за '+earlyImport.days+' дней. Загружаю дополнительные категории…');
+  }
   const {extra,failures:extraFailures}=await fetchExtras(start,end,baseCollections);
   const failures=[...baseFailures,...extraFailures];
   if(!records.length&&!extra.some(c=>c.items.length)){preview=null;renderPreview();status('Oura не вернула данные за этот период. Синхронизируй кольцо через приложение Oura.'+(failures.length?' Недоступно: '+failures.join('; '):''));return}
-  preview={records,collections:extra,failures,from:start,to:end,snapshot:JSON.stringify(bridge.getDays())};
+  preview={records,collections:extra,failures,from:start,to:end,snapshot:JSON.stringify(bridge.getDays()),earlyImport};
   renderPreview();
   el('ouraScopeStatus').textContent='Разрешённые категории: '+(grantedScopes.length?grantedScopes.join(', '):'Oura не перечислила — проверено по доступности API')+'. Получено: '+extra.length+
     '. Недоступно: '+failures.length+(failures.length?' ('+failures.map(x=>x.split(':')[0]).join(', ')+')':'');
