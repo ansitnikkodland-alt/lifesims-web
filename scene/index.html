@@ -243,7 +243,7 @@ input[type=range]:disabled{opacity:.4;cursor:default}
  repeating-linear-gradient(32deg,transparent 0 22px,#70bfcb 23px 30px,transparent 31px 45px),
  repeating-linear-gradient(153deg,#8a283c 0 14px,#39a5b4 15px 22px,#b94b58 23px 38px,#a3dfec 39px 46px);
  opacity:.94}
-.mess-object{border:0;background:transparent;padding:4px;cursor:pointer;pointer-events:auto;min-width:44px;min-height:44px;line-height:1}
+.scene-mess{z-index:8}.mess-object{border:0;background:transparent;padding:4px;cursor:pointer;pointer-events:auto;min-width:44px;min-height:44px;line-height:1}
 .mess-object:focus-visible{outline:2px solid #63ebe9;border-radius:10px}
 .room-clean{position:absolute;right:10px;bottom:12px;z-index:9;padding:10px 12px;border-radius:12px;
  background:#154656ed;color:white;border:1px solid #69d5d3;min-height:44px;font-size:13px}
@@ -558,6 +558,15 @@ function cleanRoom(itemId=null){
  })){toast('Не удалось записать уборку');return}
  renderAll();toast('✓ '+name+' · энтропия снижена');
 }
+function toggleBed(){
+ const made=state.room?.bedMadeOn===today();
+ if(transact(()=>{
+  state.room??={};
+  state.room.bedMadeOn=made?null:today();
+  state.events.push({id:uid(),kind:'bed',name:made?'Расправила кровать':'Заправила кровать',date:today(),at:new Date().toISOString(),xp:0});
+ })){renderAll();toast(made?'Кровать снова раскрыта':'Кровать заправлена')}
+ else toast('Не удалось сохранить состояние кровати');
+}
 function refreshBed(){
  const made=state.room?.bedMadeOn===today()||state.activities.some(a=>a.id==='bed_make'&&Array.isArray(a.completions)&&a.completions.some(v=>v.date===today()));
  $('bedState').classList.toggle('made',!!made);
@@ -653,6 +662,11 @@ function renderSeasonalWindow(){
 }
 function openObject(object,anchor){
 $('sheetTitle').textContent=labels[object]||'Действия';$('sheetActions').replaceChildren();
+if(object==='bed'){
+ const button=document.createElement('button');button.type='button';
+ button.textContent=state.room?.bedMadeOn===today()?'🛏 Расправить кровать':'🛏 Заправить кровать';
+ button.onclick=()=>{closeSheet();toggleBed()};$('sheetActions').append(button);
+}
 if(object==='clutter'){
  const id=anchor?.dataset.messId;
  const button=document.createElement('button');button.type='button';button.textContent='🧹 Убрать вещь';
