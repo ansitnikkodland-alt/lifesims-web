@@ -45,3 +45,24 @@
 .agenda-check[disabled]{background:#d9f3e7;color:#237d50}
 @media(min-width:600px){.agenda-overlay:not([hidden]){align-items:center}.agenda-dialog{border-radius:22px;max-height:82dvh}}
 @media(max-width:430px){#history .calendar button{min-height:73px;padding:3px 2px}#history .calendar-number{min-width:20px;height:20px;font-size:11px}#history .calendar-event-pill{font-size:9px;padding:1px 2px}}
+
+/* Event creation, editing, removal: easily reachable on mobile. */
+#eventTimedDates[hidden],#eventAllDayDates[hidden],#eventDeleteLocal[hidden],
+#eventDeleteGoogle[hidden],#eventDuplicate[hidden],#eventDeleteHelp[hidden]{display:none!important}
+#eventForm .event-check{display:flex;align-items:center;gap:10px;min-height:42px}
+#eventForm .event-check input{width:20px;height:20px}
+#eventForm input[type=color]{min-height:44px;min-width:64px;width:100%;padding:3px;cursor:pointer}
+#eventForm .row{gap:8px;flex-wrap:wrap}
+button.danger,button.danger-outline,.agenda-delete{min-height:44px;min-width:44px;border-radius:11px;font-weight:650;cursor:pointer}
+button.danger{background:#a8243e;color:#fff;border:1px solid #e17c90;padding:10px 13px}
+button.danger-outline,.agenda-delete{background:#fff1f2;color:#9c1836;border:1px solid #e7a0b2;padding:8px 12px}
+button.danger:focus-visible,button.danger-outline:focus-visible,.agenda-delete:focus-visible{outline:3px solid #ffb9c5;outline-offset:2px}
+.agenda-delete{flex:none;font-size:18px;padding:7px 10px;line-height:1}
+.gc-hidden-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 0;border-bottom:1px solid #ffffff18}
+.gc-hidden-row span{overflow-wrap:anywhere;font-size:12px}
+.gc-hidden-row button{flex:none;min-height:40px}
+#gcHiddenPanel{border:1px solid #7084ac;border-radius:11px;padding:10px;margin:12px 0}
+#gcHiddenPanel summary{cursor:pointer;font-weight:650}
+#eventList .item{display:flex;flex-wrap:wrap;align-items:center;gap:8px}
+#eventList .item .itemtext{flex:1 1 200px}
+#eventList .item .danger-outline,#eventList .item .secondary{min-height:40px}
