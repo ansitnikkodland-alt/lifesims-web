@@ -1,0 +1,38 @@
+
+/* LifeSims meals UI v28 */
+#food .heading{display:flex;gap:8px;align-items:center}
+#food .heading input{min-width:145px;max-width:170px}
+.food-total{background:linear-gradient(140deg,#23415c,#223352);border:1px solid #4b94a8}
+.food-total-number{display:flex;gap:9px;align-items:baseline;flex-wrap:wrap}
+.food-total-number span{font-size:28px;font-weight:800;letter-spacing:-.03em;color:#adf4df}
+.food-total-number small{font-size:13px;color:#c6dce8}
+.food-total .muted{font-size:13px;margin-top:8px}
+.food-actions{display:flex;flex-wrap:wrap;gap:8px;margin:11px 0}
+.food-actions button,.food-photo-button{flex:1 0 auto;font-weight:600;min-height:44px}
+.food-photo-button{display:inline-flex;align-items:center;justify-content:center;cursor:pointer;border:1px solid #7489ad;border-radius:12px;background:#34466c;color:white;padding:10px 12px}
+.food-photo-button input{position:absolute;clip:rect(0 0 0 0);height:1px;width:1px;overflow:hidden}
+.food-photo-button:focus-within{outline:2px solid #66eddb;outline-offset:2px}
+.food-photo-preview{display:flex;gap:12px;align-items:center;margin:10px 0}
+.food-photo-preview[hidden]{display:none}
+.food-photo-preview img{width:92px;height:92px;object-fit:cover;border-radius:12px;border:1px solid #a4b8d9}
+.food-estimate{padding:12px;border:1px solid #63aab1;background:#193c49;border-radius:11px;line-height:1.5;color:#e1fff7;margin:8px 0 12px;font-size:13px}
+.food-edit-nutrients summary{cursor:pointer;color:#e9f6ff;min-height:44px;display:flex;align-items:center}
+.food-nutrients{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.food-meal-item{display:flex;gap:10px;padding:11px 0;border-bottom:1px solid #4d6082;align-items:start}
+.food-meal-pic{width:52px;height:52px;flex-shrink:0;display:grid;place-items:center;background:#293e59;border:1px solid #586f8f;border-radius:12px;font-size:25px;overflow:hidden}
+.food-meal-pic img{width:100%;height:100%;object-fit:cover}
+.food-meal-body{flex:1;min-width:0}
+.food-meal-body strong{display:block;overflow-wrap:anywhere;font-size:14px}
+.food-meal-body small{display:block;color:#bfd0df;margin-top:3px;font-size:12px}
+.food-meal-actions{display:flex;gap:8px;margin-top:8px}
+.food-meal-actions button{padding:6px 10px;font-size:12px;min-height:36px}
+.food-ring{position:relative;width:180px;height:180px;margin:12px auto;border-radius:50%;border:12px solid #236f8c;box-shadow:inset 0 0 0 7px #314d71,0 0 0 2px #426c98}
+.food-ring:before{content:'00';position:absolute;top:-29px;left:50%;transform:translateX(-50%);font-size:10px;color:#dbeaff}
+.food-ring:after{content:'12';position:absolute;bottom:-25px;left:50%;transform:translateX(-50%);font-size:10px;color:#dbeaff}
+.food-ring-dot{position:absolute;transform:translate(-50%,-50%);width:14px;height:14px;background:#f8cf70;border:2px solid white;box-shadow:0 0 0 3px #112d42;border-radius:50%;z-index:2}
+.food-ring-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:13px;color:#e9f8ff}
+.food-week-row{display:grid;grid-template-columns:50px minmax(0,1fr) 66px;gap:10px;align-items:center;margin:9px 0;font-size:13px}
+.food-week-row>span:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.food-week-bar{height:12px;background:#182b42;border-radius:30px;overflow:hidden}
+.food-week-bar b{height:100%;display:block;background:linear-gradient(90deg,#2aaac0,#8de5c5);border-radius:30px}
+@media(max-width:400px){#food .heading{flex-wrap:wrap}#food .heading input{max-width:none;flex:1}.food-nutrients{gap:5px}.food-actions{gap:6px}}
