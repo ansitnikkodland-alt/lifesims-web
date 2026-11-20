@@ -15,3 +15,5 @@
 .oura-panel .oura-preview-items{padding-left:21px;font-size:12px;color:#e1ebf9;max-height:235px;overflow:auto}
 .oura-panel .oura-preview-items li{padding:6px 0;border-bottom:1px solid #ffffff20}
 @media(max-width:440px){.oura-panel{padding:12px}.oura-panel .row button{flex:1 1 130px}}
+
+.oura-today{border:1px solid #4d7298;background:#172d4b;padding:11px;border-radius:11px;color:#cde9ef;font-weight:600;margin:11px 0 13px;font-size:13px}
