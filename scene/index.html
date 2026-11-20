@@ -675,7 +675,7 @@ $('eventAllDay').onchange=toggleEventDates;
 $('eventDeleteLocal').onclick=()=>deleteEventLocal($('eventEditId').value);
 $('eventDeleteGoogle').onclick=()=>deleteEventInGoogle($('eventEditId').value);
 $('eventDuplicate').onclick=()=>duplicateCalendarEvent($('eventEditId').value);for(const k of sliderFields){$(k).addEventListener('input',()=>{$(k+'Unknown').checked=false;updateSlider(k)});$(k+'Unknown').addEventListener('change',()=>updateSlider(k))}for(const [k,button] of [['meds','medsYesterday'],['food','foodYesterday']])$(button).onclick=()=>{const d=$('stateDate').value||today(),y=currentRecord(plusDays(d,-1))[k];if(!y)return toast('За вчера нет записи');$(k).value=y;toast('Скопировано из предыдущего дня — проверь перед сохранением')};for(const id of ['stateDate','taskDate','diaryDate','historyDate'])$(id).value=activeDay;load();fillState(activeDay);fillDiary(activeDay);renderAll();
-if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
+if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 window.LifeSimsCalendarBridge={
   getSchedule:()=>JSON.parse(JSON.stringify(state.schedule||[])),
   getHidden:()=>JSON.parse(JSON.stringify(state.googleHidden||[])),
@@ -1343,7 +1343,7 @@ const EXTRA_COLLECTIONS=[
 const el=id=>document.getElementById(id);
 const panel=document.createElement('div');panel.className='card oura-panel';
 panel.innerHTML=[
-'<h3>💍 Oura Ring</h3>',
+'<h3>💍 Oura Ring · v24</h3>',
 '<div id="ouraToday" class="oura-today" role="status">Оценки Oura за сегодня пока не загружены.</div>',
 '<p class="hint">Первый импорт охватывает последние 7 дней. Для получения личных данных сначала нажми «Подключить Oura», разреши доступ на сайте Oura, затем «Проверить данные» и «Сохранить в LifeSims». Пульс, тренировки, стресс и другие доступные категории сохраняются отдельно; недоступные категории будут перечислены после проверки.</p>',
 '<details id="ouraSettings" open><summary>Подключение Oura</summary>',
@@ -1709,6 +1709,6 @@ if(connected()&&el('ouraAuto').checked&&bridge.wasImported()){
   load(true).catch(e=>status('⚠ Oura: '+e.message));
  }
 }
-window.LifeSimsOuraVersion='oura-v23-interactive-diagnostics';
+window.LifeSimsOuraVersion='oura-v24-cache-refresh';
 })();
 </script></body></html>
