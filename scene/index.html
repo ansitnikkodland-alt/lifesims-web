@@ -74,14 +74,28 @@
 <section class="section" id="diary"><div class="heading"><h2>Дневник</h2><input type="date" id="diaryDate" aria-label="Дата дневника"></div><label class="field">Запись дня <textarea id="diaryText" rows="7" placeholder="Что произошло, что было важным, что хочется запомнить"></textarea></label><button class="primary" id="saveDiary">Сохранить дневник</button><p class="hint">Можно открыть прежнюю дату и исправить текст.</p></section>
 <section class="section" id="history">
 <div class="heading"><h2>Календарь жизни</h2><input type="date" id="historyDate" aria-label="Выбранная дата"></div>
-<div class="history-controls"><button data-view="day">День</button><button data-view="week">Неделя</button><button data-view="month">Месяц</button><button id="prevPeriod" aria-label="Предыдущий период">◀</button><button id="nextPeriod" aria-label="Следующий период">▶</button></div>
+<div class="history-controls"><button data-view="day">День</button><button data-view="week">Неделя</button><button data-view="month">Месяц</button><button type="button" id="todayPeriod">Сегодня</button><button id="prevPeriod" aria-label="Предыдущий период">◀</button><button id="nextPeriod" aria-label="Следующий период">▶</button></div>
 <div id="historyRange" class="hint"></div><div id="calendar"></div>
 <div class="calendar-dayhead"><h3 id="calendarDayTitle">Выбранная дата</h3><div class="row"><button type="button" class="primary" id="addCalendarEvent">+ Мероприятие</button><button type="button" class="secondary" id="addCalendarTask">+ Дело или привычка</button><button type="button" class="secondary" id="openCalendarGoogle">🔄 Google</button></div></div>
 <div class="card"><h3>📅 События и записи выбранного дня</h3><div id="historyDetails"></div><p class="hint">Запланированное мероприятие не считается выполненным автоматически. Исторические записи не изменяются при синхронизации Google.</p></div>
 <div class="card"><h3>☑ Дела и привычки на дату</h3><input type="hidden" id="taskDate"><div id="taskList"></div></div>
 <div class="row"><button class="secondary" id="editSelectedDay">Редактировать состояние за дату</button></div>
 <details id="calendarEventEditor" class="card calendar-editor"><summary>Создать или изменить мероприятие</summary>
-<form id="eventForm" class="card"><input type="hidden" id="eventEditId"><label class="field">Название <input id="eventName" maxlength="130" required></label><div class="cols"><label class="field">Начало <input id="eventStart" type="datetime-local" required></label><label class="field">Конец <input id="eventEnd" type="datetime-local" required></label></div><label class="field">Повтор <select id="eventRepeat"><option value="none">Без повтора</option><option value="weekly">По дням недели</option></select></label><fieldset id="eventWeekdays" hidden><legend>Дни недели</legend><div class="row"><label><input type="checkbox" name="eventWeekday" value="1"> Пн</label><label><input type="checkbox" name="eventWeekday" value="2"> Вт</label><label><input type="checkbox" name="eventWeekday" value="3"> Ср</label><label><input type="checkbox" name="eventWeekday" value="4"> Чт</label><label><input type="checkbox" name="eventWeekday" value="5"> Пт</label><label><input type="checkbox" name="eventWeekday" value="6"> Сб</label><label><input type="checkbox" name="eventWeekday" value="7"> Вс</label></div></fieldset><div class="row"><button class="primary" type="submit">Сохранить мероприятие</button><button class="secondary" type="button" id="eventCancel">Отмена редактирования</button></div></form>
+<form id="eventForm" class="card"><input type="hidden" id="eventEditId">
+<label class="field">Название <input id="eventName" maxlength="130" required></label>
+<label class="field event-check"><input type="checkbox" id="eventAllDay"> Весь день</label>
+<div id="eventTimedDates" class="cols"><label class="field">Начало <input id="eventStart" type="datetime-local" required></label><label class="field">Конец <input id="eventEnd" type="datetime-local" required></label></div>
+<div id="eventAllDayDates" class="cols" hidden><label class="field">Дата начала <input id="eventDayStart" type="date"></label><label class="field">Дата окончания (включительно) <input id="eventDayEnd" type="date"></label></div>
+<label class="field">Повтор <select id="eventRepeat"><option value="none">Без повтора</option><option value="daily">Каждый день</option><option value="weekly">По дням недели</option><option value="monthly">Каждый месяц</option><option value="yearly">Каждый год</option></select></label>
+<fieldset id="eventWeekdays" hidden><legend>Дни недели</legend><div class="row"><label><input type="checkbox" name="eventWeekday" value="1"> Пн</label><label><input type="checkbox" name="eventWeekday" value="2"> Вт</label><label><input type="checkbox" name="eventWeekday" value="3"> Ср</label><label><input type="checkbox" name="eventWeekday" value="4"> Чт</label><label><input type="checkbox" name="eventWeekday" value="5"> Пт</label><label><input type="checkbox" name="eventWeekday" value="6"> Сб</label><label><input type="checkbox" name="eventWeekday" value="7"> Вс</label></div></fieldset>
+<label class="field">Место <input id="eventLocation" maxlength="300" placeholder="Адрес или место встречи"></label>
+<label class="field">Описание <textarea id="eventDescription" rows="3" placeholder="Дополнительные сведения"></textarea></label>
+<label class="field">Цвет в LifeSims <input id="eventColor" type="color" value="#4285f4"></label>
+<p id="eventEditSource" class="hint" role="status">Местные мероприятия сохраняются на этом устройстве. Google синхронизируется отдельно.</p>
+<div class="row"><button class="primary" type="submit">Сохранить мероприятие</button><button class="secondary" type="button" id="eventCancel">Отмена</button><button class="secondary" type="button" id="eventDuplicate" hidden>Дублировать</button></div>
+<div class="row"><button class="danger" type="button" id="eventDeleteLocal" hidden>Удалить мероприятие</button><button class="danger-outline" type="button" id="eventDeleteGoogle" hidden>Удалить также из Google</button></div>
+<p class="hint" id="eventDeleteHelp" hidden>Удаление из LifeSims не затрагивает Google. Для удаления в Google необходимо подключить аккаунт с правом изменения событий и подтвердить действие.</p>
+</form>
 </details>
 <details id="calendarTaskEditor" class="card calendar-editor"><summary>Добавить дело или привычку</summary>
 <form id="taskForm" class="card"><label class="field">Название дела <input id="taskTitle" maxlength="150" required placeholder="Например, разобрать вещи"></label><div class="cols"><label class="field">Повтор <select id="taskRepeat"><option value="once">Один раз</option><option value="daily">Ежедневно</option><option value="weekly">Еженедельно</option></select></label><label class="field">Награда <select id="taskXP"><option value="5">5 XP</option><option value="10" selected>10 XP</option><option value="20">20 XP</option><option value="40">40 XP</option></select></label></div><label class="field">Связать с предметом (необязательно)<select id="taskAction"><option value="">Без связи с комнатой</option></select></label><button class="primary" type="submit">Добавить дело</button></form>
@@ -117,9 +131,9 @@ const defs=[
 {id:'sim_diary',object:'sim',name:'Записать в дневник',xp:0,repeat:'daily',open:'diary'},
 {id:'sofa_rest',object:'sofa',name:'Отдохнуть',xp:5,repeat:'daily',skill:'Здоровье'}];
 const labels={window:'🪟 Окно — работа',bed:'🛏 Кровать',books:'📚 Книжная полка',desk:'💻 Компьютер',sink:'🚰 Раковина',sim:'👤 Персонаж',sofa:'🛋 Диван'};
-const base=()=>({schema:VERSION,createdAt:new Date().toISOString(),days:{},activities:defs.filter(a=>a.xp>0).map(a=>({...a,kind:'habit',completions:[]})),events:[],schedule:[],room:{work:null},legacySkills:{},legacyCopy:null});
+const base=()=>({schema:VERSION,createdAt:new Date().toISOString(),days:{},activities:defs.filter(a=>a.xp>0).map(a=>({...a,kind:'habit',completions:[]})),events:[],schedule:[],googleHidden:[],room:{work:null},legacySkills:{},legacyCopy:null});
 let state,storageOK=true,storageBlocked=false,activeDay=today(),historyView='month',selectedTab='needs';
-function normalize(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.schema!==VERSION||!raw.days||typeof raw.days!=='object'||Array.isArray(raw.days)||!Array.isArray(raw.activities)||!Array.isArray(raw.events))throw Error('Неизвестный или повреждённый формат');const safe=base();return {...safe,...raw,schedule:Array.isArray(raw.schedule)?raw.schedule:(Array.isArray(raw.legacyCopy?.events)?raw.legacyCopy.events.map((e,i)=>({id:'legacy-schedule-'+i,title:e.title||'Мероприятие',startsAt:e.startsAt,endsAt:e.endsAt,repeat:e.repeat==='weekly'?'weekly':'none',weekdays:e.repeat==='weekly'&&e.startsAt?[((new Date(e.startsAt.slice(0,10)+'T12:00:00').getDay()+6)%7)+1]:[]})):[]),room:(raw.room&&typeof raw.room==='object'&&!Array.isArray(raw.room))?{...safe.room,...raw.room}:safe.room};}
+function normalize(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.schema!==VERSION||!raw.days||typeof raw.days!=='object'||Array.isArray(raw.days)||!Array.isArray(raw.activities)||!Array.isArray(raw.events))throw Error('Неизвестный или повреждённый формат');const safe=base();return {...safe,...raw,googleHidden:Array.isArray(raw.googleHidden)?raw.googleHidden.filter(x=>x&&typeof x.calendarId==='string'&&typeof x.id==='string').map(x=>({calendarId:x.calendarId,id:x.id,title:typeof x.title==='string'?x.title:'',hiddenAt:typeof x.hiddenAt==='string'?x.hiddenAt:''})):[],schedule:Array.isArray(raw.schedule)?raw.schedule:(Array.isArray(raw.legacyCopy?.events)?raw.legacyCopy.events.map((e,i)=>({id:'legacy-schedule-'+i,title:e.title||'Мероприятие',startsAt:e.startsAt,endsAt:e.endsAt,repeat:e.repeat==='weekly'?'weekly':'none',weekdays:e.repeat==='weekly'&&e.startsAt?[((new Date(e.startsAt.slice(0,10)+'T12:00:00').getDay()+6)%7)+1]:[]})):[]),room:(raw.room&&typeof raw.room==='object'&&!Array.isArray(raw.room))?{...safe.room,...raw.room}:safe.room};}
 function migrate(old){const s=base();s.legacyCopy=old;s.legacySkills=(old.skills&&typeof old.skills==='object'&&!Array.isArray(old.skills))?old.skills:{};
 if(Array.isArray(old.tasks))for(const t of old.tasks){if(!t||typeof t.name!=='string')continue;const a={id:uid(),name:t.name,kind:'task',xp:Number.isFinite(+t.xp)?Math.max(0,Math.min(40,+t.xp)):10,repeat:'once',createdDate:today(),completions:[],legacyDone:!!t.done};s.activities.push(a)}
 if(Array.isArray(old.log))for(const l of old.log){if(!l||typeof l.at!=='string'||!/^\d{4}-\d\d-\d\dT/.test(l.at))continue;s.events.push({id:uid(),kind:'legacy',name:String(l.text||'Действие'),date:l.at.slice(0,10),at:l.at,xp:0,legacyXP:Number(l.xp)||0})}
@@ -223,8 +237,10 @@ function scheduleHistoryOccurrences(from,to){
       const suppressed=event.google?.supersededRange;
       if(nextMidnight>occStart && !(suppressed&&date>=suppressed.from&&date<=suppressed.to)){
         entries.push({id:event.id,date,title:event.title,startsAt:occStart,endsAt:occEnd,
-          google:!!event.google,repeat:event.repeat==='weekly',allDay:!!event.allDay,
-          sourceName:event.google?.sourceName||'LifeSims',color:event.google?.color||'#4285f4'});
+          google:!!event.google,repeat:event.repeat&&event.repeat!=='none',allDay:!!event.allDay,
+          sourceName:event.google?.sourceName||'LifeSims',
+          color:event.color||event.google?.color||'#4285f4',
+          location:event.location||'',description:event.description||''});
       }
       date=plusDays(date,1);
     }
@@ -242,16 +258,19 @@ function scheduleHistoryOccurrences(from,to){
       .map(Number).filter(n=>Number.isInteger(n)&&n>=1&&n<=7);
     const weekdays=new Set(selected.length?selected:[((baseStart.getDay()+6)%7)+1]);
     const originalDay=event.startsAt.slice(0,10);
+    const origin=asDay(originalDay);
     let candidate=plusDays(from,-Math.min(400,Math.ceil(duration/86400000)+1));
     if(candidate<originalDay)candidate=originalDay;
     const localTime=event.startsAt.slice(11);
     for(let date=candidate;date<=to;date=plusDays(date,1)){
-      const weekday=((asDay(date).getDay()+6)%7)+1;
-      if(!weekdays.has(weekday))continue;
+      const dt=asDay(date),weekday=((dt.getDay()+6)%7)+1;
+      const matches=event.repeat==='daily'||
+        (event.repeat==='weekly'&&weekdays.has(weekday))||
+        (event.repeat==='monthly'&&dt.getDate()===origin.getDate())||
+        (event.repeat==='yearly'&&dt.getDate()===origin.getDate()&&dt.getMonth()===origin.getMonth());
+      if(!matches)continue;
       const occurrenceStart=new Date(date+'T'+localTime).getTime();
-      if(Number.isFinite(occurrenceStart)){
-        addOccurrence(event,occurrenceStart,occurrenceStart+duration);
-      }
+      if(Number.isFinite(occurrenceStart))addOccurrence(event,occurrenceStart,occurrenceStart+duration);
     }
   }
   return entries.sort((a,b)=>a.date.localeCompare(b.date)||a.startsAt-b.startsAt||a.title.localeCompare(b.title,'ru'));
@@ -289,12 +308,18 @@ function renderDayAgenda(){
     const name=document.createElement('div');name.className='agenda-event-title';name.textContent=item.title;
     const meta=document.createElement('div');meta.className='agenda-event-meta';
     meta.textContent=(item.google?item.sourceName:'LifeSims')+
-      (allDay?'':' · '+timeOf(item.startsAt)+'–'+timeOf(item.endsAt));
+      (allDay?'':' · '+timeOf(item.startsAt)+'–'+timeOf(item.endsAt))+
+      (item.location?' · 📍 '+item.location:'')+
+      (item.description?' · '+item.description:'');
     main.append(name,meta);row.append(time,color,main);
     if(item.id){
-      const edit=document.createElement('button');edit.className='agenda-edit';edit.type='button';edit.textContent='Изменить';
+      const edit=document.createElement('button');edit.className='agenda-edit';edit.type='button';edit.textContent='✎';
+      edit.setAttribute('aria-label','Редактировать мероприятие '+item.title);
       edit.onclick=()=>{closeDayAgenda();openCalendarEventEditor(item.id)};
-      row.append(edit);
+      const remove=document.createElement('button');remove.type='button';remove.className='agenda-delete';remove.textContent='🗑';
+      remove.setAttribute('aria-label','Удалить мероприятие '+item.title);
+      remove.onclick=()=>deleteEventLocal(item.id);
+      row.append(edit,remove);
     }
     body.append(row);
   }
@@ -454,7 +479,10 @@ function renderHistory(){
       const edit=document.createElement('button');
       edit.type='button';edit.className='secondary history-event-edit';edit.textContent='Изменить';
       edit.onclick=()=>openCalendarEventEditor(event.id);
-      row.append(edit);
+      const remove=document.createElement('button');
+      remove.type='button';remove.className='danger-outline history-event-edit';remove.textContent='Удалить';
+      remove.onclick=()=>deleteEventLocal(event.id);
+      row.append(edit,remove);
     }
     panel.append(row);
     count++;
@@ -468,18 +496,83 @@ function renderHistory(){
   if(!$('dayAgendaOverlay').hidden)renderDayAgenda();
 }
 function changePeriod(n){const d=$('historyDate').value||today(),x=asDay(d);if(historyView==='month'){const wanted=x.getDate();x.setDate(1);x.setMonth(x.getMonth()+n);const last=new Date(x.getFullYear(),x.getMonth()+1,0).getDate();x.setDate(Math.min(wanted,last))}else x.setDate(x.getDate()+n*(historyView==='week'?7:1));$('historyDate').value=dayStr(x);renderHistory()}
-const weekdayNames=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];function clearEventForm(){$('eventForm').reset();$('eventEditId').value='';$('eventWeekdays').hidden=true}function renderSchedule(){const list=$('eventList');list.replaceChildren();for(const e of state.schedule||[]){const item=document.createElement('div');item.className='item';const info=document.createElement('div');info.className='itemtext';const title=document.createElement('strong');title.textContent=e.title;const desc=document.createElement('small');desc.textContent=(e.allDay?'Весь день · ':'')+(e.startsAt||'')+' — '+(e.endsAt||'')+(e.repeat==='weekly'?' · Каждую неделю: '+(e.weekdays||[]).map(n=>weekdayNames[n-1]).filter(Boolean).join(', '):'');info.append(title,desc);const edit=document.createElement('button');edit.className='secondary';edit.textContent='Изменить';edit.onclick=()=>openCalendarEventEditor(e.id);item.append(info,edit);list.append(item)}if(!list.children.length)list.textContent='Мероприятий пока нет'}function openCalendarEventEditor(id){
-  const e=(state.schedule||[]).find(x=>x.id===id);if(!e)return toast('Мероприятие не найдено');
-  $('eventEditId').value=e.id;$('eventName').value=e.title;
-  $('eventStart').value=e.startsAt;$('eventEnd').value=e.endsAt;
-  $('eventRepeat').value=e.repeat;$('eventWeekdays').hidden=e.repeat!=='weekly';
-  document.querySelectorAll('[name=eventWeekday]').forEach(x=>x.checked=(e.weekdays||[]).includes(Number(x.value)));
+const weekdayNames=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
+const eventRepeatLabels={none:'Без повтора',daily:'Ежедневно',weekly:'По дням недели',monthly:'Ежемесячно',yearly:'Ежегодно'};
+function toggleEventDates(){
+  const allDay=$('eventAllDay').checked;
+  $('eventTimedDates').hidden=allDay;
+  $('eventAllDayDates').hidden=!allDay;
+  $('eventStart').required=!allDay;$('eventEnd').required=!allDay;
+  $('eventDayStart').required=allDay;$('eventDayEnd').required=allDay;
+  if(allDay){
+    if(!$('eventDayStart').value)$('eventDayStart').value=($('eventStart').value||today()).slice(0,10);
+    if(!$('eventDayEnd').value)$('eventDayEnd').value=($('eventEnd').value||$('eventDayStart').value).slice(0,10);
+  }
+}
+function clearEventForm(){
+  $('eventForm').reset();$('eventEditId').value='';
+  $('eventWeekdays').hidden=true;$('eventAllDay').checked=false;
+  $('eventDayStart').value='';$('eventDayEnd').value='';
+  $('eventColor').value='#4285f4';
+  $('eventDeleteLocal').hidden=true;$('eventDeleteGoogle').hidden=true;
+  $('eventDuplicate').hidden=true;$('eventDeleteHelp').hidden=true;
+  $('eventEditSource').textContent='Новое мероприятие хранится в LifeSims. Для передачи в Google открой синхронизацию.';
+  toggleEventDates();
+}
+function renderSchedule(){
+  const list=$('eventList');list.replaceChildren();
+  for(const e of state.schedule||[]){
+    const item=document.createElement('div');item.className='item';
+    const info=document.createElement('div');info.className='itemtext';
+    const title=document.createElement('strong');title.textContent=e.title;
+    const desc=document.createElement('small');
+    desc.textContent=(e.google?'Google · '+(e.google.sourceName||'Календарь')+' · ':'LifeSims · ')+
+      (e.allDay?'Весь день · ':'')+(e.startsAt||'')+' — '+(e.endsAt||'')+
+      (e.repeat&&e.repeat!=='none'?' · '+(eventRepeatLabels[e.repeat]||e.repeat):'');
+    info.append(title,desc);
+    const edit=document.createElement('button');edit.className='secondary';edit.type='button';
+    edit.textContent='Открыть / изменить';edit.onclick=()=>openCalendarEventEditor(e.id);
+    const remove=document.createElement('button');remove.className='danger-outline';remove.type='button';
+    remove.textContent='Удалить';remove.onclick=()=>deleteEventLocal(e.id);
+    item.append(info,edit,remove);list.append(item);
+  }
+  if(!list.children.length)list.textContent='Мероприятий пока нет';
+}
+function openCalendarEventEditor(id){
+  const event=(state.schedule||[]).find(x=>x.id===id);
+  if(!event)return toast('Мероприятие не найдено');
+  clearEventForm();
+  $('eventEditId').value=event.id;$('eventName').value=event.title||'';
+  $('eventStart').value=event.startsAt||'';$('eventEnd').value=event.endsAt||'';
+  $('eventRepeat').value=eventRepeatLabels[event.repeat]?event.repeat:'none';
+  document.querySelectorAll('[name=eventWeekday]').forEach(x=>x.checked=(event.weekdays||[]).includes(Number(x.value)));
+  $('eventWeekdays').hidden=$('eventRepeat').value!=='weekly';
+  $('eventLocation').value=event.location||'';
+  $('eventDescription').value=event.description||'';
+  const color=event.color||event.google?.color||'#4285f4';
+  $('eventColor').value=/^#[0-9a-f]{6}$/i.test(color)?color:'#4285f4';
+  if(event.allDay){
+    $('eventAllDay').checked=true;
+    $('eventDayStart').value=event.startsAt.slice(0,10);
+    $('eventDayEnd').value=plusDays(event.endsAt.slice(0,10),-1);
+  }
+  toggleEventDates();
+  $('eventDeleteLocal').hidden=false;
+  $('eventDeleteLocal').textContent=event.google?'Убрать из LifeSims':'Удалить мероприятие';
+  $('eventDeleteGoogle').hidden=!event.google?.id;
+  $('eventDeleteHelp').hidden=!event.google?.id;
+  $('eventDuplicate').hidden=false;
+  $('eventEditSource').textContent=event.google
+    ? 'Источник: Google · '+(event.google.sourceName||'Календарь')+'. Изменения здесь сначала локальные; запись в Google требует отдельного подтверждения. '
+    : 'Мероприятие LifeSims. Изменения сохраняются локально.';
   $('calendarEventEditor').open=true;
   $('calendarEventEditor').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function openNewCalendarEvent(){
-  clearEventForm();const date=$('historyDate').value||today();
+  clearEventForm();
+  const date=$('historyDate').value||today();
   $('eventStart').value=date+'T09:00';$('eventEnd').value=date+'T10:00';
+  $('eventDayStart').value=date;$('eventDayEnd').value=date;
   $('calendarEventEditor').open=true;
   $('calendarEventEditor').scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -488,7 +581,79 @@ function openNewCalendarTask(){
   $('calendarTaskEditor').open=true;
   $('calendarTaskEditor').scrollIntoView({behavior:'smooth',block:'start'});
 }
-function saveEvent(e){e.preventDefault();const title=$('eventName').value.trim(),startsAt=$('eventStart').value,endsAt=$('eventEnd').value,repeat=$('eventRepeat').value,weekdays=[...document.querySelectorAll('[name=eventWeekday]:checked')].map(x=>Number(x.value));if(!title||!startsAt||!endsAt||endsAt<=startsAt)return toast('Проверь название и время мероприятия');if(repeat==='weekly'&&!weekdays.length)return toast('Выбери хотя бы один день недели');const id=$('eventEditId').value||uid(),old=(state.schedule||[]).find(x=>x.id===id);const entry={...(old||{}),id,title,startsAt,endsAt,repeat,weekdays:repeat==='weekly'?weekdays:[]};if(transact(()=>{state.schedule??=[];const i=state.schedule.findIndex(x=>x.id===id);if(i>=0)state.schedule[i]=entry;else state.schedule.push(entry)})){clearEventForm();$('calendarEventEditor').open=false;renderSchedule();renderHistory();toast('Мероприятие сохранено')}}
+function saveEvent(e){
+  e.preventDefault();
+  const title=$('eventName').value.trim();
+  const allDay=$('eventAllDay').checked;
+  const startsAt=allDay?$('eventDayStart').value+'T00:00':$('eventStart').value;
+  const endsAt=allDay?plusDays($('eventDayEnd').value,1)+'T00:00':$('eventEnd').value;
+  const repeat=$('eventRepeat').value;
+  const weekdays=[...document.querySelectorAll('[name=eventWeekday]:checked')].map(x=>Number(x.value));
+  if(!title||!startsAt||!endsAt||endsAt<=startsAt||!Number.isFinite(new Date(startsAt).getTime())||!Number.isFinite(new Date(endsAt).getTime())){
+    return toast('Проверь название, начало и конец мероприятия');
+  }
+  if(repeat==='weekly'&&!weekdays.length)return toast('Выбери хотя бы один день недели');
+  const id=$('eventEditId').value||uid(),old=(state.schedule||[]).find(x=>x.id===id);
+  const entry={...(old||{}),id,title,startsAt,endsAt,repeat,allDay,
+    weekdays:repeat==='weekly'?weekdays:[],location:$('eventLocation').value.trim(),
+    description:$('eventDescription').value.trim(),color:$('eventColor').value};
+  if(transact(()=>{
+    state.schedule??=[];
+    const i=state.schedule.findIndex(x=>x.id===id);
+    if(i>=0)state.schedule[i]=entry;else state.schedule.push(entry);
+  })){
+    clearEventForm();$('calendarEventEditor').open=false;
+    renderSchedule();renderHistory();toast('Мероприятие сохранено в LifeSims');
+  } else toast('Не удалось сохранить мероприятие. Проверь память браузера.');
+}
+function removeLocalCalendarEvent(id,hideGoogle=true){
+  const event=(state.schedule||[]).find(x=>x.id===id);
+  if(!event)throw Error('Мероприятие не найдено');
+  const ok=transact(()=>{
+    state.schedule=state.schedule.filter(x=>x.id!==id);
+    if(hideGoogle&&event.google?.id){
+      state.googleHidden??=[];
+      const cid=event.google.calendarId||'primary';
+      if(!state.googleHidden.some(x=>x.calendarId===cid&&x.id===event.google.id)){
+        state.googleHidden.push({calendarId:cid,id:event.google.id,title:event.title,hiddenAt:new Date().toISOString()});
+      }
+    }
+  });
+  if(!ok)throw Error('Не удалось сохранить удаление. Проверь доступ к памяти браузера.');
+  if($('eventEditId').value===id){clearEventForm();$('calendarEventEditor').open=false}
+  renderSchedule();renderHistory();
+  window.LifeSimsGoogleCalendarActions?.refreshHidden?.();
+  return event;
+}
+function deleteEventLocal(id){
+  const event=(state.schedule||[]).find(x=>x.id===id);
+  if(!event)return toast('Мероприятие уже отсутствует');
+  const warn=event.repeat&&event.repeat!=='none'?' Будут убраны все повторения этой серии.':'';
+  const text=event.google
+    ? 'Убрать «'+event.title+'» только из LifeSims? В Google событие останется. При следующей синхронизации оно останется скрытым, пока ты его не восстановишь.'+warn
+    : 'Удалить «'+event.title+'» из LifeSims?'+warn;
+  if(!window.confirm(text))return;
+  try{removeLocalCalendarEvent(id,true);toast('Мероприятие убрано из LifeSims');}
+  catch(error){toast('Ошибка удаления: '+error.message)}
+}
+async function deleteEventInGoogle(id){
+  const event=(state.schedule||[]).find(x=>x.id===id);
+  if(!event?.google?.id)return toast('Это мероприятие не связано с Google');
+  const actions=window.LifeSimsGoogleCalendarActions;
+  if(!actions?.deleteEvent)return toast('Модуль Google не готов. Открой «Календарь → Google».');
+  try{await actions.deleteEvent(id);}
+  catch(error){toast('Google: '+error.message)}
+}
+function duplicateCalendarEvent(id){
+  const event=(state.schedule||[]).find(x=>x.id===id);
+  if(!event)return toast('Мероприятие не найдено');
+  const {google,...base}=event;
+  const copy={...base,id:uid(),title:event.title+' (копия)',color:event.color||event.google?.color||'#4285f4'};
+  if(transact(()=>{state.schedule??=[];state.schedule.push(copy)})){
+    renderSchedule();renderHistory();openCalendarEventEditor(copy.id);
+    toast('Копия создана в LifeSims. Она не связана с Google.');
+  }else toast('Не удалось создать копию');
+}
 function renderAll(){renderSchedule();renderNeeds();renderHistory();updateDebt();renderWork()}
 function downloadHTML(){const html='<!doctype html>\n'+document.documentElement.outerHTML,blob=new Blob([html],{type:'text/html;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='LifeSims-Анюта.html';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);toast('HTML подготовлен к скачиванию')}function backup(){if(storageBlocked){toast('Экспорт заблокирован: исходные данные повреждены или недоступны. Пустая копия не создаётся. Сохрани прежний JSON-файл и не очищай браузер.');return false}const contents=JSON.stringify(state,null,2),blob=new Blob([contents],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='LifeSims-'+today()+'-backup.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);toast('Резервная копия подготовлена к скачиванию')}
 function parseBackup(raw){const inputs=[raw,raw?.state,raw?.data,raw?.backup];for(const obj of inputs){if(!obj||typeof obj!=='object'||Array.isArray(obj))continue;if(obj.schema===VERSION)return normalize(obj);if(Array.isArray(obj.tasks)&&obj.skills&&typeof obj.skills==='object'&&!Array.isArray(obj.skills))return migrate(obj)}throw Error('Неизвестный формат. Нужен JSON из раздела «Сохранения / Данные» LifeSims. HTML-файл не содержит сохранения.')}
@@ -496,17 +661,33 @@ let pendingImport=null;
 function importMessage(message,error=false){const el=$('importStatus');el.textContent=message;el.classList.toggle('error',error)}
 function importSummary(proposed){const dayCount=Object.keys(proposed.days||{}).length,activityCount=proposed.activities.length,doneCount=proposed.events.filter(e=>e.kind==='complete').length,oldCount=proposed.activities.filter(x=>x.legacyDone).length,calendarCount=(proposed.schedule||[]).length;return `Найдено: ${dayCount} датированных записей, ${activityCount} дел и привычек, ${calendarCount} мероприятий, ${doneCount} выполненных действий${oldCount?', '+oldCount+' ранее выполненных задач':''}. Данные текущей версии заменятся только после подтверждения.`}
 async function restore(){pendingImport=null;$('importConfirmPanel').hidden=true;const file=$('importFile').files?.[0];if(!file){importMessage('Сначала выбери JSON-файл с прогрессом.',true);return}if(file.size>6_000_000){importMessage('Файл слишком большой (максимум 6 МБ).',true);return}try{const text=await file.text();pendingImport=parseBackup(JSON.parse(text));$('importPreview').textContent=importSummary(pendingImport);$('importConfirmPanel').hidden=false;importMessage('Файл распознан: '+file.name+'. Проверь количество записей и подтверди импорт.')}catch(e){pendingImport=null;importMessage('Не удалось прочитать копию: '+e.message,true)}}
-function confirmImport(){if(!pendingImport){importMessage('Сначала выбери и проверь JSON.',true);return}const old=state,wasBlocked=storageBlocked,wasOK=storageOK;let oldContents;try{oldContents=localStorage.getItem(STORE)}catch(e){importMessage('Браузер не разрешил доступ к сохранению. Открой HTTPS-версию LifeSims и повтори импорт.',true);return}const proposed=pendingImport;state=proposed;storageBlocked=false;let written=save();if(written){try{const read=normalize(JSON.parse(localStorage.getItem(STORE)));written=JSON.stringify(read.days)===JSON.stringify(state.days)&&JSON.stringify(read.activities)===JSON.stringify(state.activities)&&JSON.stringify(read.events)===JSON.stringify(state.events)&&JSON.stringify(read.schedule)===JSON.stringify(state.schedule)}catch(e){written=false}}if(!written){try{if(oldContents===null)localStorage.removeItem(STORE);else localStorage.setItem(STORE,oldContents)}catch(e){}state=old;storageBlocked=wasBlocked;storageOK=wasOK;setStorage();importMessage('Не удалось записать и проверить импорт. Прежние данные не заменены. Открой HTTPS-версию LifeSims и попробуй снова.',true);return}pendingImport=null;$('importConfirmPanel').hidden=true;activeDay=today();for(const id of ['stateDate','taskDate','diaryDate','historyDate'])$(id).value=activeDay;fillState(activeDay);fillDiary(activeDay);renderAll();importMessage('✓ Импорт записан и проверен. '+importSummary(proposed)+' Проверь вкладки «Дела» и «История».');toast('✓ Прогресс импортирован и сохранён')}
-for(const b of document.querySelectorAll('.touchmap .hot')){b.addEventListener('click',()=>openObject(b.dataset.object,b));b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openObject(b.dataset.object,b)}})}$('plumbob').onclick=()=>showNeedsEditor('',today());$('returnHome').onclick=finishWork;$('portraitBtn').onclick=()=>openObject('sim',document.querySelector('.touchmap .hot[data-object=sim]'));$('resourceChip').onclick=()=>showNeedsEditor('',today());$('xpChip').onclick=()=>openTab('history',true);$('closeSheet').onclick=closeSheet;document.addEventListener('pointerdown',e=>{if($('sheetWrap').classList.contains('open')&&!e.target.closest('.sheet')&&!e.target.closest('.hot'))closeSheet()});document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSheet();closeDayAgenda()}});for(const b of document.querySelectorAll('[data-tab]'))b.onclick=()=>openTab(b.dataset.tab,true);$('openNeedsEditor').onclick=()=>showNeedsEditor('',today());$('stateForm').onsubmit=saveFieldState;$('taskForm').onsubmit=addActivity;$('saveDiary').onclick=saveDiary;for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>{historyView=b.dataset.view;renderHistory()};$('historyDate').onchange=renderHistory;$('prevPeriod').onclick=()=>changePeriod(-1);$('nextPeriod').onclick=()=>changePeriod(1);$('editSelectedDay').onclick=()=>{activeDay=$('historyDate').value;showNeedsEditor('',activeDay)};$('stateDate').onchange=()=>fillState($('stateDate').value);$('addCalendarEvent').onclick=openNewCalendarEvent;$('addCalendarTask').onclick=openNewCalendarTask;$('agendaClose').onclick=closeDayAgenda;
+function confirmImport(){if(!pendingImport){importMessage('Сначала выбери и проверь JSON.',true);return}const old=state,wasBlocked=storageBlocked,wasOK=storageOK;let oldContents;try{oldContents=localStorage.getItem(STORE)}catch(e){importMessage('Браузер не разрешил доступ к сохранению. Открой HTTPS-версию LifeSims и повтори импорт.',true);return}const proposed=pendingImport;state=proposed;storageBlocked=false;let written=save();if(written){try{const read=normalize(JSON.parse(localStorage.getItem(STORE)));written=JSON.stringify(read.days)===JSON.stringify(state.days)&&JSON.stringify(read.activities)===JSON.stringify(state.activities)&&JSON.stringify(read.events)===JSON.stringify(state.events)&&JSON.stringify(read.schedule)===JSON.stringify(state.schedule)&&JSON.stringify(read.googleHidden)===JSON.stringify(state.googleHidden)}catch(e){written=false}}if(!written){try{if(oldContents===null)localStorage.removeItem(STORE);else localStorage.setItem(STORE,oldContents)}catch(e){}state=old;storageBlocked=wasBlocked;storageOK=wasOK;setStorage();importMessage('Не удалось записать и проверить импорт. Прежние данные не заменены. Открой HTTPS-версию LifeSims и попробуй снова.',true);return}pendingImport=null;$('importConfirmPanel').hidden=true;activeDay=today();for(const id of ['stateDate','taskDate','diaryDate','historyDate'])$(id).value=activeDay;fillState(activeDay);fillDiary(activeDay);renderAll();importMessage('✓ Импорт записан и проверен. '+importSummary(proposed)+' Проверь вкладки «Дела» и «История».');toast('✓ Прогресс импортирован и сохранён')}
+for(const b of document.querySelectorAll('.touchmap .hot')){b.addEventListener('click',()=>openObject(b.dataset.object,b));b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openObject(b.dataset.object,b)}})}$('plumbob').onclick=()=>showNeedsEditor('',today());$('returnHome').onclick=finishWork;$('portraitBtn').onclick=()=>openObject('sim',document.querySelector('.touchmap .hot[data-object=sim]'));$('resourceChip').onclick=()=>showNeedsEditor('',today());$('xpChip').onclick=()=>openTab('history',true);$('closeSheet').onclick=closeSheet;document.addEventListener('pointerdown',e=>{if($('sheetWrap').classList.contains('open')&&!e.target.closest('.sheet')&&!e.target.closest('.hot'))closeSheet()});document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSheet();closeDayAgenda()}});for(const b of document.querySelectorAll('[data-tab]'))b.onclick=()=>openTab(b.dataset.tab,true);$('openNeedsEditor').onclick=()=>showNeedsEditor('',today());$('stateForm').onsubmit=saveFieldState;$('taskForm').onsubmit=addActivity;$('saveDiary').onclick=saveDiary;for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>{historyView=b.dataset.view;renderHistory()};$('historyDate').onchange=renderHistory;$('prevPeriod').onclick=()=>changePeriod(-1);$('nextPeriod').onclick=()=>changePeriod(1);$('todayPeriod').onclick=()=>{$('historyDate').value=today();renderHistory()};$('editSelectedDay').onclick=()=>{activeDay=$('historyDate').value;showNeedsEditor('',activeDay)};$('stateDate').onchange=()=>fillState($('stateDate').value);$('addCalendarEvent').onclick=openNewCalendarEvent;$('addCalendarTask').onclick=openNewCalendarTask;$('agendaClose').onclick=closeDayAgenda;
 $('dayAgendaOverlay').addEventListener('click',e=>{if(e.target===$('dayAgendaOverlay'))closeDayAgenda()});
 $('agendaAddEvent').onclick=()=>{closeDayAgenda();openNewCalendarEvent()};
 $('agendaAddTask').onclick=()=>{closeDayAgenda();openNewCalendarTask()};$('openCalendarGoogle').onclick=()=>{$('calendarGoogleEditor').open=true;$('calendarGoogleEditor').scrollIntoView({behavior:'smooth',block:'start'})};$('diaryDate').onchange=()=>fillDiary($('diaryDate').value);$('exportData').onclick=backup;$('downloadHTML').onclick=downloadHTML;$('importData').onclick=restore;$('confirmImport').onclick=confirmImport;$('cancelImport').onclick=()=>{pendingImport=null;$('importConfirmPanel').hidden=true;importMessage('Импорт отменён. Текущий прогресс не изменён.')};$('importFile').onchange=()=>{pendingImport=null;$('importConfirmPanel').hidden=true;importMessage('Файл выбран. Нажми «Проверить файл JSON».')};
 for(const a of defs.filter(a=>a.xp>0)){const opt=document.createElement('option');opt.value=a.id;opt.textContent=a.name;$('taskAction').append(opt)}
-$('eventRepeat').onchange=()=>{$('eventWeekdays').hidden=$('eventRepeat').value!=='weekly'};$('eventForm').onsubmit=saveEvent;$('eventCancel').onclick=clearEventForm;for(const k of sliderFields){$(k).addEventListener('input',()=>{$(k+'Unknown').checked=false;updateSlider(k)});$(k+'Unknown').addEventListener('change',()=>updateSlider(k))}for(const [k,button] of [['meds','medsYesterday'],['food','foodYesterday']])$(button).onclick=()=>{const d=$('stateDate').value||today(),y=currentRecord(plusDays(d,-1))[k];if(!y)return toast('За вчера нет записи');$(k).value=y;toast('Скопировано из предыдущего дня — проверь перед сохранением')};for(const id of ['stateDate','taskDate','diaryDate','historyDate'])$(id).value=activeDay;load();fillState(activeDay);fillDiary(activeDay);renderAll();
+$('eventRepeat').onchange=()=>{$('eventWeekdays').hidden=$('eventRepeat').value!=='weekly'};$('eventForm').onsubmit=saveEvent;
+$('eventCancel').onclick=()=>{clearEventForm();$('calendarEventEditor').open=false};
+$('eventAllDay').onchange=toggleEventDates;
+
+$('eventDeleteLocal').onclick=()=>deleteEventLocal($('eventEditId').value);
+$('eventDeleteGoogle').onclick=()=>deleteEventInGoogle($('eventEditId').value);
+$('eventDuplicate').onclick=()=>duplicateCalendarEvent($('eventEditId').value);for(const k of sliderFields){$(k).addEventListener('input',()=>{$(k+'Unknown').checked=false;updateSlider(k)});$(k+'Unknown').addEventListener('change',()=>updateSlider(k))}for(const [k,button] of [['meds','medsYesterday'],['food','foodYesterday']])$(button).onclick=()=>{const d=$('stateDate').value||today(),y=currentRecord(plusDays(d,-1))[k];if(!y)return toast('За вчера нет записи');$(k).value=y;toast('Скопировано из предыдущего дня — проверь перед сохранением')};for(const id of ['stateDate','taskDate','diaryDate','historyDate'])$(id).value=activeDay;load();fillState(activeDay);fillDiary(activeDay);renderAll();
 if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js').catch(()=>{});
 window.LifeSimsCalendarBridge={
   getSchedule:()=>JSON.parse(JSON.stringify(state.schedule||[])),
+  getHidden:()=>JSON.parse(JSON.stringify(state.googleHidden||[])),
   canWrite:()=>!storageBlocked&&storageOK,
+  removeLocalEvent:(id)=>removeLocalCalendarEvent(id,true),
+  restoreHidden:(calendarId,id)=>{
+    const hidden=(state.googleHidden||[]).some(x=>x.calendarId===calendarId&&x.id===id);
+    if(!hidden)return false;
+    if(!transact(()=>{state.googleHidden=state.googleHidden.filter(x=>!(x.calendarId===calendarId&&x.id===id))})){
+      throw Error('Не удалось восстановить запись в браузере');
+    }
+    return true;
+  },
   upsert:(entries)=>{
     if(storageBlocked||!storageOK)throw Error('Сохранение LifeSims заблокировано, изменения не применены');
     if(!Array.isArray(entries)||entries.some(e=>!e||typeof e.id!=='string'||typeof e.title!=='string'))
@@ -550,7 +731,7 @@ window.LifeSimsCalendarBridge={
   panel.id = 'googleCalendarPanel';
   panel.innerHTML =
     '<h3>📅 Google Календарь</h3>' +
-    '<p class="hint">События выбранных календарей Google → LifeSims. Вариант двусторонней записи изменяет только основной календарь. Удалений нет, без интернета местные записи остаются.</p>' +
+    '<p class="hint">События выбранных календарей Google → LifeSims. Двусторонний режим позволяет создавать и редактировать события в основном календаре. Удаление в Google доступно только по отдельному подтверждению из редактора события.</p>' +
     '<p class="hint">После входа нажми «Проверить изменения», затем «Применить изменения». Иначе события не появятся в «Календаре». По умолчанию Google доступен только для чтения.</p>' +
     '<details><summary>Технические настройки (обычно не нужны)</summary>' +
     '<label class="field">OAuth Client ID<input id="gcClient" type="text" spellcheck="false" autocomplete="off" value="431544105696-rvvpicrjlrff400pafjb8tp3805lpqj8.apps.googleusercontent.com"></label>' +
@@ -564,7 +745,9 @@ window.LifeSimsCalendarBridge={
     '<div class="row"><button type="button" class="secondary" id="gcPreview" disabled>Проверить изменения</button>' +
     '<button type="button" class="primary" id="gcApply" disabled>Применить изменения</button></div>' +
     '<p id="gcStatus" class="hint" role="status" aria-live="polite">Google не подключён.</p>' +
-    '<div id="gcChanges"></div><p class="hint">Синхронизация выполняется только по кнопке, пока действует разрешение Google. ' +
+    '<div id="gcChanges"></div>' +
+    '<details id="gcHiddenPanel"><summary>Скрытые из LifeSims события Google</summary><div id="gcHiddenList"></div></details>' +
+    '<p class="hint">Синхронизация выполняется только по кнопке, пока действует разрешение Google. ' +
     'Окно просмотра: от 365 дней назад до 400 дней вперёд. Повторяющиеся события загружаются по отдельным датам, с изменёнными экземплярами; ' +
     'целодневные события поддерживаются. Для списка календарей Google запрашивает отдельное разрешение на чтение названий календарей. ' +
     'Перед первой синхронизацией скачай резервную копию JSON.</p>';
@@ -573,6 +756,7 @@ window.LifeSimsCalendarBridge={
   const el = id => document.getElementById(id);
   // Always use the verified project client; an obsolete localStorage value could prevent login.
   el('gcClient').value = DEFAULT_CLIENT_ID;
+  renderHidden();
 
   let token = '', expiry = 0, preview = null, busy = false, authorizedMode = '';
   let availableCalendars = [];
@@ -585,6 +769,25 @@ window.LifeSimsCalendarBridge={
   }
   let googleLibraryReady = false;
   function status(message) { el('gcStatus').textContent = message; }
+  function renderHidden(){
+    const target=el('gcHiddenList');target.replaceChildren();
+    const hidden=bridge.getHidden?.()||[];
+    if(!hidden.length){target.textContent='Скрытых событий нет.';return}
+    for(const item of hidden){
+      const line=document.createElement('div');line.className='gc-hidden-row';
+      const title=document.createElement('span');
+      title.textContent=(item.title||'Событие')+' · '+(item.calendarId==='primary'?'Основной календарь':'Другой календарь');
+      const button=document.createElement('button');button.type='button';button.className='secondary';
+      button.textContent='Восстановить';button.onclick=()=>{
+        try{
+          bridge.restoreHidden(item.calendarId,item.id);
+          invalidatePreview();renderHidden();
+          status('Событие разрешено к повторному импорту. Нажми «Проверить изменения» и «Применить изменения».');
+        }catch(error){status('⚠ '+error.message)}
+      };
+      line.append(title,button);target.append(line);
+    }
+  }
   function ready() {
     const authenticated = !!token && Date.now() < expiry - 30000;
     if (!authenticated) { token = ''; expiry = 0; }
@@ -731,11 +934,12 @@ window.LifeSimsCalendarBridge={
   function signature(event) {
     const values=[
       String(event.title || ''), String(event.startsAt || ''), String(event.endsAt || ''),
-      event.repeat === 'weekly' ? 'weekly' : 'none',
+      ['daily','weekly','monthly','yearly'].includes(event.repeat) ? event.repeat : 'none',
       event.repeat === 'weekly' ? [...(event.weekdays || [])].map(Number).sort((a, b) => a - b) : []
     ];
     // Keep legacy timed-event signatures compatible with previously synced data.
     if(event.allDay)values.push('all-day');
+    if(event.location||event.description)values.push([String(event.location||''),String(event.description||'')]);
     return JSON.stringify(values);
   }
   function project(event) {
@@ -765,7 +969,8 @@ window.LifeSimsCalendarBridge={
     const startsAt=allDay?event.start.date+'T00:00':localDate(event.start.dateTime);
     const endsAt=allDay?event.end.date+'T00:00':localDate(event.end.dateTime);
     if (!startsAt || !endsAt || endsAt <= startsAt) return null;
-    return { title: event.summary || 'Без названия', startsAt, endsAt, repeat, weekdays, allDay };
+    return { title:event.summary||'Без названия',startsAt,endsAt,repeat,weekdays,allDay,
+      location:event.location||'',description:event.description||'' };
   }
   function toGoogle(event) {
     const start = new Date(event.startsAt), end = new Date(event.endsAt);
@@ -787,11 +992,16 @@ window.LifeSimsCalendarBridge={
     const dateOnly=d=>[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
     const payload = {
       summary: event.title,
+      location: event.location || '',
+      description: event.description || '',
       start: event.allDay ? {date:dateOnly(start)} : {dateTime:start.toISOString(),timeZone:tz},
       end: event.allDay ? {date:dateOnly(end)} : {dateTime:end.toISOString(),timeZone:tz}
     };
     if (event.repeat === 'weekly') payload.recurrence = ['RRULE:FREQ=WEEKLY;BYDAY=' +
       [...new Set(event.weekdays)].map(n => weekdayCodes[n - 1]).join(',')];
+    else if(event.repeat==='daily')payload.recurrence=['RRULE:FREQ=DAILY'];
+    else if(event.repeat==='monthly')payload.recurrence=['RRULE:FREQ=MONTHLY;BYMONTHDAY='+start.getDate()];
+    else if(event.repeat==='yearly')payload.recurrence=['RRULE:FREQ=YEARLY;BYMONTH='+(start.getMonth()+1)+';BYMONTHDAY='+start.getDate()];
     else payload.recurrence = [];
     return payload;
   }
@@ -880,13 +1090,15 @@ window.LifeSimsCalendarBridge={
     const changes = [], claimed = new Set(), remoteIds = new Set();
     const selectedIds=new Set(getChosen().map(c=>c.primary?'primary':c.id));
     const migrated=new Set();
+    const hidden=new Set((bridge.getHidden?.()||[]).map(x=>eventKey(x.calendarId,x.id)));
     let conflicts = 0, orphaned = 0;
     const mapped=new Map(locals.filter(x=>x.google?.id).map(x=>[eventKey(x.google.calendarId||'primary',x.google.id),x]));
-    const legacySeries=new Map(locals.filter(x=>x.google?.id&&x.repeat==='weekly')
+    const legacySeries=new Map(locals.filter(x=>x.google?.id&&x.repeat&&x.repeat!=='none')
       .map(x=>[eventKey(x.google.calendarId||'primary',x.google.id),x]));
     for (const remote of remoteData.supported) {
       const key=eventKey(remote.calendarId,remote.id);
       remoteIds.add(key);
+      if(hidden.has(key))continue; // User explicitly hid this event locally; don't re-import it.
       if(remote.seriesId){
         const prior=legacySeries.get(eventKey(remote.calendarId,remote.seriesId));
         if(prior&&!migrated.has(prior.id)&&!prior.google?.supersededRange){
@@ -930,7 +1142,9 @@ window.LifeSimsCalendarBridge={
       if(local.google?.id && selectedIds.has(cid)&&!local.google?.supersededRange&&
         !remoteIds.has(eventKey(cid,local.google.id)))orphaned++;
     }
-    return { mode, changes, conflicts, orphaned, skipped: remoteData.skipped, snapshot: JSON.stringify(locals), from: remoteData.from,to:remoteData.to,calendars:remoteData.chosenCount,seen:remoteData.visible };
+    return { mode, changes, conflicts, orphaned, skipped: remoteData.skipped,
+      snapshot: JSON.stringify(locals), hiddenSnapshot: JSON.stringify(bridge.getHidden?.()||[]),
+      from: remoteData.from,to:remoteData.to,calendars:remoteData.chosenCount,seen:remoteData.visible };
   }
   async function withBusy(task) {
     if (busy) return;
@@ -938,6 +1152,51 @@ window.LifeSimsCalendarBridge={
     try { await task(); } catch (e) { status('⚠ ' + e.message); }
     finally { busy = false; ready(); }
   }
+  // Remote event deletion is an explicit, authenticated operation: never a sync side effect.
+  async function deleteEventInGoogle(localId){
+    if(busy)throw Error('Синхронизация ещё выполняется. Заверши её перед удалением.');
+    const event=bridge.getSchedule().find(x=>x.id===localId);
+    if(!event?.google?.id)throw Error('Это мероприятие не связано с Google.');
+    if(!bridge.canWrite())throw Error('Локальное сохранение недоступно. Удаление в Google отменено.');
+    if(!token||Date.now()>expiry-30000||authorizedMode!=='both'){
+      el('gcMode').value='both';
+      el('calendarGoogleEditor').open=true;
+      el('calendarGoogleEditor').scrollIntoView({behavior:'smooth',block:'start'});
+      status('Чтобы удалить событие в Google, выбери «Двусторонняя», нажми «Подключить Google» и разреши изменение событий. Затем открой мероприятие и нажми удаление ещё раз.');
+      throw Error('Требуется повторное подключение Google с правом изменения событий.');
+    }
+    const calendarId=event.google.calendarId||'primary';
+    const cal=availableCalendars.find(x=>calendarId==='primary'?x.primary:x.id===calendarId);
+    if(!cal||!['owner','writer'].includes(cal.role)){
+      throw Error('Нет подтверждённого права редактирования этого календаря. Можно убрать событие только из LifeSims.');
+    }
+    busy=true;ready();
+    try {
+      const path=eventsUrl(calendarId)+'/'+encodeURIComponent(event.google.id);
+      const fresh=await api('GET',path);
+      if(fresh.status==='cancelled')throw Error('Событие уже отменено в Google. Удали его только из LifeSims.');
+      if(event.google.etag&&fresh.etag&&event.google.etag!==fresh.etag){
+        throw Error('Событие в Google изменилось после последнего импорта. Сначала обнови синхронизацию.');
+      }
+      const series=event.repeat&&event.repeat!=='none'&&!event.google.seriesId;
+      const warning=series?' Это удалит всю серию повторяющихся мероприятий.':' Если это отдельный экземпляр повторяющегося события, будет удалён только этот экземпляр.';
+      const confirmText='Удалить «'+event.title+'» из Google Календаря «'+(cal.name||'Google')+'» и из LifeSims?'+
+        warning+' Участники Google могут получить уведомление. Действие нельзя автоматически отменить.';
+      if(!window.confirm(confirmText))return false;
+      status('Удаляю мероприятие в Google…');
+      await api('DELETE',path+'?sendUpdates=all',undefined,fresh.etag||event.google.etag);
+      try{bridge.removeLocalEvent(localId)}
+      catch(err){
+        status('⚠ В Google удалено, но в LifeSims не удалось сохранить удаление: '+err.message);
+        throw Error('В Google удалено; локальную запись нужно убрать отдельно.');
+      }
+      invalidatePreview();
+      renderHidden();
+      status('✓ Удалено из Google и LifeSims: '+event.title);
+      return true;
+    }finally{busy=false;ready()}
+  }
+  window.LifeSimsGoogleCalendarActions={deleteEvent:deleteEventInGoogle,refreshHidden:renderHidden};
   el('gcPreview').addEventListener('click', () => withBusy(async () => {
     invalidatePreview();
     if (!bridge.canWrite()) throw Error('Локальные данные недоступны для записи. Сначала восстанови сохранение LifeSims.');
@@ -952,7 +1211,8 @@ window.LifeSimsCalendarBridge={
   }));
   el('gcApply').addEventListener('click', () => withBusy(async () => {
     if (!preview || !preview.changes.length) return;
-    if (preview.snapshot !== JSON.stringify(bridge.getSchedule())) {
+    if (preview.snapshot !== JSON.stringify(bridge.getSchedule()) ||
+        preview.hiddenSnapshot !== JSON.stringify(bridge.getHidden?.()||[])) {
       invalidatePreview();
       throw Error('Мероприятия изменились после проверки. Проверь изменения заново.');
     }
@@ -995,10 +1255,11 @@ window.LifeSimsCalendarBridge={
     }
     flush();
     invalidatePreview();
-    status('✓ Синхронизировано ' + applied + ' мероприятий. В «Календаре» отображаются сохранённые события по датам. Ничего не удалено; можно скачать резервную копию JSON.');
+    renderHidden();
+    status('✓ Синхронизировано ' + applied + ' мероприятий. В «Календаре» отображаются сохранённые события по датам. Удалений не было; можно скачать резервную копию JSON.');
   }));
   ready();
-  window.LifeSimsGoogleCalendarVersion = 'inline-v11';
-  el('gcConnect').dataset.authHandler = 'inline-v11';
+  window.LifeSimsGoogleCalendarVersion = 'inline-v12';
+  el('gcConnect').dataset.authHandler = 'inline-v12';
 })();
 </script></body></html>
