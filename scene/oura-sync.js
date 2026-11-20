@@ -12,14 +12,14 @@ const panel=document.createElement('div');panel.className='card oura-panel';
 panel.innerHTML=[
 '<h3>💍 Oura Ring</h3>',
 '<div id="ouraToday" class="oura-today" role="status">Оценки Oura за сегодня пока не загружены.</div>',
-'<p class="hint">Фактический сон, шаги и калории, оценки сна и восстановления. Потребность во сне LifeSims рассчитывает отдельно.</p>',
+'<p class="hint">Первый импорт охватывает только последние 7 дней. Разрешения Oura могут включать пульс, тренировки, стресс и другие данные. Пока числовые поля LifeSims заполняются из ежедневных данных; расширенные категории подключаются отдельно и не выдаются за выполненную синхронизацию.</p>',
 '<details id="ouraSettings" open><summary>Подключение Oura</summary>',
 '<p class="hint">Создай OAuth-приложение на <a href="https://developer.ouraring.com/applications" target="_blank" rel="noopener noreferrer">Oura Developer → Applications</a>. Добавь Redirect URI ниже. Секретный ключ (Client Secret) сюда вводить нельзя.</p>',
 '<label class="field">Redirect URI <input id="ouraRedirect" type="text" readonly></label>',
 '<button type="button" class="secondary" id="ouraCopyRedirect">Скопировать Redirect URI</button>',
 '<label class="field">Oura Client ID <input id="ouraClientId" autocomplete="off" spellcheck="false" placeholder="Только публичный Client ID"></label>',
 '<div class="row"><button type="button" class="primary" id="ouraConnect">Подключить Oura</button><button type="button" class="secondary" id="ouraDisconnect" disabled>Отключить на устройстве</button></div></details>',
-'<label class="field">За какой период получить данные <select id="ouraDays"><option value="7">7 дней</option><option value="30" selected>30 дней</option><option value="90">90 дней</option></select></label>',
+'<label class="field">За какой период получить данные <select id="ouraDays"><option value="7" selected>7 дней</option><option value="30">30 дней</option><option value="90">90 дней</option></select></label>',
 '<label class="oura-auto"><input id="ouraAuto" type="checkbox"> Обновлять при открытии LifeSims (не чаще раза в 6 часов)</label>',
 '<div class="row"><button type="button" class="secondary" id="ouraPreview" disabled>Проверить данные</button><button type="button" class="primary" id="ouraApply" disabled>Сохранить в LifeSims</button></div>',
 '<p id="ouraStatus" class="hint" role="status" aria-live="polite">Oura не подключена.</p>',
@@ -70,7 +70,7 @@ el('ouraConnect').onclick=()=>{
  if(!/^[a-zA-Z0-9_-]{8,128}$/.test(id))return status('Укажи публичный Client ID своего приложения Oura.');
  try{saveSession(STATE_KEY,randomState());}catch(_){return status('Нужно разрешить sessionStorage в Chrome.')}
  saveSetting(ID_KEY,id);
- const params=new URLSearchParams({response_type:'token',client_id:id,redirect_uri:REDIRECT,scope:'daily',state:session(STATE_KEY)});
+ const params=new URLSearchParams({response_type:'token',client_id:id,redirect_uri:REDIRECT,scope:'daily heartrate tag workout session spo2 ring_configuration stress heart_health',state:session(STATE_KEY)});
  location.assign(AUTH+'?'+params.toString());
 };
 function callback(){
