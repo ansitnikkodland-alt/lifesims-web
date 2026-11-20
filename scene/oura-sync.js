@@ -11,6 +11,7 @@ const el=id=>document.getElementById(id);
 const panel=document.createElement('div');panel.className='card oura-panel';
 panel.innerHTML=[
 '<h3>💍 Oura Ring</h3>',
+'<div id="ouraToday" class="oura-today" role="status">Оценки Oura за сегодня пока не загружены.</div>',
 '<p class="hint">Фактический сон, шаги и калории, оценки сна и восстановления. Потребность во сне LifeSims рассчитывает отдельно.</p>',
 '<details id="ouraSettings" open><summary>Подключение Oura</summary>',
 '<p class="hint">Создай OAuth-приложение на <a href="https://cloud.ouraring.com/" target="_blank" rel="noopener noreferrer">Oura Cloud → My Applications</a>. Добавь Redirect URI ниже. Секретный ключ (Client Secret) сюда вводить нельзя.</p>',
@@ -33,6 +34,14 @@ const session=(k)=>{try{return sessionStorage.getItem(k)}catch(_){return null}};
 const saveSession=(k,v)=>sessionStorage.setItem(k,v);
 const dropSession=k=>{try{sessionStorage.removeItem(k)}catch(_){}};
 const status=v=>el('ouraStatus').textContent=v;
+function renderToday(){
+ const r=bridge.getDays()[bridge.today()]||{},scores=r.ouraScores||{};
+ const vals=[];
+ if(Number.isFinite(scores.sleep))vals.push('Сон '+scores.sleep+'/100');
+ if(Number.isFinite(scores.readiness))vals.push('Восстановление '+scores.readiness+'/100');
+ if(Number.isFinite(scores.activity))vals.push('Активность '+scores.activity+'/100');
+ el('ouraToday').textContent=vals.length?'Сегодня по Oura: '+vals.join(' · '):'Оценки Oura за сегодня пока не загружены.';
+}
 const connected=()=>token&&expiry>Date.now()+30000;
 function update(){
  el('ouraConnect').disabled=busy;el('ouraDisconnect').disabled=busy||!connected();
@@ -156,6 +165,7 @@ function apply(automatic=false){
  if(!preview)return;
  if(preview.snapshot!==JSON.stringify(bridge.getDays())){preview=null;renderPreview();throw Error('Показатели LifeSims изменились. Проверь данные Oura ещё раз.')}
  const done=bridge.importDays(preview.records);
+ renderToday();
  preview=null;renderPreview();saveSetting(LAST_KEY,String(Date.now()));
  status('✓ Oura: обновлено '+done.fields+' показателей за '+done.days+' дней; ручные записи не перезаписаны.'+(automatic?' Автопроверка выполнена.':''));
  update();
@@ -180,6 +190,7 @@ async function load(automatic=false){
 }
 el('ouraPreview').onclick=()=>load(false).catch(e=>status('⚠ '+e.message));
 el('ouraApply').onclick=()=>{try{apply(false)}catch(e){status('⚠ '+e.message)}};
+renderToday();
 update();
 if(connected()&&el('ouraAuto').checked&&bridge.wasImported()){
  const last=Number(setting(LAST_KEY)||0);
