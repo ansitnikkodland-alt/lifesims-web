@@ -691,9 +691,14 @@ if(object==='desk'){
  $('sheetActions').append(action);
 }
 if(object==='window'){
- const title=document.createElement('p');title.className='hint';title.textContent='Ближайшие мероприятия · выбери, куда отправиться';$('sheetActions').append(title);
- const events=scheduleHistoryOccurrences(today(),plusDays(today(),21))
-  .filter(e=>!state.room?.work||e.title!==state.room.work.name).slice(0,12);
+ const title=document.createElement('p');title.className='hint';title.textContent='Мероприятия на ближайший месяц · выбрать для посещения';$('sheetActions').append(title);
+ const seenSeries=new Set();
+ const events=scheduleHistoryOccurrences(today(),plusDays(today(),30))
+  .filter(e=>{
+   if(state.room?.work&&e.title===state.room.work.name)return false;
+   if(seenSeries.has(e.id))return false;
+   seenSeries.add(e.id);return true;
+  }).slice(0,12);
  if(!events.length){const empty=document.createElement('p');empty.className='hint';empty.textContent='Мероприятий на ближайшие 3 недели нет.';$('sheetActions').append(empty)}
  for(const entry of events){
   const btn=document.createElement('button');btn.type='button';btn.textContent='📅 '+entry.date.slice(5)+' · '+entry.title;
