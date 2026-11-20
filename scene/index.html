@@ -492,7 +492,7 @@ body{background:#091428}
 <div class="cols"><label class="field">Тип <select id="taskKind"><option value="task">Дело</option><option value="habit">Привычка</option></select></label>
 <label class="field">Повтор <select id="taskRepeat"><option value="once">Однократно</option><option value="daily">Ежедневно</option><option value="weekly">По дням недели</option></select></label></div>
 <fieldset id="taskWeekdays" hidden><legend>Конкретные дни недели</legend><div class="row"><label><input type="checkbox" name="taskWeekday" value="1"> Пн</label><label><input type="checkbox" name="taskWeekday" value="2"> Вт</label><label><input type="checkbox" name="taskWeekday" value="3"> Ср</label><label><input type="checkbox" name="taskWeekday" value="4"> Чт</label><label><input type="checkbox" name="taskWeekday" value="5"> Пт</label><label><input type="checkbox" name="taskWeekday" value="6"> Сб</label><label><input type="checkbox" name="taskWeekday" value="7"> Вс</label></div></fieldset>
-<div class="cols"><label class="field">Начало <input id="taskStartDate" type="date" required></label><label class="field">Награда <select id="taskXP"><option value="0">0 XP</option><option value="5">5 XP</option><option value="10" selected>10 XP</option><option value="15">15 XP</option><option value="20">20 XP</option><option value="40">40 XP</option></select></label></div>
+<div class="cols"><label class="field">Начало <input id="taskStartDate" type="date" required></label><label class="field">Влияние на ресурс <select id="taskXP"><option value="-40">−40 XP · сильное снижение</option><option value="-20">−20 XP</option><option value="-15">−15 XP</option><option value="-10">−10 XP</option><option value="-5">−5 XP</option><option value="0">0 XP · без влияния</option><option value="5">+5 XP</option><option value="10" selected>+10 XP</option><option value="15">+15 XP</option><option value="20">+20 XP</option><option value="40">+40 XP</option></select></label></div>
 <label class="field">Связать с предметом в комнате <select id="taskObject"><option value="">Без связи</option><option value="bed">🛏 Кровать</option><option value="books">📚 Книжный шкаф</option><option value="desk">💻 Рабочий стол</option><option value="sink">🚰 Раковина</option><option value="shower">🚿 Душевая кабина</option><option value="sofa">🛋 Диван</option><option value="sim">👤 Персонаж</option><option value="window">🪟 Окно</option></select></label>
 <div class="row"><button class="primary" type="submit" id="taskSave">Сохранить дело/привычку</button><button class="secondary" type="button" id="taskCancel">Отмена</button><button class="secondary" type="button" id="taskDelete" hidden>Удалить</button></div>
 <p class="hint">Изменение или удаление дела не удаляет записи о его прежнем выполнении и уже полученный XP.</p>
@@ -624,7 +624,7 @@ function complete(a,date){if(done(a,date))return toast('Уже выполнен�
  if(a.id==='bed_make'){state.room??={};state.room.bedMadeOn=date}
  if(a.object==='shower'&&/принят.*душ|принять душ|помытьс|приняла душ/i.test(a.name)){state.room??={};state.room.lastShowerAt=stamp}
  if(/уборк|помыть|убрать|постират|мыть посуд|разобрать|пропылесос/i.test(a.name)){state.room??={};state.room.lastCleanAt=stamp;state.room.entropyOffset=Math.min(0,(state.room.entropyOffset||0)-4)}
- state.events.push({id:uid(),kind:'complete',activityId:a.id,name:a.name,date,at:stamp,xp})})){toast(`✓ ${a.name}${xp?' · +'+xp+' XP':''}`);$('sceneStatus').textContent='✓ '+a.name;renderAll()}}
+ state.events.push({id:uid(),kind:'complete',activityId:a.id,name:a.name,date,at:stamp,xp})})){toast(`✓ ${a.name}${xp?' · '+(xp>0?'+':'')+xp+' XP':''}`);$('sceneStatus').textContent='✓ '+a.name;renderAll()}}
 let activeQuickKind='task';
 function relevantActivities(date,kind){
  return state.activities.filter(a=>{
@@ -647,7 +647,7 @@ function makeActivityItem(a,date){
   ?a.weekdays.map(n=>['','Пн','Вт','Ср','Чт','Пт','Сб','Вс'][Number(n)]).filter(Boolean).join(', ')
   :'раз в неделю';
  description.textContent=(a.repeat==='daily'?'Ежедневно':a.repeat==='weekly'?weekdays:'Однократно')+
-  ' · '+(a.xp||0)+' XP';
+  ' · '+((Number(a.xp)||0)>0?'+':'')+(Number(a.xp)||0)+' XP';
  text.append(title,description);el.append(mark,text);
  if(a.object){const badge=document.createElement('span');badge.className='pill';badge.textContent='Комната';el.append(badge)}
  const edit=document.createElement('button');edit.className='secondary task-edit';
@@ -693,8 +693,8 @@ function openActivityEditor(id){
  $('taskTitle').value=a.name||'';$('taskKind').value=a.kind==='habit'?'habit':'task';
  $('taskRepeat').value=['once','daily','weekly'].includes(a.repeat)?a.repeat:'once';
  $('taskStartDate').value=a.createdDate||today();
- $('taskXP').value=String(a.xp||0);
- if(!$('taskXP').value)$('taskXP').value='10';
+ $('taskXP').value=String(Number.isFinite(a.xp)?a.xp:0);
+ if(!$('taskXP').value)$('taskXP').value='0';
  $('taskObject').value=a.object||'';
  $('taskWeekdays').hidden=a.repeat!=='weekly';
  document.querySelectorAll('[name=taskWeekday]').forEach(x=>x.checked=Array.isArray(a.weekdays)?a.weekdays.includes(Number(x.value)):false);
@@ -1049,7 +1049,7 @@ function openSingleMetric(field,date=today()){
   }else message.textContent='Не удалось сохранить показатель.';
  }
  if(field==='resource'){
-  addNumber('Расчётный ресурс',derivedResource(r,date)==null?null:derivedResource(r,date)+'%');
+  addNumber('Расчётный ресурс',derivedResource(r,date)==null?null:derivedResource(r,date)+'%');const impact=resourceActivityImpact(date);addNumber('Влияние выполненных дел и привычек', (impact>0?'+':'')+impact+' XP');
   const data=[
    ['Сон',sleepAssessment(date).need],
    ['Настроение',r.mood],
@@ -1058,7 +1058,7 @@ function openSingleMetric(field,date=today()){
    ['Сытость',r.nutrition==null?estimatedFoodNeed(date):r.nutrition]
   ];
   for(const [name,value] of data)addNumber(name,value==null?null:value+'%');
-  note('Ресурс автоматически вычисляется из имеющихся показателей. Напрямую изменить его нельзя — нужно изменить соответствующий исходный показатель.');
+  note('Ресурс = среднее имеющихся показателей + сумма подписанных XP за выполненные сегодня действия (ограничено 0–100%). При отсутствии показателей, но наличии действий, игровая база составляет 50%.');
  }else if(field==='entropy'){
   addNumber('Игровая энтропия',gameEntropy()+'%');
   const input=document.createElement('input');input.type='range';input.min='0';input.max='100';input.step='5';input.value=gameEntropy();input.className='color-slider';
@@ -1206,11 +1206,21 @@ function hygieneCondition(r,date){
  // A manual value may lower, but not silently mask, elapsed-time decay.
  return Number.isFinite(r.hygiene)?Math.min(r.hygiene,automatic):automatic;
 }
+function resourceActivityImpact(date){
+ // Recorded completion XP is a signed, once-per-activity contribution.
+ // Count only completions performed on this day, not future tasks.
+ return (state.events||[]).reduce((sum,event)=>sum+(
+   event?.kind==='complete'&&event.date===date&&Number.isFinite(Number(event.xp))?
+   Number(event.xp):0),0);
+}
 function derivedResource(r,d){
  const sleep=sleepAssessment(d).need;
  const vals=[sleep,r.mood,physicalCondition(r,d),hygieneCondition(r,d),r.nutrition==null?estimatedFoodNeed(d):r.nutrition];
  const available=vals.filter(x=>typeof x==='number'&&Number.isFinite(x));
- return available.length?Math.round(available.reduce((a,b)=>a+b,0)/available.length):null;
+ const influence=resourceActivityImpact(d);
+ if(!available.length&&!influence)return null;
+ const base=available.length?available.reduce((a,b)=>a+b,0)/available.length:50;
+ return Math.max(0,Math.min(100,Math.round(base+influence)));
 }
 function renderCrystal(){const r=currentRecord(today());const v=derivedResource(r,today());const p=v==null?['#c2e9ff','#76c9ef','#2169b6']:v>65?['#c7fff0','#55dfa5','#0e9874']:v>35?['#fff2b1','#edbf53','#a57a15']:['#ffc2cd','#f4778c','#af405b'];const el=$('plumbob');el.style.setProperty('--gem-light',p[0]);el.style.setProperty('--gem-middle',p[1]);el.style.setProperty('--gem-dark',p[2]);el.title=v==null?'Ресурс не записан; нажми, чтобы записать':`Ресурс: ${v}%`}
 function sleepAssessment(date){const dates=Object.keys(state.days).filter(d=>d<=date&&state.days[d]?.sleepHours!=null).sort();if(!dates.length)return {need:null,debt:null,last:null};let debt=0,prev=null,gaps=false;for(const d of dates){const rec=state.days[d],hours=Number(rec.sleepHours);if(prev&&plusDays(prev,1)!==d)gaps=true;debt=Math.max(0,debt+7.5-hours);if(rec.sleepDebtAdjustment!=null)debt=Number(rec.sleepDebtAdjustment);prev=d}const last=Number(state.days[dates[dates.length-1]].sleepHours);if(dates[dates.length-1]!==date)return {need:null,debt:gaps?null:debt,last};
