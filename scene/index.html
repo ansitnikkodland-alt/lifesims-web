@@ -160,9 +160,18 @@
 <p class="hint" id="eventDeleteHelp" hidden>Удаление из LifeSims не затрагивает Google. Для удаления в Google необходимо подключить аккаунт с правом изменения событий и подтвердить действие.</p>
 </form>
 </details>
-<details id="calendarTaskEditor" class="card calendar-editor"><summary>Добавить дело или привычку</summary>
-<form id="taskForm" class="card"><label class="field">Название дела <input id="taskTitle" maxlength="150" required placeholder="Например, разобрать вещи"></label><div class="cols"><label class="field">Повтор <select id="taskRepeat"><option value="once">Один раз</option><option value="daily">Ежедневно</option><option value="weekly">Еженедельно</option></select></label><label class="field">Награда <select id="taskXP"><option value="5">5 XP</option><option value="10" selected>10 XP</option><option value="20">20 XP</option><option value="40">40 XP</option></select></label></div><label class="field">Связать с предметом (необязательно)<select id="taskAction"><option value="">Без связи с комнатой</option></select></label><button class="primary" type="submit">Добавить дело</button></form>
-</details>
+<details id="calendarTaskEditor" class="card calendar-editor"><summary id="taskEditorHeading">Добавить или изменить дело/привычку</summary>
+<form id="taskForm" class="card">
+<input type="hidden" id="taskEditId">
+<label class="field">Название <input id="taskTitle" maxlength="150" required placeholder="Например, отчёт по воскресеньям"></label>
+<div class="cols"><label class="field">Тип <select id="taskKind"><option value="task">Дело</option><option value="habit">Привычка</option></select></label>
+<label class="field">Повтор <select id="taskRepeat"><option value="once">Однократно</option><option value="daily">Ежедневно</option><option value="weekly">По дням недели</option></select></label></div>
+<fieldset id="taskWeekdays" hidden><legend>Конкретные дни недели</legend><div class="row"><label><input type="checkbox" name="taskWeekday" value="1"> Пн</label><label><input type="checkbox" name="taskWeekday" value="2"> Вт</label><label><input type="checkbox" name="taskWeekday" value="3"> Ср</label><label><input type="checkbox" name="taskWeekday" value="4"> Чт</label><label><input type="checkbox" name="taskWeekday" value="5"> Пт</label><label><input type="checkbox" name="taskWeekday" value="6"> Сб</label><label><input type="checkbox" name="taskWeekday" value="7"> Вс</label></div></fieldset>
+<div class="cols"><label class="field">Начало <input id="taskStartDate" type="date" required></label><label class="field">Награда <select id="taskXP"><option value="0">0 XP</option><option value="5">5 XP</option><option value="10" selected>10 XP</option><option value="15">15 XP</option><option value="20">20 XP</option><option value="40">40 XP</option></select></label></div>
+<label class="field">Связать с предметом в комнате <select id="taskObject"><option value="">Без связи</option><option value="bed">🛏 Кровать</option><option value="books">📚 Книжный шкаф</option><option value="desk">💻 Рабочий стол</option><option value="sink">🚰 Раковина</option><option value="shower">🚿 Душевая кабина</option><option value="sofa">🛋 Диван</option><option value="sim">👤 Персонаж</option><option value="window">🪟 Окно</option></select></label>
+<div class="row"><button class="primary" type="submit" id="taskSave">Сохранить дело/привычку</button><button class="secondary" type="button" id="taskCancel">Отмена</button><button class="secondary" type="button" id="taskDelete" hidden>Удалить</button></div>
+<p class="hint">Изменение или удаление дела не удаляет записи о его прежнем выполнении и уже полученный XP.</p>
+</form></details>
 <details id="calendarAllEvents" class="card calendar-editor"><summary>Управление всеми мероприятиями</summary><div id="eventList"></div></details>
 <details id="calendarGoogleEditor" class="card calendar-editor"><summary>🔄 Синхронизация с Google Календарём</summary><div id="googleCalendarMount"></div></details>
 </section>
@@ -215,12 +224,67 @@ function fillState(d){$('stateDate').value=d;const r=currentRecord(d);for(const 
 function parseField(k){if(sliderFields.includes(k)&&$(k+'Unknown').checked)return null;const el=$(k),v=el.value.trim();if(v==='')return null;if(['meds','food','cycle'].includes(k))return v;const n=Number(v);if(!Number.isFinite(n)||el.validity.badInput||!el.checkValidity())throw Error(`Неправильное значение: ${k}`);return n}
 function saveFieldState(e){e.preventDefault();const d=$('stateDate').value||today();if(!/^\d{4}-\d\d-\d\d$/.test(d))return toast('Выбери дату');let patch={};try{for(const k of fields)patch[k]=parseField(k)}catch(e){toast(e.message);return}const old=currentRecord(d);const changed=fields.some(k=>old[k]!==patch[k]);if(!changed)return toast('Нечего обновлять');const fromOura=Array.isArray(old.ouraFields)?old.ouraFields.filter(k=>old[k]===patch[k]):[];const r={...old,...patch,ouraFields:fromOura,updatedAt:new Date().toISOString()};if(setDay(d,r)){activeDay=d;toast('Показатели сохранены за '+d);renderAll()}}
 function weekKey(d){const date=asDay(d);const weekday=(date.getDay()+6)%7;date.setDate(date.getDate()-weekday);return dayStr(date)}
-function due(a,d){if(a.legacyDone)return false;if(a.repeat==='once')return (a.createdDate||d)<=d;if(a.repeat==='daily')return (a.createdDate||'0000-00-00')<=d;if(a.repeat==='weekly')return (a.createdDate||'0000-00-00')<=d;return false}
+function due(a,d){
+ if(a.legacyDone)return false;
+ const origin=a.createdDate||'0000-00-00';
+ if(d<origin)return false;
+ if(a.repeat==='once')return d===(a.createdDate||d);
+ if(a.repeat==='daily')return true;
+ if(a.repeat==='weekly'){
+  const weekdays=Array.isArray(a.weekdays)?a.weekdays.map(Number).filter(n=>n>=1&&n<=7):[];
+  if(!weekdays.length)return ((asDay(d).getDay()+6)%7)===((asDay(a.createdDate||d).getDay()+6)%7);
+  return weekdays.includes(((asDay(d).getDay()+6)%7)+1);
+ }
+ return false;
+}
 function done(a,d){if(a.legacyDone)return true;const cm=Array.isArray(a.completions)?a.completions:[];if(a.repeat==='once')return cm.length>0;if(a.repeat==='weekly')return cm.some(c=>weekKey(c.date)===weekKey(d));return cm.some(c=>c.date===d)}
 function complete(a,date){if(done(a,date))return toast('Уже выполнено — XP второй раз не начисляются');if(!due(a,date))return toast('Дело ещё не запланировано');const xp=Number.isFinite(a.xp)?a.xp:0;const stamp=new Date().toISOString();if(transact(()=>{a.completions??=[];a.completions.push({date,at:stamp,xp});state.events.push({id:uid(),kind:'complete',activityId:a.id,name:a.name,date,at:stamp,xp})})){toast(`✓ ${a.name}${xp?' · +'+xp+' XP':''}`);$('sceneStatus').textContent='✓ '+a.name;renderAll()}}
-function renderActivities(){const d=$('taskDate').value||today();const list=$('taskList');list.replaceChildren();const relevant=state.activities.filter(a=>{if(a.legacyDone)return false;if(a.kind==='habit'&&!a.createdDate&&d<(state.createdAt||'').slice(0,10)&&!(a.completions||[]).some(c=>c.date===d))return false;return due(a,d)});if(!relevant.length){list.textContent='На эту дату дел нет';return}for(const a of relevant){const finished=done(a,d),el=document.createElement('div');el.className='item'+(finished?' done':'');const btn=document.createElement('button');btn.className='check';btn.textContent=finished?'✓':'○';btn.disabled=finished;btn.setAttribute('aria-label',`Выполнить ${a.name}`);btn.onclick=()=>complete(a,d);const text=document.createElement('div');text.className='itemtext';const title=document.createElement('strong');title.textContent=a.name;const sub=document.createElement('small');sub.textContent=(a.kind==='habit'?'Привычка':'Дело')+' · '+(a.repeat==='daily'?'Ежедневно':a.repeat==='weekly'?'Еженедельно':'Одноразовое')+' · '+(a.xp||0)+' XP'+(a.legacyDone?' · Выполнено в прежней версии (дата не установлена)':'');text.append(title,sub);el.append(btn,text);if(a.object){const badge=document.createElement('span');badge.className='pill';badge.textContent='Комната';el.append(badge)}list.append(el)}}
-function addActivity(e){e.preventDefault();const name=$('taskTitle').value.trim();if(!name)return;const actionKey=$('taskAction').value,linked=defs.find(a=>a.id===actionKey);if(linked){const existing=state.activities.find(a=>a.id===actionKey);if(existing){toast('Это действие уже есть — используй существующую привычку');return}}
-const calendarDate=$('historyDate').value||today();const act=linked?{...linked,kind:'habit',completions:[],createdDate:calendarDate}: {id:uid(),name,xp:Number($('taskXP').value),repeat:$('taskRepeat').value,createdDate:calendarDate,kind:'task',completions:[]};if(transact(()=>{state.activities.push(act)})){toast('Добавлено: '+act.name);$('taskForm').reset();$('calendarTaskEditor').open=false;renderAll()}}
+function renderActivities(){const d=$('taskDate').value||today();const list=$('taskList');list.replaceChildren();const relevant=state.activities.filter(a=>{if(a.legacyDone)return false;if(a.kind==='habit'&&!a.createdDate&&d<(state.createdAt||'').slice(0,10)&&!(a.completions||[]).some(c=>c.date===d))return false;return due(a,d)});if(!relevant.length){list.textContent='На эту дату дел нет';return}for(const a of relevant){const finished=done(a,d),el=document.createElement('div');el.className='item'+(finished?' done':'');const btn=document.createElement('button');btn.className='check';btn.textContent=finished?'✓':'○';btn.disabled=finished;btn.setAttribute('aria-label',`Выполнить ${a.name}`);btn.onclick=()=>complete(a,d);const text=document.createElement('div');text.className='itemtext';const title=document.createElement('strong');title.textContent=a.name;const sub=document.createElement('small');
+ const weekdaysLabel=Array.isArray(a.weekdays)&&a.weekdays.length?a.weekdays.map(n=>['','Пн','Вт','Ср','Чт','Пт','Сб','Вс'][Number(n)]).join(', '):'раз в неделю';
+ sub.textContent=(a.kind==='habit'?'Привычка':'Дело')+' · '+(a.repeat==='daily'?'Ежедневно':a.repeat==='weekly'?weekdaysLabel:'Однократно')+' · '+(a.xp||0)+' XP';text.append(title,sub);el.append(btn,text);if(a.object){const badge=document.createElement('span');badge.className='pill';badge.textContent='Комната';el.append(badge)}
+ const edit=document.createElement('button');edit.className='secondary task-edit';edit.type='button';edit.textContent='Изменить';edit.onclick=()=>openActivityEditor(a.id);el.append(edit);list.append(el)}}
+function clearActivityEditor(){
+ $('taskForm').reset();$('taskEditId').value='';
+ $('taskStartDate').value=$('historyDate').value||today();
+ document.querySelectorAll('[name=taskWeekday]').forEach(x=>x.checked=false);
+ $('taskWeekdays').hidden=true;$('taskDelete').hidden=true;
+ $('taskEditorHeading').textContent='Добавить дело или привычку';$('taskSave').textContent='Сохранить';
+}
+function openActivityEditor(id){
+ const a=state.activities.find(x=>x.id===id);
+ if(!a)return toast('Дело не найдено');
+ clearActivityEditor();$('taskEditId').value=id;
+ $('taskTitle').value=a.name||'';$('taskKind').value=a.kind==='habit'?'habit':'task';
+ $('taskRepeat').value=['once','daily','weekly'].includes(a.repeat)?a.repeat:'once';
+ $('taskStartDate').value=a.createdDate||today();
+ $('taskXP').value=String(a.xp||0);
+ if(!$('taskXP').value)$('taskXP').value='10';
+ $('taskObject').value=a.object||'';
+ $('taskWeekdays').hidden=a.repeat!=='weekly';
+ document.querySelectorAll('[name=taskWeekday]').forEach(x=>x.checked=Array.isArray(a.weekdays)?a.weekdays.includes(Number(x.value)):false);
+ $('taskDelete').hidden=false;$('taskEditorHeading').textContent='Изменить дело или привычку';
+ $('calendarTaskEditor').open=true;$('calendarTaskEditor').scrollIntoView({block:'center',behavior:'smooth'});
+}
+function addActivity(e){
+ e.preventDefault();
+ const name=$('taskTitle').value.trim();if(!name)return toast('Введи название');
+ const repeat=$('taskRepeat').value;
+ const weekdays=[...document.querySelectorAll('[name=taskWeekday]:checked')].map(x=>Number(x.value));
+ if(repeat==='weekly'&&!weekdays.length)return toast('Выбери конкретные дни недели');
+ const id=$('taskEditId').value;
+ const old=state.activities.find(x=>x.id===id);
+ if(id&&!old)return toast('Дело больше не найдено');
+ const act={...(old||{}),id:old?.id||uid(),name,repeat,weekdays:repeat==='weekly'?weekdays:[],createdDate:$('taskStartDate').value||today(),kind:$('taskKind').value==='habit'?'habit':'task',xp:Number($('taskXP').value),object:$('taskObject').value||null,completions:old?.completions||[]};
+ if(!transact(()=>{const i=state.activities.findIndex(x=>x.id===act.id);if(i<0)state.activities.push(act);else state.activities[i]=act;}))return toast('Не удалось сохранить');
+ clearActivityEditor();$('calendarTaskEditor').open=false;
+ renderAll();toast(old?'Дело обновлено':'Дело добавлено');
+}
+function deleteActivity(id){
+ const a=state.activities.find(x=>x.id===id);
+ if(!a||!confirm('Удалить «'+a.name+'» из будущих дел? История выполнений и XP сохранятся.'))return;
+ if(!transact(()=>{state.activities=state.activities.filter(x=>x.id!==id)}))return toast('Не удалось удалить');
+ clearActivityEditor();$('calendarTaskEditor').open=false;renderAll();toast('Дело удалено');
+}
 function placeSheet(anchor){
 const scene=$('scene'),sr=scene.getBoundingClientRect(),el=anchor||document.querySelector('.touchmap [data-object="sim"]'),ar=el.getBoundingClientRect(),popup=$('sheetWrap').querySelector('.sheet');
 const width=popup.offsetWidth,height=popup.offsetHeight;
@@ -236,10 +300,15 @@ function renderWork(){const work=state.room?.work||null;$('scene').classList.tog
 function openObject(object,anchor){
 $('sheetTitle').textContent=labels[object]||'Действия';$('sheetActions').replaceChildren();
 if(object==='window'){if(state.room?.work){const b=document.createElement('button');b.textContent='Вернуться домой';b.onclick=()=>{closeSheet();finishWork()};$('sheetActions').append(b)}else{const p=document.createElement('p');p.textContent='Работа: мероприятия. Подтверди выход — он сохранится в истории без начисления XP.';const input=document.createElement('input');input.type='text';input.maxLength=130;input.placeholder='Название мероприятия (необязательно)';input.setAttribute('aria-label','Название мероприятия');input.style.width='100%';input.style.marginBottom='8px';const b=document.createElement('button');b.textContent='Пойти на работу (мероприятия)';b.onclick=()=>{const title=input.value;closeSheet();startWork(title)};$('sheetActions').append(p,input,b)}}
-for(const c of defs.filter(x=>x.object===object)){
+for(const c of defs.filter(x=>x.object===object&&x.open)){
 const b=document.createElement('button'),span=document.createElement('span'),sm=document.createElement('small');span.textContent=c.name;
 const a=state.activities.find(x=>x.id===c.id);sm.textContent=c.open?'Открыть':a&&done(a,today())?'✓ Готово':`+${c.xp} XP`;
 b.append(span,sm);b.onclick=()=>{closeSheet();if(c.open){if(c.open==='state')showNeedsEditor('',today());else openTab(c.open,true);return}if(!a){toast('Действие не найдено');return}complete(a,today())};$('sheetActions').append(b)
+}
+for(const a of state.activities.filter(a=>a.object===object&&due(a,today()))){
+ const btn=document.createElement('button'),span=document.createElement('span'),small=document.createElement('small');
+ span.textContent=a.name;small.textContent=done(a,today())?'✓ Уже сделано':'+ '+(a.xp||0)+' XP';
+ btn.append(span,small);btn.onclick=()=>{closeSheet();complete(a,today())};$('sheetActions').append(btn);
 }
 $('sheetWrap').classList.add('open');$('sheetWrap').setAttribute('aria-hidden','false');
 placeSheet(anchor||document.querySelector('.touchmap [data-object="'+object+'"]'));
@@ -677,7 +746,7 @@ function openNewCalendarEvent(){
   $('calendarEventEditor').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function openNewCalendarTask(){
-  $('taskDate').value=$('historyDate').value||today();
+  clearActivityEditor();$('taskDate').value=$('historyDate').value||today();
   $('calendarTaskEditor').open=true;
   $('calendarTaskEditor').scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -766,7 +835,10 @@ for(const b of document.querySelectorAll('.touchmap .hot')){b.addEventListener('
 $('dayAgendaOverlay').addEventListener('click',e=>{if(e.target===$('dayAgendaOverlay'))closeDayAgenda()});
 $('agendaAddEvent').onclick=()=>{closeDayAgenda();openNewCalendarEvent()};
 $('agendaAddTask').onclick=()=>{closeDayAgenda();openNewCalendarTask()};$('openCalendarGoogle').onclick=()=>{$('calendarGoogleEditor').open=true;$('calendarGoogleEditor').scrollIntoView({behavior:'smooth',block:'start'})};$('diaryDate').onchange=()=>fillDiary($('diaryDate').value);$('exportData').onclick=backup;$('downloadHTML').onclick=downloadHTML;$('importData').onclick=restore;$('confirmImport').onclick=confirmImport;$('cancelImport').onclick=()=>{pendingImport=null;$('importConfirmPanel').hidden=true;importMessage('Импорт отменён. Текущий прогресс не изменён.')};$('importFile').onchange=()=>{pendingImport=null;$('importConfirmPanel').hidden=true;importMessage('Файл выбран. Нажми «Проверить файл JSON».')};
-for(const a of defs.filter(a=>a.xp>0)){const opt=document.createElement('option');opt.value=a.id;opt.textContent=a.name;$('taskAction').append(opt)}
+$('taskRepeat').onchange=()=>{$('taskWeekdays').hidden=$('taskRepeat').value!=='weekly'};
+$('taskCancel').onclick=()=>{clearActivityEditor();$('calendarTaskEditor').open=false};
+$('taskDelete').onclick=()=>deleteActivity($('taskEditId').value);
+clearActivityEditor();
 $('eventRepeat').onchange=()=>{$('eventWeekdays').hidden=$('eventRepeat').value!=='weekly'};$('eventForm').onsubmit=saveEvent;
 $('eventCancel').onclick=()=>{clearEventForm();$('calendarEventEditor').open=false};
 $('eventAllDay').onchange=toggleEventDates;
