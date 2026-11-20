@@ -63,7 +63,7 @@ function renderToday(){
 const connected=()=>token&&expiry>Date.now()+30000;
 function update(){
  el('ouraConnect').disabled=busy;el('ouraDisconnect').disabled=busy||!connected();
- el('ouraPreview').disabled=busy||!connected();el('ouraApply').disabled=busy||!preview?.records.length;
+ el('ouraPreview').disabled=busy||!connected();el('ouraApply').disabled=busy||!preview||(!preview.records.length&&!preview.collections?.some(c=>c.items.length));
 }
 function clearToken(){token='';expiry=0;preview=null;grantedScopes=[];dropSession(TOKEN_KEY);update()}
 el('ouraClientId').value=setting(ID_KEY)||'';
@@ -278,7 +278,6 @@ async function load(automatic=false){
   const sleepScore=await read('daily_sleep',start,end);
   const readiness=await read('daily_readiness',start,end);
   const records=aggregate(sleep,activity,sleepScore,readiness);
-  if(!records.length){preview=null;renderPreview();status('Oura не вернула данные за этот период. Синхронизируй кольцо через приложение Oura.');return}
   const baseCollections=[
     {name:'sleep',label:'Периоды сна',items:sleep},
     {name:'daily_activity',label:'Активность по дням',items:activity},
@@ -286,11 +285,12 @@ async function load(automatic=false){
     {name:'daily_readiness',label:'Оценки восстановления',items:readiness}
   ];
   const {extra,failures}=await fetchExtras(start,end,baseCollections);
+  if(!records.length&&!extra.some(c=>c.items.length)){preview=null;renderPreview();status('Oura не вернула данные за этот период. Синхронизируй кольцо через приложение Oura.');return}
   preview={records,collections:extra,failures,from:start,to:end,snapshot:JSON.stringify(bridge.getDays())};
   renderPreview();
   el('ouraScopeStatus').textContent='Разрешённые категории: '+grantedScopes.join(', ')+'. Получено: '+extra.length+
     '. Недоступно: '+failures.length+(failures.length?' ('+failures.map(x=>x.split(':')[0]).join(', ')+')':'');
-  status('✓ Oura: найдено '+records.length+' дней за неделю. '+(automatic?'Автоматически обновляю показатели…':'Проверь и нажми «Сохранить в LifeSims».'));
+  status('✓ Oura: найдено '+records.length+' дней с основными показателями и '+extra.filter(c=>c.items.length).length+' непустых категорий за неделю. '+(automatic?'Автоматически обновляю показатели…':'Проверь и нажми «Сохранить в LifeSims».'));
   if(automatic)await apply(true);
  }finally{busy=false;update()}
 }
