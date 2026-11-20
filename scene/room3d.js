@@ -131,7 +131,7 @@ function carpetTexture(){
  }
  });
 }
-const rug=group('rug');const rugMesh=mesh(new T.PlaneGeometry(5.35,3.6),mat('#ffffff',.94,0,{map:carpetTexture()}),rug);
+const rug=group();const rugMesh=mesh(new T.PlaneGeometry(5.35,3.6),mat('#ffffff',.94,0,{map:carpetTexture()}),rug);
 rugMesh.rotation.x=-Math.PI/2;rugMesh.position.set(1.05,.01,1.06);
 box(5.37,.028,3.64,mat('#503342'),rug,1.05,-.006,1.06);
 function legs(g,x,y,z,w=1,d=1,h=.75,m=darkWood){
@@ -208,7 +208,7 @@ function sofa(){
 }
 sofa();
 function coffee(){
- const g=group('table');g.position.set(2.33,0,2.87);
+ const g=group();g.position.set(2.33,0,2.87);
  box(1.77,.10,.95,wood,g,0,.64,0);legs(g,0,.63,0,1.7,.9,.60);
  box(.44,.05,.32,paper,g,-.38,.72,-.08);
  box(.46,.07,.35,maroon,g,-.34,.80,-.09);
@@ -349,7 +349,7 @@ let down=null,dragged=false,active=true;
 function applySize(){
  const w=host.clientWidth||375,h=host.clientHeight||520;
  renderer.setSize(w,h,false);
- const aspect=w/h,half=5.10/zoom;
+ const aspect=w/h,half=Math.max(5.15,7.0/aspect)/zoom;
  camera.left=-half*aspect;camera.right=half*aspect;
  camera.top=half;camera.bottom=-half;camera.updateProjectionMatrix();
 }
@@ -358,6 +358,13 @@ const wrap=document.createElement('div');wrap.id='life3dControls';
 const rotateBtn=document.createElement('button');rotateBtn.type='button';rotateBtn.textContent='↻ Повернуть 3D';rotateBtn.setAttribute('aria-label','Повернуть 3D-комнату');
 rotateBtn.onclick=()=>{azimuth+=.36;cameraPlace()};
 wrap.append(rotateBtn);
+const zoomIn=document.createElement('button');zoomIn.type='button';zoomIn.textContent='＋';
+zoomIn.setAttribute('aria-label','Приблизить 3D-комнату');
+zoomIn.onclick=()=>{zoom=Math.min(1.8,zoom+.18);applySize()};
+const zoomOut=document.createElement('button');zoomOut.type='button';zoomOut.textContent='−';
+zoomOut.setAttribute('aria-label','Отдалить 3D-комнату');
+zoomOut.onclick=()=>{zoom=Math.max(.78,zoom-.18);applySize()};
+wrap.append(zoomIn,zoomOut);
 const hint=document.createElement('span');hint.textContent='Нажми на предмет · проведи вбок, чтобы повернуть';
 wrap.append(hint);
 function positionForHit(e){
@@ -435,8 +442,11 @@ function sync(snapshot){
   const cleaned=snapshot.cleanedItems?.[o.userData.messId]===snapshot.today;
   o.visible=disorder>=o.userData.minEntropy&&!cleaned;
  }
- const hh=new Date().getHours();
- const night=hh<7||hh>19;
+ const now=new Date(),dayOfYear=Math.floor((now-new Date(now.getFullYear(),0,1))/86400000)+1;
+ const lat=55.75*Math.PI/180,decl=23.44*Math.sin(2*Math.PI*(284+dayOfYear)/365)*Math.PI/180;
+ const halfDay=12*Math.acos(Math.max(-1,Math.min(1,-Math.tan(lat)*Math.tan(decl))))/Math.PI;
+ const hour=now.getHours()+now.getMinutes()/60;
+ const night=hour<12.45-halfDay||hour>12.45+halfDay;
  sun.intensity=night?1.0:3.1;
  ambient.intensity=night?1.55:2.25;
  lamp.intensity=night?22:12;
