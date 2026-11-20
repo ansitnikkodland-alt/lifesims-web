@@ -840,17 +840,42 @@ function deleteActivity(id){
 }
 let currentSheetAnchor=null;
 function placeSheet(anchor){
- const popup=$('sheetWrap').querySelector('.sheet');
- if(!popup||!anchor)return;
- const ar=anchor.getBoundingClientRect();
- const width=popup.offsetWidth||244,height=popup.offsetHeight||100,padding=10;
- const right=ar.right+12,left=ar.left-width-12;
- const center=(ar.left+ar.right-width)/2;
- const x=right+width<window.innerWidth-padding?right:left>padding?left:Math.max(padding,Math.min(window.innerWidth-width-padding,center));
- const centerY=ar.top+Math.min(ar.height,80)/2;
- const y=Math.max(padding,Math.min(window.innerHeight-height-padding,centerY-height/2));
- $('sheetWrap').style.setProperty('--pop-left',Math.round(x)+'px');
- $('sheetWrap').style.setProperty('--pop-top',Math.round(y)+'px');
+ if(!anchor||!$('sheetWrap').classList.contains('open'))return;
+ const rect=anchor.getBoundingClientRect();
+ const vw=window.innerWidth,vh=window.innerHeight;
+ if(rect.bottom < -25 || rect.top > vh+25){closeSheet();return}
+ const buttons=[...$('sheetActions').querySelectorAll(':scope > button')];
+ const notes=[...$('sheetActions').querySelectorAll(':scope > .hint')];
+ const count=buttons.length,rows=Math.max(1,Math.ceil(count/2));
+ const bw=Math.min(128,Math.max(94,Math.round(vw*.28)));
+ const offset=bw/2+58, margin=offset+bw/2+7;
+ const rawX=(rect.left+rect.right)/2,rawY=(rect.top+rect.bottom)/2;
+ const limitX=Math.min(margin,vw/2);
+ const cx=Math.max(limitX,Math.min(vw-limitX,rawX));
+ const extent=(rows-1)*53/2+32;
+ const limitY=Math.min(vh/2,extent+30);
+ const cy=Math.max(limitY,Math.min(vh-limitY,rawY));
+ const wrap=$('sheetWrap'),header=wrap.querySelector('.sheethead');
+ header.style.left=cx+'px';header.style.top=cy+'px';
+ wrap.style.setProperty('--radial-x',cx+'px');
+ wrap.style.setProperty('--radial-y',cy+'px');
+ buttons.forEach((button,i)=>{
+  let x,y;
+  if(count===1){x=cx;y=cy+69}
+  else{
+   const column=i%2,row=Math.floor(i/2);
+   x=cx+(column===0?-offset:offset);
+   y=cy+(row-(rows-1)/2)*53;
+  }
+  x=Math.max(bw/2+7,Math.min(vw-bw/2-7,x));
+  y=Math.max(28,Math.min(vh-28,y));
+  button.style.position='fixed';
+  button.style.left=Math.round(x)+'px';
+  button.style.top=Math.round(y)+'px';
+  button.style.width=bw+'px';
+  button.style.transform='translate(-50%,-50%)';
+ });
+ notes.forEach((note,i)=>{note.hidden=i>0});
 }
 function startWork(name){if(state.room?.work)return toast('Анюта уже на мероприятии');const workName=name.trim().slice(0,130)||'Рабочее мероприятие',stamp=new Date().toISOString(),session=uid();if(transact(()=>{state.room={...(state.room||{}),work:{id:session,name:workName,startedAt:stamp}};state.events.push({id:uid(),kind:'work_start',sessionId:session,name:'Выход на работу: '+workName,date:today(),at:stamp,xp:0})})){renderWork();renderAll();toast('Анюта отправилась на мероприятие')}}
 function finishWork(){if(!state.room?.work)return;const work=state.room.work,stamp=new Date().toISOString();if(transact(()=>{state.room={...(state.room||{}),work:null};state.events.push({id:uid(),kind:'work_end',sessionId:work.id,name:'Возвращение с работы: '+work.name,date:today(),at:stamp,xp:0})})){renderWork();renderAll();toast('Анюта вернулась домой')}}
@@ -1073,7 +1098,7 @@ if(object==='window'){
    if(state.room?.work&&e.title===state.room.work.name)return false;
    if(seenSeries.has(e.id))return false;
    seenSeries.add(e.id);return true;
-  }).slice(0,12);
+  }).slice(0,5);
  if(!events.length){const empty=document.createElement('p');empty.className='hint';empty.textContent='Мероприятий на ближайшие 3 недели нет.';$('sheetActions').append(empty)}
  for(const entry of events){
   const btn=document.createElement('button');btn.type='button';btn.textContent='📅 '+entry.date.slice(5)+' · '+entry.title;
@@ -2082,7 +2107,7 @@ function importMessage(message,error=false){const el=$('importStatus');el.textCo
 function importSummary(proposed){const dayCount=Object.keys(proposed.days||{}).length,activityCount=proposed.activities.length,doneCount=proposed.events.filter(e=>e.kind==='complete').length,oldCount=proposed.activities.filter(x=>x.legacyDone).length,calendarCount=(proposed.schedule||[]).length;return `Найдено: ${dayCount} датированных записей, ${activityCount} дел и привычек, ${calendarCount} мероприятий, ${doneCount} выполненных действий${oldCount?', '+oldCount+' ранее выполненных задач':''}. Данные текущей версии заменятся только после подтверждения.`}
 async function restore(){pendingImport=null;$('importConfirmPanel').hidden=true;const file=$('importFile').files?.[0];if(!file){importMessage('Сначала выбери JSON-файл с прогрессом.',true);return}if(file.size>6_000_000){importMessage('Файл слишком большой (максимум 6 МБ).',true);return}try{const text=await file.text();pendingImport=parseBackup(JSON.parse(text));$('importPreview').textContent=importSummary(pendingImport);$('importConfirmPanel').hidden=false;importMessage('Файл распознан: '+file.name+'. Проверь количество записей и подтверди импорт.')}catch(e){pendingImport=null;importMessage('Не удалось прочитать копию: '+e.message,true)}}
 function confirmImport(){if(!pendingImport){importMessage('Сначала выбери и проверь JSON.',true);return}const old=state,wasBlocked=storageBlocked,wasOK=storageOK;let oldContents;try{oldContents=localStorage.getItem(STORE)}catch(e){importMessage('Браузер не разрешил доступ к сохранению. Открой HTTPS-версию LifeSims и повтори импорт.',true);return}const proposed=pendingImport;state=proposed;storageBlocked=false;let written=save();if(written){try{const read=normalize(JSON.parse(localStorage.getItem(STORE)));written=JSON.stringify(read.days)===JSON.stringify(state.days)&&JSON.stringify(read.activities)===JSON.stringify(state.activities)&&JSON.stringify(read.events)===JSON.stringify(state.events)&&JSON.stringify(read.schedule)===JSON.stringify(state.schedule)&&JSON.stringify(read.googleHidden)===JSON.stringify(state.googleHidden)}catch(e){written=false}}if(!written){try{if(oldContents===null)localStorage.removeItem(STORE);else localStorage.setItem(STORE,oldContents)}catch(e){}state=old;storageBlocked=wasBlocked;storageOK=wasOK;setStorage();importMessage('Не удалось записать и проверить импорт. Прежние данные не заменены. Открой HTTPS-версию LifeSims и попробуй снова.',true);return}pendingImport=null;$('importConfirmPanel').hidden=true;activeDay=today();for(const id of ['stateDate','taskDate','diaryDate','historyDate'])$(id).value=activeDay;fillState(activeDay);fillDiary(activeDay);renderAll();importMessage('✓ Импорт записан и проверен. '+importSummary(proposed)+' Проверь вкладки «Дела» и «История».');toast('✓ Прогресс импортирован и сохранён')}
-for(const b of document.querySelectorAll('.touchmap .hot')){b.addEventListener('click',()=>openObject(b.dataset.object,b));b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openObject(b.dataset.object,b)}})}$('plumbob').onclick=()=>openSingleMetric('resource',today());$('returnHome').onclick=finishWork;$('portraitBtn').onclick=()=>openObject('sim',document.querySelector('.touchmap .hot[data-object=sim]'));$('xpChip').onclick=()=>openTab('history',true);$('closeSheet').onclick=closeSheet;document.addEventListener('pointerdown',e=>{if($('sheetWrap').classList.contains('open')&&!e.target.closest('.sheet')&&!e.target.closest('.hot')&&!e.target.closest('#scenePhone')&&!e.target.closest('#showerCabin'))closeSheet()});document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSheet();closeDayAgenda()}});for(const b of document.querySelectorAll('[data-tab]'))b.onclick=()=>openTab(b.dataset.tab,true);$('openNeedsEditor').onclick=()=>showNeedsEditor('',today());$('stateForm').onsubmit=saveFieldState;$('taskForm').onsubmit=addActivity;$('saveDiary').onclick=saveDiary;for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>{historyView=b.dataset.view;renderHistory()};$('historyDate').onchange=renderHistory;$('prevPeriod').onclick=()=>changePeriod(-1);$('nextPeriod').onclick=()=>changePeriod(1);$('todayPeriod').onclick=()=>{$('historyDate').value=today();renderHistory()};$('editSelectedDay').onclick=()=>{activeDay=$('historyDate').value;showNeedsEditor('',activeDay)};$('stateDate').onchange=()=>fillState($('stateDate').value);$('addCalendarEvent').onclick=openNewCalendarEvent;$('addCalendarTask').onclick=()=>openNewCalendarTask('task');
+for(const b of document.querySelectorAll('.touchmap .hot')){b.addEventListener('click',()=>openObject(b.dataset.object,b));b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openObject(b.dataset.object,b)}})}$('plumbob').onclick=()=>openSingleMetric('resource',today());$('returnHome').onclick=finishWork;$('portraitBtn').onclick=()=>openObject('sim',document.querySelector('.touchmap .hot[data-object=sim]'));$('xpChip').onclick=()=>openTab('history',true);$('closeSheet').onclick=closeSheet;document.addEventListener('pointerdown',e=>{if($('sheetWrap').classList.contains('open')&&!e.target.closest('.sheet')&&!e.target.closest('.hot')&&!e.target.closest('#scenePhone,#sceneFridge,#sceneToilet,#sceneCatLitter,#showerCabin'))closeSheet()});document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSheet();closeDayAgenda()}});for(const b of document.querySelectorAll('[data-tab]'))b.onclick=()=>openTab(b.dataset.tab,true);$('openNeedsEditor').onclick=()=>showNeedsEditor('',today());$('stateForm').onsubmit=saveFieldState;$('taskForm').onsubmit=addActivity;$('saveDiary').onclick=saveDiary;for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>{historyView=b.dataset.view;renderHistory()};$('historyDate').onchange=renderHistory;$('prevPeriod').onclick=()=>changePeriod(-1);$('nextPeriod').onclick=()=>changePeriod(1);$('todayPeriod').onclick=()=>{$('historyDate').value=today();renderHistory()};$('editSelectedDay').onclick=()=>{activeDay=$('historyDate').value;showNeedsEditor('',activeDay)};$('stateDate').onchange=()=>fillState($('stateDate').value);$('addCalendarEvent').onclick=openNewCalendarEvent;$('addCalendarTask').onclick=()=>openNewCalendarTask('task');
 $('addCalendarHabit').onclick=()=>openNewCalendarTask('habit');
 for(const id of ['topTasksDate','topHabitsDate'])$(id).addEventListener('change',renderTopActivities);
 $('topTasksAdd').onclick=()=>{$('historyDate').value=$('topTasksDate').value||today();openNewCalendarTask('task')};
