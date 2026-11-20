@@ -559,8 +559,13 @@ function cleanRoom(itemId=null){
  })){toast('Не удалось записать уборку');return}
  renderAll();toast('✓ '+name+' · энтропия снижена');
 }
+function isBedMade(){
+ if(Object.prototype.hasOwnProperty.call(state.room||{},'bedMadeOn'))
+  return state.room.bedMadeOn===today();
+ return state.activities.some(a=>a.id==='bed_make'&&Array.isArray(a.completions)&&a.completions.some(v=>v.date===today()));
+}
 function toggleBed(){
- const made=state.room?.bedMadeOn===today();
+ const made=isBedMade();
  if(transact(()=>{
   state.room??={};
   state.room.bedMadeOn=made?null:today();
@@ -569,7 +574,7 @@ function toggleBed(){
  else toast('Не удалось сохранить состояние кровати');
 }
 function refreshBed(){
- const made=state.room?.bedMadeOn===today()||state.activities.some(a=>a.id==='bed_make'&&Array.isArray(a.completions)&&a.completions.some(v=>v.date===today()));
+ const made=isBedMade();
  $('bedState').classList.toggle('made',!!made);
  $('bedState').setAttribute('title',made?'Кровать заправлена':'Кровать не заправлена');
 }
@@ -665,7 +670,7 @@ function openObject(object,anchor){
 $('sheetTitle').textContent=labels[object]||'Действия';$('sheetActions').replaceChildren();
 if(object==='bed'){
  const button=document.createElement('button');button.type='button';
- button.textContent=state.room?.bedMadeOn===today()?'🛏 Расправить кровать':'🛏 Заправить кровать';
+ button.textContent=isBedMade()?'🛏 Расправить кровать':'🛏 Заправить кровать';
  button.onclick=()=>{closeSheet();toggleBed()};$('sheetActions').append(button);
 }
 if(object==='clutter'){
