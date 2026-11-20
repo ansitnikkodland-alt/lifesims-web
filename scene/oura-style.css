@@ -1,0 +1,19 @@
+/* Oura integration adopts LifeSims' dark theme. */
+.oura-mount{margin-top:16px}
+.oura-panel{border:1px solid #6884ae;background:linear-gradient(150deg,#263657,#1e2945);border-radius:15px;padding:14px}
+.oura-panel h3{margin:0 0 10px;font-size:16px;color:#ebf6ff}
+.oura-panel details{border:1px solid #536f96;border-radius:11px;padding:10px;margin:12px 0}
+.oura-panel summary{cursor:pointer;color:#e8f5ff;font-weight:650}
+.oura-panel input,.oura-panel select{color-scheme:dark}
+.oura-panel input[readonly]{font-size:12px;overflow-wrap:anywhere;background:#192c48;color:#dbeafb}
+.oura-panel .field{margin-top:9px}
+.oura-panel .oura-auto{display:flex;align-items:flex-start;gap:10px;margin:13px 0;line-height:1.35;cursor:pointer;font-size:13px}
+.oura-panel .oura-auto input{width:20px;height:20px;flex:none}
+.oura-panel .row button{min-height:44px}
+.oura-panel .hint{line-height:1.5}
+.oura-panel .hint a{color:#83eaf2;text-decoration:underline}
+.oura-panel .oura-preview-items{padding-left:21px;font-size:12px;color:#e1ebf9;max-height:235px;overflow:auto}
+.oura-panel .oura-preview-items li{padding:6px 0;border-bottom:1px solid #ffffff20}
+@media(max-width:440px){.oura-panel{padding:12px}.oura-panel .row button{flex:1 1 130px}}
+
+.oura-today{border:1px solid #4d7298;background:#172d4b;padding:11px;border-radius:11px;color:#cde9ef;font-weight:600;margin:11px 0 13px;font-size:13px}
