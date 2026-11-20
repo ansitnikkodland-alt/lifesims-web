@@ -161,7 +161,7 @@
 <div class="card"><h3>☑ Дела и привычки на дату</h3><input type="hidden" id="taskDate"><div id="taskList"></div></div>
 <div class="row"><button class="secondary" id="editSelectedDay">Редактировать состояние за дату</button></div>
 <details id="calendarEventEditor" class="card calendar-editor"><summary>Создать или изменить мероприятие</summary>
-<form id="eventForm" class="card"><input type="hidden" id="eventEditId">
+<form id="eventForm" class="card"><input type="hidden" id="eventEditId"><input type="hidden" id="eventOccurrenceDate"><label class="field" id="eventScopeField" hidden>Изменить повторения<select id="eventScope"><option value="one">Только это событие</option><option value="future">Это и будущие</option><option value="all">Все события серии</option></select></label>
 <label class="field">Название <input id="eventName" maxlength="130" required></label>
 <label class="field event-check"><input type="checkbox" id="eventAllDay"> Весь день</label>
 <div id="eventTimedDates" class="cols"><label class="field">Начало <input id="eventStart" type="datetime-local" required></label><label class="field">Конец <input id="eventEnd" type="datetime-local" required></label></div>
@@ -443,57 +443,61 @@ function addHistoryLine(parent,date,text){const e=document.createElement('div');
 /* Expands local and imported Google events only for the visible History period.
    Calendar events are plans, not evidence of attendance or completed tasks. */
 function scheduleHistoryOccurrences(from,to){
-  const entries=[];
-  const periodStart=asDay(from).getTime();
-  const periodEnd=asDay(plusDays(to,1)).getTime();
-  const atDate=(ms)=>dayStr(new Date(ms));
-  function addOccurrence(event,occStart,occEnd){
-    if(occStart>=periodEnd||occEnd<=periodStart)return;
-    let date=atDate(Math.max(occStart,periodStart));
-    while(date<=to){
-      const midnight=asDay(date).getTime();
-      const nextMidnight=asDay(plusDays(date,1)).getTime();
-      if(midnight>=occEnd)break;
-      const suppressed=event.google?.supersededRange;
-      if(nextMidnight>occStart && !(suppressed&&date>=suppressed.from&&date<=suppressed.to)){
-        entries.push({id:event.id,date,title:event.title,startsAt:occStart,endsAt:occEnd,
-          google:!!event.google,repeat:event.repeat&&event.repeat!=='none',allDay:!!event.allDay,
-          sourceName:event.google?.sourceName||'LifeSims',
-          color:event.color||event.google?.color||'#4285f4',
-          location:event.location||'',description:event.description||''});
-      }
-      date=plusDays(date,1);
-    }
+ const entries=[],periodStart=asDay(from).getTime(),periodEnd=asDay(plusDays(to,1)).getTime();
+ const valid=d=>typeof d==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(d);
+ function addOccurrence(event,start,end,key,localOverride){
+  if(!Number.isFinite(start)||!Number.isFinite(end)||end<=start||start>=periodEnd||end<=periodStart)return;
+  const info=localOverride?{...event,...localOverride}:event;
+  let date=dayStr(new Date(Math.max(start,periodStart)));
+  while(date<=to){
+   const midnight=asDay(date).getTime(),next=asDay(plusDays(date,1)).getTime();
+   if(midnight>=end)break;
+   const suppressed=event.google?.supersededRange;
+   if(next>start&&!(suppressed&&date>=suppressed.from&&date<=suppressed.to)){
+    entries.push({id:event.id,occurrenceKey:key,date,title:info.title,startsAt:start,endsAt:end,
+      google:!!event.google,repeat:event.repeat&&event.repeat!=='none',allDay:!!info.allDay,
+      sourceName:event.google?.sourceName||'LifeSims',color:info.color||event.google?.color||'#4285f4',
+      location:info.location||'',description:info.description||''});
+   }
+   date=plusDays(date,1);
   }
-  for(const event of Array.isArray(state.schedule)?state.schedule:[]){
-    if(!event||typeof event.title!=='string'||typeof event.startsAt!=='string'||typeof event.endsAt!=='string')continue;
-    const baseStart=new Date(event.startsAt),baseEnd=new Date(event.endsAt);
-    if(!Number.isFinite(baseStart.getTime())||!Number.isFinite(baseEnd.getTime())||baseEnd<=baseStart)continue;
-    const duration=baseEnd.getTime()-baseStart.getTime();
-    if(event.repeat!=='weekly'){
-      addOccurrence(event,baseStart.getTime(),baseEnd.getTime());
-      continue;
-    }
-    const selected=(Array.isArray(event.weekdays)?event.weekdays:[])
-      .map(Number).filter(n=>Number.isInteger(n)&&n>=1&&n<=7);
-    const weekdays=new Set(selected.length?selected:[((baseStart.getDay()+6)%7)+1]);
-    const originalDay=event.startsAt.slice(0,10);
-    const origin=asDay(originalDay);
-    let candidate=plusDays(from,-Math.min(400,Math.ceil(duration/86400000)+1));
-    if(candidate<originalDay)candidate=originalDay;
-    const localTime=event.startsAt.slice(11);
-    for(let date=candidate;date<=to;date=plusDays(date,1)){
-      const dt=asDay(date),weekday=((dt.getDay()+6)%7)+1;
-      const matches=event.repeat==='daily'||
-        (event.repeat==='weekly'&&weekdays.has(weekday))||
-        (event.repeat==='monthly'&&dt.getDate()===origin.getDate())||
-        (event.repeat==='yearly'&&dt.getDate()===origin.getDate()&&dt.getMonth()===origin.getMonth());
-      if(!matches)continue;
-      const occurrenceStart=new Date(date+'T'+localTime).getTime();
-      if(Number.isFinite(occurrenceStart))addOccurrence(event,occurrenceStart,occurrenceStart+duration);
-    }
+ }
+ for(const event of state.schedule||[]){
+  if(!event||typeof event.title!=='string'||typeof event.startsAt!=='string'||typeof event.endsAt!=='string')continue;
+  const baseStart=new Date(event.startsAt),baseEnd=new Date(event.endsAt);
+  if(!Number.isFinite(baseStart.getTime())||!Number.isFinite(baseEnd.getTime())||baseEnd<=baseStart)continue;
+  const duration=baseEnd-baseStart,baseDay=event.startsAt.slice(0,10);
+  const until=valid(event.repeatUntil)?event.repeatUntil:'9999-12-31';
+  const excluded=new Set(Array.isArray(event.excludedDates)?event.excludedDates:[]);
+  const overrides=event.overrides&&typeof event.overrides==='object'?event.overrides:{};
+  if(!event.repeat||event.repeat==='none'){
+   if(!excluded.has(baseDay))addOccurrence(event,baseStart.getTime(),baseEnd.getTime(),baseDay);
+   continue;
   }
-  return entries.sort((a,b)=>a.date.localeCompare(b.date)||a.startsAt-b.startsAt||a.title.localeCompare(b.title,'ru'));
+  const shiftedBack=Math.min(10,Math.ceil(duration/86400000)+1);
+  let startDay=plusDays(from,-shiftedBack);
+  if(startDay<baseDay)startDay=baseDay;
+  const weeks=Array.isArray(event.weekdays)?event.weekdays.map(Number):[];
+  const selected=new Set(weeks.length?weeks:[((baseStart.getDay()+6)%7)+1]);
+  const origin=asDay(baseDay);
+  for(let date=startDay;date<=to&&date<=until;date=plusDays(date,1)){
+   const d=asDay(date),weekday=((d.getDay()+6)%7)+1;
+   const matches=event.repeat==='daily'||(event.repeat==='weekly'&&selected.has(weekday))||
+    (event.repeat==='monthly'&&d.getDate()===origin.getDate())||
+    (event.repeat==='yearly'&&d.getMonth()===origin.getMonth()&&d.getDate()===origin.getDate());
+   if(!matches||excluded.has(date)||overrides[date])continue;
+   const time=event.startsAt.slice(11)||'00:00',start=new Date(date+'T'+time).getTime();
+   addOccurrence(event,start,start+duration,date);
+  }
+  // Individual exceptions can be rescheduled to another day; render independently.
+  for(const [key,override] of Object.entries(overrides)){
+   if(!valid(key)||!override||excluded.has(key)||key>until)continue;
+   const shiftedStart=new Date(override.startsAt||key+'T'+event.startsAt.slice(11)).getTime();
+   const shiftedEnd=new Date(override.endsAt||new Date(shiftedStart+duration).toISOString()).getTime();
+   addOccurrence(event,shiftedStart,shiftedEnd,key,override);
+  }
+ }
+ return entries.sort((a,b)=>a.date.localeCompare(b.date)||a.startsAt-b.startsAt||a.title.localeCompare(b.title,'ru'));
 }
 
 function safeEventColor(color){return /^#[0-9a-fA-F]{6}$/.test(color||'')?color:'#4285f4'}
@@ -535,7 +539,7 @@ function renderDayAgenda(){
     if(item.id){
       const edit=document.createElement('button');edit.className='agenda-edit';edit.type='button';edit.textContent='✎';
       edit.setAttribute('aria-label','Редактировать мероприятие '+item.title);
-      edit.onclick=()=>{closeDayAgenda();openCalendarEventEditor(item.id)};
+      edit.onclick=()=>{closeDayAgenda();openCalendarEventEditor(item.id,item.occurrenceKey||item.date)};
       const remove=document.createElement('button');remove.type='button';remove.className='agenda-delete';remove.textContent='🗑';
       remove.setAttribute('aria-label','Удалить мероприятие '+item.title);
       remove.onclick=()=>deleteEventLocal(item.id);
@@ -710,7 +714,7 @@ function renderHistory(){
     if(event.id){
       const edit=document.createElement('button');
       edit.type='button';edit.className='secondary history-event-edit';edit.textContent='Изменить';
-      edit.onclick=()=>openCalendarEventEditor(event.id);
+      edit.onclick=()=>openCalendarEventEditor(event.id,event.occurrenceKey||event.date);
       const remove=document.createElement('button');
       remove.type='button';remove.className='danger-outline history-event-edit';remove.textContent='Удалить';
       remove.onclick=()=>deleteEventLocal(event.id);
@@ -745,7 +749,7 @@ function clearEventForm(){
   $('eventForm').reset();$('eventEditId').value='';
   $('eventWeekdays').hidden=true;$('eventAllDay').checked=false;
   $('eventDayStart').value='';$('eventDayEnd').value='';
-  $('eventColor').value='#4285f4';
+  $('eventColor').value='#4285f4';$('eventOccurrenceDate').value='';$('eventScopeField').hidden=true;$('eventScope').value='one';
   $('eventDeleteLocal').hidden=true;$('eventDeleteGoogle').hidden=true;
   $('eventDuplicate').hidden=true;$('eventDeleteHelp').hidden=true;
   $('eventEditSource').textContent='Новое мероприятие хранится в LifeSims. Для передачи в Google открой синхронизацию.';
@@ -770,36 +774,43 @@ function renderSchedule(){
   }
   if(!list.children.length)list.textContent='Мероприятий пока нет';
 }
-function openCalendarEventEditor(id){
-  const event=(state.schedule||[]).find(x=>x.id===id);
-  if(!event)return toast('Мероприятие не найдено');
-  clearEventForm();
-  $('eventEditId').value=event.id;$('eventName').value=event.title||'';
-  $('eventStart').value=event.startsAt||'';$('eventEnd').value=event.endsAt||'';
-  $('eventRepeat').value=eventRepeatLabels[event.repeat]?event.repeat:'none';
-  document.querySelectorAll('[name=eventWeekday]').forEach(x=>x.checked=(event.weekdays||[]).includes(Number(x.value)));
-  $('eventWeekdays').hidden=$('eventRepeat').value!=='weekly';
-  $('eventLocation').value=event.location||'';
-  $('eventDescription').value=event.description||'';
-  const color=event.color||event.google?.color||'#4285f4';
-  $('eventColor').value=/^#[0-9a-f]{6}$/i.test(color)?color:'#4285f4';
-  if(event.allDay){
-    $('eventAllDay').checked=true;
-    $('eventDayStart').value=event.startsAt.slice(0,10);
-    $('eventDayEnd').value=plusDays(event.endsAt.slice(0,10),-1);
-  }
-  toggleEventDates();
-  $('eventDeleteLocal').hidden=false;
-  $('eventDeleteLocal').textContent=event.google?'Убрать из LifeSims':'Удалить мероприятие';
-  $('eventDeleteGoogle').hidden=!event.google?.id;
-  $('eventDeleteHelp').hidden=!event.google?.id;
-  $('eventDuplicate').hidden=false;
-  $('eventEditSource').textContent=event.google
-    ? 'Источник: Google · '+(event.google.sourceName||'Календарь')+'. Изменения здесь сначала локальные; запись в Google требует отдельного подтверждения. '
-    : 'Мероприятие LifeSims. Изменения сохраняются локально.';
-  $('calendarEventEditor').open=true;
-  $('calendarEventEditor').scrollIntoView({behavior:'smooth',block:'start'});
+function openCalendarEventEditor(id,occurrenceDate){
+ const event=(state.schedule||[]).find(x=>x.id===id);
+ if(!event)return toast('Мероприятие не найдено');
+ clearEventForm();
+ const recurring=event.repeat&&event.repeat!=='none';
+ const chosen=occurrenceDate||event.startsAt.slice(0,10);
+ const occurrence=recurring?scheduleHistoryOccurrences(chosen,chosen).find(x=>x.id===id&&x.occurrenceKey===chosen):null;
+ const override=event.overrides?.[chosen];
+ $('eventEditId').value=event.id;$('eventOccurrenceDate').value=recurring?chosen:'';
+ $('eventScopeField').hidden=!recurring;$('eventScope').value=recurring?'one':'all';
+ $('eventName').value=override?.title||event.title||'';
+ const startsAt=override?.startsAt||(occurrence?dayStr(new Date(occurrence.startsAt))+'T'+event.startsAt.slice(11):event.startsAt);
+ const endsAt=override?.endsAt||(occurrence?new Date(occurrence.endsAt).getFullYear()+'-'+String(new Date(occurrence.endsAt).getMonth()+1).padStart(2,'0')+'-'+String(new Date(occurrence.endsAt).getDate()).padStart(2,'0')+'T'+String(new Date(occurrence.endsAt).getHours()).padStart(2,'0')+':'+String(new Date(occurrence.endsAt).getMinutes()).padStart(2,'0'):event.endsAt);
+ $('eventStart').value=startsAt.slice(0,16);$('eventEnd').value=endsAt.slice(0,16);
+ $('eventRepeat').value=['none','daily','weekly','monthly','yearly'].includes(event.repeat)?event.repeat:'none';
+ document.querySelectorAll('[name=eventWeekday]').forEach(x=>x.checked=(event.weekdays||[]).includes(Number(x.value)));
+ $('eventWeekdays').hidden=$('eventRepeat').value!=='weekly';
+ $('eventLocation').value=override?.location||event.location||'';
+ $('eventDescription').value=override?.description||event.description||'';
+ const color=override?.color||event.color||event.google?.color||'#4285f4';
+ $('eventColor').value=/^#[0-9a-f]{6}$/i.test(color)?color:'#4285f4';
+ if(override?.allDay??event.allDay){
+  $('eventAllDay').checked=true;$('eventDayStart').value=startsAt.slice(0,10);$('eventDayEnd').value=plusDays(endsAt.slice(0,10),-1);
+ }
+ toggleEventDates();
+ $('eventDeleteLocal').hidden=false;
+ $('eventDeleteLocal').textContent=event.google?'Убрать из LifeSims':'Удалить мероприятие';
+ $('eventDeleteGoogle').hidden=!event.google?.id;
+ $('eventDeleteHelp').hidden=!event.google?.id;
+ $('eventDuplicate').hidden=false;
+ $('eventEditSource').textContent=event.google
+  ? 'Изменения повторений сохраняются локально в LifeSims, не в Google. Google продолжает хранить исходную серию.'
+  : 'Выбери: только этот экземпляр, этот и будущие или всю серию.';
+ $('calendarEventEditor').open=true;
+ $('calendarEventEditor').scrollIntoView({behavior:'smooth',block:'start'});
 }
+
 function openNewCalendarEvent(){
   clearEventForm();
   const date=$('historyDate').value||today();
@@ -814,30 +825,50 @@ function openNewCalendarTask(){
   $('calendarTaskEditor').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function saveEvent(e){
-  e.preventDefault();
-  const title=$('eventName').value.trim();
-  const allDay=$('eventAllDay').checked;
-  const startsAt=allDay?$('eventDayStart').value+'T00:00':$('eventStart').value;
-  const endsAt=allDay?plusDays($('eventDayEnd').value,1)+'T00:00':$('eventEnd').value;
-  const repeat=$('eventRepeat').value;
-  const weekdays=[...document.querySelectorAll('[name=eventWeekday]:checked')].map(x=>Number(x.value));
-  if(!title||!startsAt||!endsAt||endsAt<=startsAt||!Number.isFinite(new Date(startsAt).getTime())||!Number.isFinite(new Date(endsAt).getTime())){
-    return toast('Проверь название, начало и конец мероприятия');
+ e.preventDefault();
+ const title=$('eventName').value.trim(),allDay=$('eventAllDay').checked;
+ const startsAt=allDay?$('eventDayStart').value+'T00:00':$('eventStart').value;
+ const endsAt=allDay?plusDays($('eventDayEnd').value,1)+'T00:00':$('eventEnd').value;
+ const repeat=$('eventRepeat').value;
+ const weekdays=[...document.querySelectorAll('[name=eventWeekday]:checked')].map(x=>Number(x.value));
+ if(!title||!startsAt||!endsAt||endsAt<=startsAt||!Number.isFinite(Date.parse(startsAt))||!Number.isFinite(Date.parse(endsAt)))return toast('Проверь даты и название');
+ if(repeat==='weekly'&&!weekdays.length)return toast('Выбери дни недели');
+ const id=$('eventEditId').value||uid(),old=(state.schedule||[]).find(x=>x.id===id),occurrenceKey=$('eventOccurrenceDate').value;
+ const scope=old&&old.repeat&&old.repeat!=='none'?$('eventScope').value:'all';
+ const next={...(old||{}),id,title,startsAt,endsAt,repeat,allDay,weekdays:repeat==='weekly'?weekdays:[],
+  location:$('eventLocation').value.trim(),description:$('eventDescription').value.trim(),color:$('eventColor').value};
+ if(!transact(()=>{
+  state.schedule??=[];
+  const i=state.schedule.findIndex(x=>x.id===id);
+  if(!old||scope==='all'||!occurrenceKey){
+   if(i<0)state.schedule.push(next);
+   else{
+    // For whole-series edits keep the original start day; change its clock time.
+    if(old.repeat&&old.repeat!=='none'&&scope==='all'){
+     const day=old.startsAt.slice(0,10),startTime=startsAt.slice(11),duration=Date.parse(endsAt)-Date.parse(startsAt);
+     next.startsAt=day+'T'+startTime;
+     const endDate=new Date(Date.parse(next.startsAt)+duration);
+     next.endsAt=dayStr(endDate)+'T'+String(endDate.getHours()).padStart(2,'0')+':'+String(endDate.getMinutes()).padStart(2,'0');
+    }
+    state.schedule[i]=next;
+   }
+  }else if(scope==='one'){
+   // Keep the original recurring series and override only the selected occurrence.
+   const overrides={...(old.overrides||{})};
+   overrides[occurrenceKey]={title,startsAt,endsAt,allDay,location:next.location,description:next.description,color:next.color};
+   state.schedule[i]={...old,overrides};
+  }else if(scope==='future'){
+   const previousDay=plusDays(occurrenceKey,-1);
+   const remainder={...next,id:uid(),google:undefined,overrides:{},excludedDates:[],repeatUntil:undefined};
+   // Earlier instances remain part of the old series; the new series starts here.
+   state.schedule[i]={...old,repeatUntil:previousDay};
+   state.schedule.push(remainder);
   }
-  if(repeat==='weekly'&&!weekdays.length)return toast('Выбери хотя бы один день недели');
-  const id=$('eventEditId').value||uid(),old=(state.schedule||[]).find(x=>x.id===id);
-  const entry={...(old||{}),id,title,startsAt,endsAt,repeat,allDay,
-    weekdays:repeat==='weekly'?weekdays:[],location:$('eventLocation').value.trim(),
-    description:$('eventDescription').value.trim(),color:$('eventColor').value};
-  if(transact(()=>{
-    state.schedule??=[];
-    const i=state.schedule.findIndex(x=>x.id===id);
-    if(i>=0)state.schedule[i]=entry;else state.schedule.push(entry);
-  })){
-    clearEventForm();$('calendarEventEditor').open=false;
-    renderSchedule();renderHistory();toast('Мероприятие сохранено в LifeSims');
-  } else toast('Не удалось сохранить мероприятие. Проверь память браузера.');
+ }))return toast('Не удалось сохранить мероприятие');
+ clearEventForm();$('calendarEventEditor').open=false;renderSchedule();renderHistory();
+ toast(scope==='one'?'Изменён один экземпляр':scope==='future'?'Изменена эта и будущая часть серии':'Изменения сохранены');
 }
+
 function removeLocalCalendarEvent(id,hideGoogle=true){
   const event=(state.schedule||[]).find(x=>x.id===id);
   if(!event)throw Error('Мероприятие не найдено');
