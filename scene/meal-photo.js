@@ -95,7 +95,7 @@ async function loadOCR(){
 function extractNutrition(text){
  const full=String(text||'').replace(/\u00a0/g,' ').replace(/ё/g,'е');
  const lines=full.split(/[\n\r]+/).map(x=>x.trim()).filter(Boolean);
- const isPer100=/(?:на|в|per|\/)\s*100\s*(?:г|гр|g|мл|ml)\b/i.test(full)||
+ const isPer100=/(?:на|в|per|\/)\s*100\s*(?:г|гр|g|мл|ml)(?![a-zа-я])/i.test(full)||
   /(?:100\s*(?:г|гр|g|мл|ml))\s*[:\/\-]/i.test(full);
  function item(pattern){
   for(const raw of lines){
