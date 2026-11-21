@@ -106,6 +106,30 @@ jobs:
             await page.evaluate(()=>window.LifeSimsTaskBridge.setHabitAmount('__smoke_min',window.LifeSimsTaskBridge.today(),3));
             if(await lowerCell().evaluate(el=>el.classList.contains('is-negative')))throw Error('Lower bound met, should not be negative');
             console.log('COFFEE EDITOR + BOTH NORM TYPES + MANUAL QUANTITIES: PASS');
+            // The finance editor exists separately from a linked task with the same name.
+            // The phone popup must show just one financial-control action without deleting task data.
+            const phoneButtons=await page.evaluate(()=>{
+              const api=window.LifeSimsTaskBridge,d=api.today();
+              api.read().activities.push(
+                {id:'__finance_smoke',kind:'task',name:'Финансовый контроль',object:'phone',repeat:'daily',
+                  createdDate:d,xp:15,completions:[]},
+                {id:'__phone_other_smoke',kind:'task',name:'Написать письмо',object:'phone',repeat:'daily',
+                  createdDate:d,xp:15,completions:[]}
+              );
+              document.querySelector('#scenePhone').click();
+              return [...document.querySelectorAll('#sheetActions > button')].map(x=>x.textContent.trim());
+            });
+            if(phoneButtons.filter(x=>x.includes('Финансовый контроль')).length!==1)
+              throw Error('Phone popup repeats finance control: '+JSON.stringify(phoneButtons));
+            if(!phoneButtons.some(x=>x.includes('Написать письмо')))
+              throw Error('Unrelated phone-linked task unexpectedly hidden');
+            await page.locator('#sheetActions > button').filter({hasText:'Финансовый контроль'}).click();
+            await page.locator('#financeDialog').waitFor({state:'visible'});
+            const preserved=await page.evaluate(()=>window.LifeSimsTaskBridge.read().activities
+              .some(x=>x.id==='__finance_smoke'&&x.name==='Финансовый контроль'&&x.xp===15));
+            if(!preserved)throw Error('Phone finance task was removed or changed');
+            console.log('PHONE FINANCE DEDUP + EDITOR ACCESS + TASK PRESERVATION: PASS');
+
             if(errors.length)console.warn('OTHER BROWSER CONSOLE ERRORS:',errors.slice(0,8).join(' | '));
             await browser.close();
           })().catch(e=>{console.error(e);process.exit(1)});
