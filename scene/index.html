@@ -2188,7 +2188,7 @@ function refreshSkillSuggestions(){
  const list=$('skillSuggestions');if(!list)return;list.replaceChildren();
  for(const v of skillScores()){const option=document.createElement('option');option.value=v.name;list.append(option)}
 }
-window.LifeSimsSkillBridge={today, scores:()=>skillScores(),read:()=>({activities:state.activities||[],events:state.events||[],legacySkills:state.legacySkills||{}}),edit:id=>openActivityEditor(id),create:kind=>openNewCalendarTask(kind)};
+window.LifeSimsSkillBridge={today, scores:()=>skillScores(),read:()=>({activities:state.activities||[],events:state.events||[],legacySkills:state.legacySkills||{},defaults:defs}),edit:id=>openActivityEditor(id),create:kind=>openNewCalendarTask(kind)};
 function renderSkills(){
  const list=$('skillsList');if(!list)return;list.replaceChildren();
  const f=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:1});
@@ -4699,6 +4699,7 @@ function edit(meal){
  setInput('mealKcal',meal.kcal);setInput('mealProtein',meal.protein);setInput('mealFat',meal.fat);setInput('mealCarbs',meal.carbs);
  $('mealFormTitle').textContent='Изменить приём пищи';$('mealCancel').hidden=false;$('mealSave').textContent='Сохранить изменения';
  $('mealEstimateResult').textContent='Сохранённые значения '+(meal.estimate?'ориентировочные.':'скорректированы вручную.');
+ const nutrients=$('mealKcal')?.closest('details');if(nutrients)nutrients.open=true;
  setPhotoPreview();$('mealForm').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function remove(id){
