@@ -1,0 +1,54 @@
+
+/* LifeSims v46 — chat-first meal entry. Original detailed nutrition editor remains available. */
+.meal-chat-mask[hidden]{display:none!important}
+.meal-chat-mask{position:fixed;inset:0;z-index:5000;display:flex;align-items:flex-end;justify-content:center;background:#080c13bc;color:#f1f4f6;font-family:system-ui,-apple-system,"Segoe UI",sans-serif}
+.meal-chat-sheet{background:linear-gradient(160deg,#24262b,#191b20 56%,#111419);border:1px solid #4e5259;box-shadow:0 -10px 65px #0009;border-radius:28px 28px 0 0;width:min(100%,760px);height:min(93dvh,880px);display:flex;flex-direction:column;overflow:hidden;padding-bottom:env(safe-area-inset-bottom)}
+.meal-chat-grab{background:#eee;border-radius:12px;width:44px;height:5px;margin:10px auto 3px;flex:none}
+.meal-chat-head{display:flex;align-items:center;gap:9px;padding:10px 17px 9px;flex:none}
+.meal-chat-head h2{font-size:19px;margin:0;flex:1;color:#fff}
+.meal-chat-head button{border:0;min-height:44px;min-width:44px;background:#32353b;color:#f2f2f2;border-radius:50%;cursor:pointer;font-size:22px}
+.meal-chat-head input{color:#e7e7e7;background:#32353b;border:1px solid #696d75;border-radius:11px;font:13px system-ui;min-height:42px;max-width:135px;padding:6px}
+.meal-chat-head .meal-chat-details{font-size:18px}
+.meal-chat-tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:2px;flex:none;margin:0 16px;border-bottom:1px solid #585b60}
+.meal-chat-tabs button{border:0;border-bottom:2px solid transparent;background:transparent;padding:14px 4px 13px;color:#aaaeb8;min-height:48px;font-size:14px;cursor:pointer}
+.meal-chat-tabs button[aria-selected=true]{border-bottom-color:#f3efe9;color:#fff;font-weight:650}
+.meal-chat-contents{overflow-y:auto;overscroll-behavior:contain;flex:1;min-height:0;padding:19px 18px 16px;scrollbar-width:thin}
+.meal-chat-prompt{font-size:21px;font-weight:550;line-height:1.4;color:#fafafa;margin:7px 0 15px}
+.meal-chat-subtitle{font-size:13px;color:#b8bbc3;margin:0 0 13px}
+.meal-chat-empty{padding:17px 0;color:#b8bec8;font-size:14px}
+.meal-chat-summary{border:1px solid #515960;background:#282b31;border-radius:16px;padding:12px 14px;margin-bottom:15px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.meal-chat-summary strong{font-size:19px;color:#f2f4f6}
+.meal-chat-summary span{font-size:12px;color:#bcbfc9}
+.meal-chat-thread{display:flex;flex-direction:column;gap:14px}
+.meal-chat-entry{display:flex;flex-direction:column;gap:6px}
+.meal-chat-message{max-width:90%;align-self:flex-end;background:#43464d;border-radius:18px 18px 5px 18px;padding:12px 14px;word-break:break-word;white-space:pre-wrap;font-size:15px;line-height:1.4}
+.meal-chat-response{max-width:94%;align-self:flex-start;background:#282c34;border:1px solid #52565e;border-radius:5px 17px 17px 17px;padding:12px 13px}
+.meal-chat-response strong{font-size:18px;color:#dbf6e9}
+.meal-chat-response .meal-chat-macro{font-size:12px;color:#c1c9d1;margin:5px 0}
+.meal-chat-response .meal-chat-uncertainty{font-size:11px;color:#bac0cb;margin-top:4px}
+.meal-chat-response button,.meal-chat-item button{background:#373d46;color:#eaf2f8;border:1px solid #6a707a;border-radius:12px;min-width:44px;min-height:44px;padding:8px 11px;font-size:13px;cursor:pointer}
+.meal-chat-response .meal-chat-actions{display:flex;gap:7px;margin-top:8px}
+.meal-chat-list{display:flex;flex-direction:column;gap:9px}
+.meal-chat-item{border:1px solid #515760;background:#272b32;border-radius:14px;padding:9px;display:flex;align-items:center;gap:6px;min-height:64px}
+.meal-chat-pick{flex:1;text-align:left;border:0!important;background:transparent!important;color:white!important;min-width:0!important;padding:6px!important}
+.meal-chat-pick b,.meal-chat-pick small{display:block;white-space:normal;text-align:left}
+.meal-chat-pick b{font-size:14px}
+.meal-chat-pick small{font-size:12px;color:#bfc5cd;margin-top:5px}
+.meal-chat-star{font-size:21px!important;padding:7px!important}
+.meal-chat-star[aria-pressed=true]{color:#f0d288!important}
+.meal-chat-compose{padding:10px 17px 16px;flex:none;border-top:1px solid #42474e;background:#1e2126}
+.meal-chat-hint{font-size:12px;color:#c1c5cb;line-height:1.4;margin:0 0 8px}
+.meal-chat-suggestions{display:flex;gap:7px;overflow-x:auto;scrollbar-width:thin;padding-bottom:8px}
+.meal-chat-suggestions[hidden]{display:none}
+.meal-chat-suggestions button{border:1px solid #636a72;border-radius:20px;white-space:nowrap;background:#30353d;color:#e7eef3;font-size:13px;min-height:36px;padding:7px 12px}
+.meal-chat-composer{display:flex;align-items:flex-end;gap:9px}
+.meal-chat-composer textarea{width:100%;min-height:59px;max-height:140px;resize:vertical;border:1px solid #878890;border-radius:19px;background:#2b2d34;color:#fff;padding:13px 14px;font:17px/1.4 system-ui;outline:none;flex:1}
+.meal-chat-composer textarea::placeholder{color:#abaeb7}
+.meal-chat-composer textarea:focus{border-color:#f1ecdf}
+.meal-chat-composer button{min-height:54px;min-width:54px;border:0;border-radius:50%;background:#eee7dd;color:#242428;font-size:23px;font-weight:700;cursor:pointer}
+.meal-chat-composer button:disabled{background:#555962;color:#b3b3b8;cursor:not-allowed}
+.meal-chat-status{font-size:13px;color:#d7d9dc;min-height:18px;margin:8px 0 0}
+.meal-chat-status[hidden]{display:none}
+.meal-chat-note{color:#bbbfc7;font-size:11px;padding:0 17px 7px;margin:0}
+@media(max-width:430px){.meal-chat-sheet{height:94dvh}.meal-chat-head{padding-left:12px;padding-right:12px}.meal-chat-contents{padding:14px 13px}.meal-chat-tabs{margin:0 10px}.meal-chat-compose{padding:8px 12px 9px}.meal-chat-prompt{font-size:18px}.meal-chat-message{max-width:98%}}
+@media(prefers-reduced-motion:reduce){.meal-chat-mask *{scroll-behavior:auto!important}}
