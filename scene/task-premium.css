@@ -120,3 +120,29 @@
 #calendarTaskPopup #tpResourceEditor{scroll-margin-top:20px}
 .tp-habit-resource{display:block;font-size:10px;font-weight:480;color:#92ced5;margin:4px 0 0 17px}
 @media(max-width:370px){#tpResourceEditor .tp-editor-grid{grid-template-columns:minmax(0,1fr)}}
+
+
+/* v59: tap a habit name to edit; harmful/negative habit completions are red. */
+.tp-habit-table .tp-habit-name .tp-habit-edit-name{
+ display:inline-block!important;
+ background:transparent!important;border:0!important;box-shadow:none!important;
+ color:#eef5fb!important;font-size:12px!important;font-weight:620!important;
+ padding:8px 0!important;min-height:44px;max-width:calc(100% - 21px);
+ white-space:normal;text-align:left;vertical-align:middle;
+ line-height:1.3;overflow-wrap:anywhere;border-radius:5px;
+}
+.tp-habit-table .tp-habit-name .tp-habit-edit-name.negative{color:#ff8993!important}
+.tp-habit-table .tp-habit-name .tp-habit-edit-name:focus-visible{
+ outline:2px solid #ffd1a4!important;outline-offset:2px
+}
+.tp-habit-table .tp-habit-day.was-done.is-negative{
+ background:#47252e!important;border-color:#cc5264!important;color:#ff8993!important
+}
+.tp-habit-table .tp-habit-day.was-done.is-negative:hover{background:#582d37!important}
+.tp-negative-habit .tp-info strong{color:#ff8993}
+#tpHabitNature{border-color:#a05c66;background:#322930}
+#tpHabitNature .tp-negative-toggle{display:flex;align-items:center;flex-direction:row;gap:10px;font-size:14px}
+#tpHabitNature .tp-negative-toggle input{
+ appearance:auto;width:21px;min-width:21px;height:21px;accent-color:#f36b79
+}
+#tpHabitNature .tp-note{color:#edc3cb}
