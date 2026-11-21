@@ -664,6 +664,13 @@ body{background:#091428}
  background:#273859;color:#fff;border:1px solid #94a4c3;border-radius:10px;padding:10px}
 #objectLinkDialog button{min-height:44px;min-width:44px}
 #objectLinkDialog .row{display:flex;flex-wrap:wrap;gap:9px}
+</style>
+<style id="lifesims-v48-metric-source">
+#needsGrid .metric-origin{display:block;font-size:12px;line-height:1.35;letter-spacing:.01em;
+ color:#e1e7ef;opacity:.83;margin-top:7px;text-align:left;padding:0 2px}
+#needsGrid .calorie-balance-card .metric-origin{padding-top:4px}
+#singleMetricContent #hungerManualSlider{width:100%;min-height:44px}
+#singleMetricContent output{display:block;margin:6px 0 10px;color:#e1f7ef}
 </style></head>
 <body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v48</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
@@ -1670,7 +1677,8 @@ function openSingleMetric(field,date=today()){
  }else if(field==='hygiene'){
   addNumber('Текущая гигиена',hygieneCondition(r,date)==null?null:hygieneCondition(r,date)+'%');
   const reference=showerReference();
-  note('Последний душ: '+(reference?.source==='logged'?new Date(reference.at).toLocaleString('ru-RU'):reference?.source==='reported'?'18 ноября (среда), время не указано':'нет записи')+'. Гигиена снижается со временем; при записи только даты используется расчёт по календарным дням.');
+  const ant=state.room?.lastAntiperspirantAt,antDay=typeof ant==='string'&&Number.isFinite(Date.parse(ant))?dayStr(new Date(ant)):null;
+  note('Последний душ: '+(reference?.source==='logged'?new Date(reference.at).toLocaleString('ru-RU'):reference?.source==='reported'?reference.day+' (время не указано)':'нет записи')+'. Антиперспирант: '+(antDay?freshnessLabel(antDay,date):'нет записи')+'. В игровой модели после душа антиперспирант продлевает защиту на 12 часов (или на календарный день, когда время душа неизвестно).');
   singleMetricField(date,'hygiene');
   addButton('Сохранить гигиену',()=>commitValue(['hygiene']));
   if(date===today()){
@@ -2717,7 +2725,8 @@ $('financeClose').onclick=()=>$('financeDialog').close();
 $('financeForm').onsubmit=saveFinanceControl;
 renderSeasonalWindow();renderMovie();
 setInterval(renderSeasonalWindow,5*60*1000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)renderSeasonalWindow()});
+setInterval(()=>{if(!document.hidden)renderNeeds()},60*1000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden){renderSeasonalWindow();renderNeeds()}});
 $('entropyRange').onchange=()=>{
  const target=Number($('entropyRange').value);
  if(transact(()=>{state.room??={};state.room.entropyOffset=(Number(state.room.entropyOffset)||0)+(target-gameEntropy())})){renderAll();toast('Игровая энтропия изменена')}
