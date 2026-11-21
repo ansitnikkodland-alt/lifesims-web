@@ -67,6 +67,35 @@
    if(habit.id!=='__coffee')line.append(button('✎',()=>api.edit(habit.id)));
    list.append(line);
   }
+  // Read-only measured/history metrics, as in the supplied habit-tracker reference.
+  // Never invent a check-in or mark missing Oura readings as zero.
+  const observed=document.createElement('tr');observed.className='tp-habit-subheading';
+  const observedLabel=el('th','tp-habit-name','Показатели дня');observedLabel.colSpan=8;
+  observed.append(observedLabel);tbody.append(observed);
+  const metrics=[
+   {name:'Шаги',get:d=>Number.isFinite(saved.days?.[d]?.steps)?
+    saved.days[d].steps.toLocaleString('ru-RU'):'?'},
+   {name:'Сон',get:d=>Number.isFinite(saved.days?.[d]?.sleepHours)?
+    saved.days[d].sleepHours.toLocaleString('ru-RU',{maximumFractionDigits:1})+' ч':'?'},
+   {name:'Readiness',get:d=>Number.isFinite(saved.days?.[d]?.ouraScores?.readiness)?
+    saved.days[d].ouraScores.readiness+'%':'?'},
+   {name:'Последний приём пищи',get:d=>{
+    const meals=(saved.foodMeals||[]).filter(m=>m.date===d&&typeof m.time==='string');
+    return meals.length?meals.map(m=>m.time).sort().pop():'?';
+   }}
+  ];
+  for(const metric of metrics){
+   const tr=el('tr','tp-habit-observed'),name=el('th','tp-habit-name');
+   const dot=el('span','tp-habit-dot');dot.style.background=shade(metric.name);
+   name.append(dot,document.createTextNode(metric.name));tr.append(name);
+   for(const date of days){
+    const td=el('td'),value=metric.get(date);
+    const txt=el('span','tp-habit-readonly'+(value==='?'?' unknown':''),value);
+    txt.title='Запись показателя за '+date;
+    td.append(txt);tr.append(td);
+   }
+   tbody.append(tr);
+  }
   table.append(tbody);
   $('tpHabitGrid').replaceChildren(table);
   $('tpHabitGrid').hidden=view!=='grid';list.hidden=view!=='list';
