@@ -248,11 +248,10 @@
    status('Укажи, сколько граммов ты съела (от 1 до 10 000).');return
   }
   const estimate=legacy.estimate(canonicalTitle+(ingredientText?', '+ingredientText:''),gramsFromPhoto||(!hasNewIngredients&&match?.grams)||existing?.grams||null);
-  const fromPackage=!!photoFile&&photoData?.kind==='package'&&
-   photoData.per100&&Object.values(photoData.per100).some(v=>v!=null);
+  const fromPackage=!!photoFile&&photoData?.kind==='package';
   const usePrevious=!photoFile&&!!match&&!hasNewIngredients&&match.kcal!=null;
   const nutrition=fromPackage?Object.fromEntries(['kcal','protein','fat','carbs'].map(k=>[
-   k,photoData.per100[k]==null?null:Math.round(photoData.per100[k]*gramsFromPhoto/100*10)/10
+   k,photoData.per100?.[k]==null?null:Math.round(photoData.per100[k]*gramsFromPhoto/100*10)/10
   ])):(usePrevious?match:estimate);
   const now=new Date(),time=existing?.time||String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
   try{
