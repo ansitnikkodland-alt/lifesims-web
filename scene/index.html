@@ -688,8 +688,17 @@ body{background:#091428}
 #needsGrid .activity-sync-detail{color:#c6d8e7;margin-top:7px}
 #ouraToday{white-space:pre-line}
 @media(max-width:380px){#needsGrid .needs-energy-pair{gap:6px}#needsGrid .needs-energy-pair>.meter{padding:9px}}
+</style><style id="v51-interaction">
+#needsNativeModal,#calendarTaskPopup{width:min(96vw,620px);max-width:96vw;max-height:90dvh;overflow:auto;padding:16px;border:1px solid #8ea8c8;border-radius:18px;background:#1e2e4d;color:#fff}
+#needsNativeModal::backdrop,#calendarTaskPopup::backdrop{background:#071023cc}
+#needsNativeModal #needsEditor[open]{position:relative!important;display:block!important;inset:auto!important;left:auto!important;right:auto!important;top:auto!important;width:100%!important;max-height:none!important;overflow:visible!important;padding:0!important;border:0!important;box-shadow:none!important;background:transparent!important}
+#calendarTaskPopup #calendarTaskEditor{display:block!important;max-width:100%;padding:0;margin:0;box-shadow:none}
+#calendarTaskPopup #calendarTaskEditor>summary{font-size:18px;font-weight:700;margin-bottom:10px}
+#needsGrid .needs-hunger-wrap{display:flex;flex-direction:column;gap:7px;min-width:0}
+#needsGrid .needs-hunger-wrap>.meter{width:100%;flex:1}
+#needsGrid .needs-hunger-wrap>.hunger-eat{width:100%;min-height:44px;white-space:normal}
 </style></head>
-<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v50</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
+<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v51</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
 <img id="sceneRugColor" class="rug-color-layer" alt="" aria-hidden="true">
 <span id="sceneCrystalTint" aria-hidden="true"></span>
@@ -1077,6 +1086,7 @@ function addActivity(e){
  const act={...(old||{}),id:old?.id||uid(),name,repeat,weekdays:repeat==='weekly'?weekdays:[],createdDate:$('taskStartDate').value||today(),kind:$('taskKind').value==='habit'?'habit':'task',xp:Number($('taskXP').value),object:$('taskObject').value||null,completions:old?.completions||[]};
  if(!transact(()=>{const i=state.activities.findIndex(x=>x.id===act.id);if(i<0)state.activities.push(act);else state.activities[i]=act;}))return toast('Не удалось сохранить');
  clearActivityEditor();$('calendarTaskEditor').open=false;
+ if($('calendarTaskPopup')?.open)$('calendarTaskPopup').close();
  renderAll();toast(old?'Дело обновлено':'Дело добавлено');
 }
 function deleteActivity(id){
@@ -1508,7 +1518,7 @@ function closeOtherMetricPopups(){
  }
  $('food').classList.remove('open');
  $('diary').classList.remove('open');
- $('needsEditor').open=false;
+ $('needsEditor').open=false;const native=$('needsNativeModal');if(native?.open)native.close();
  $('lifeModalMask').hidden=true;
 }
 function closeAllLifeOverlays(){
@@ -1607,7 +1617,8 @@ function openSingleMetric(field,date=today()){
   const calc=satietyAssessment(date);
   addNumber('Расчётная сытость',calc.value==null?null:calc.value+'%');
   if(calc.date)note('Последняя запись: '+freshnessLabel(calc.date,date)+'.');
-  note('Это игровая шкала голода: чем больше заполнение, тем выше сытость. Условно 600 ккал дают 100% сразу после еды. Значение плавно уменьшается до нуля за 16 часов. Это не медицинская оценка и не рекомендация по питанию.');
+  addButton('🍽 Поесть — записать еду',()=>{dialog.close();openCalorieBalance(today())});
+   note('Это игровая шкала голода: чем больше заполнение, тем выше сытость. Условно 600 ккал дают 100% сразу после еды. Значение плавно уменьшается до нуля за 16 часов. Это не медицинская оценка и не рекомендация по питанию.');
   if(date!==today()){
    note('Ручная корректировка доступна за сегодняшний день. Прошлые приёмы пищи можно редактировать в календаре.');
   }else{
@@ -1719,7 +1730,15 @@ function showNeedsEditor(field='',date=today()){
  if(field){openSingleMetric(field,date);return}
  closeOtherMetricPopups();
  openTab('needs',false);
- fillState(date);$('needsEditor').open=true;$('lifeModalMask').hidden=false;
+ fillState(date);let modal=$('needsNativeModal');
+ if(!modal){
+  modal=document.createElement('dialog');modal.id='needsNativeModal';
+  modal.setAttribute('aria-label','Все показатели');document.body.append(modal);
+  modal.addEventListener('close',()=>{$('needsEditor').open=false;syncLifeModalMask()});
+ }
+ $('needsEditor').open=true;modal.append($('needsEditor'));
+ if(!modal.open)modal.showModal();modal.scrollTop=0;
+ $('lifeModalMask').hidden=true;
 }
 function xpTotal(){const origin=Object.values(state.legacySkills||{}).reduce((sum,x)=>sum+(Number.isFinite(+x)?+x:0),0);const earned=state.events.reduce((sum,e)=>sum+(e.kind==='complete'&&Number.isFinite(+e.xp)?+e.xp:0),0);return Math.max(0,Math.round(origin+earned))}
 function metric(el,name,value,suffix='%',displayValue=null,field='',sourceDate=null,detail=''){
@@ -1985,12 +2004,16 @@ function renderNeeds(){
   calories.append(origin);
  }
  const pair=document.createElement('div');pair.className='needs-energy-pair';
- pair.append(calories);g.append(pair);
+ pair.append(calories);g.insertBefore(pair,g.children[2]||null);
  // Explicitly render the hunger meter beside calories even when no meal was logged.
  metric(pair,'🍽 Голод',hunger.value,'%',hunger.value==null?'Нет данных':hunger.value+'% сытости',
   'hunger',hunger.date,hunger.date?'спад за 16 ч':'Нажми, чтобы записать вручную');
  const hungerCard=pair.lastElementChild;hungerCard.classList.add('need-hunger');
- hungerCard.setAttribute('aria-label','Голод — открыть ручную корректировку');
+ hungerCard.setAttribute('aria-label','Голод — изменить вручную или записать еду');
+ const hungerWrap=document.createElement('div');hungerWrap.className='needs-hunger-wrap';
+ hungerCard.replaceWith(hungerWrap);hungerWrap.append(hungerCard);
+ const eat=document.createElement('button');eat.type='button';eat.className='secondary hunger-eat';
+ eat.textContent='🍽 Поесть · записать еду';eat.onclick=()=>openCalorieBalance(today());hungerWrap.append(eat);
  $('xpTop').textContent=xpTotal()+' XP';
  const completed=state.events.filter(e=>e.date===d&&e.kind==='complete').length;
  const vals=[
@@ -2534,14 +2557,26 @@ function openNewCalendarEvent(){
   $('calendarEventEditor').scrollIntoView({behavior:'smooth',block:'start'});
 }
 function openNewCalendarTask(kind='task',object=null){
-  openTab('history');
-  clearActivityEditor();$('taskDate').value=$('historyDate').value||today();
-  $('taskKind').value=kind==='habit'?'habit':'task';
-  if(object&&[...$('taskObject').options].some(option=>option.value===object))$('taskObject').value=object;
-  $('taskRepeat').value=kind==='habit'?'daily':'once';
-  $('taskEditorHeading').textContent=kind==='habit'?'Добавить привычку':'Добавить дело';
-  $('calendarTaskEditor').open=true;
-  $('calendarTaskEditor').scrollIntoView({behavior:'smooth',block:'start'});
+ closeDayAgenda();closeOtherMetricPopups();
+ const editor=$('calendarTaskEditor');
+ let popup=$('calendarTaskPopup');
+ if(!popup){
+  popup=document.createElement('dialog');popup.id='calendarTaskPopup';
+  popup.setAttribute('aria-label','Создать дело или привычку');
+  document.body.append(popup);
+  popup.addEventListener('close',()=>{
+   if(editor.parentElement===popup)$('history').append(editor);
+   editor.open=false;
+  });
+ }
+ if(editor.parentElement!==popup)popup.append(editor);
+ clearActivityEditor();editor.open=true;
+ $('taskKind').value=kind==='habit'?'habit':'task';
+ $('taskStartDate').value=today();
+ if(object&&[...$('taskObject').options].some(x=>x.value===object))$('taskObject').value=object;
+ $('taskRepeat').value=kind==='habit'?'daily':'once';$('taskWeekdays').hidden=true;
+ $('taskEditorHeading').textContent=kind==='habit'?'Добавить привычку':'Добавить дело';
+ if(!popup.open)popup.showModal();$('taskTitle').focus({preventScroll:true});
 }
 function saveEvent(e){
  e.preventDefault();
@@ -2690,7 +2725,7 @@ $('diaryText').addEventListener('input',()=>{diaryTagTouched=false;diaryPaint()}
 $('diaryAddTag').onclick=()=>{const name=$('diaryCustomTag').value.trim().toLowerCase();if(!name)return;diaryTagTouched=true;diaryChosenTags.add(name);$('diaryCustomTag').value='';diaryTagsRender(diaryAnalyze($('diaryText').value).tags)};
 $('exportData').onclick=backup;$('downloadHTML').onclick=downloadHTML;$('importData').onclick=restore;$('confirmImport').onclick=confirmImport;$('cancelImport').onclick=()=>{pendingImport=null;$('importConfirmPanel').hidden=true;importMessage('Импорт отменён. Текущий прогресс не изменён.')};$('importFile').onchange=()=>{pendingImport=null;$('importConfirmPanel').hidden=true;importMessage('Файл выбран. Нажми «Проверить файл JSON».')};
 $('taskRepeat').onchange=()=>{$('taskWeekdays').hidden=$('taskRepeat').value!=='weekly'};
-$('taskCancel').onclick=()=>{clearActivityEditor();$('calendarTaskEditor').open=false};
+$('taskCancel').onclick=()=>{clearActivityEditor();$('calendarTaskEditor').open=false;if($('calendarTaskPopup')?.open)$('calendarTaskPopup').close()};
 $('taskDelete').onclick=()=>deleteActivity($('taskEditId').value);
 clearActivityEditor();
 $('eventRepeat').onchange=()=>{$('eventWeekdays').hidden=$('eventRepeat').value!=='weekly'};$('eventForm').onsubmit=saveEvent;
@@ -2713,7 +2748,7 @@ $('historyLogForm').onsubmit=saveHistoryLog;
 $('historyLogDelete').onclick=deleteHistoryLog;
 $('singleMetricClose').onclick=()=>{if($('singleMetricDialog').open)$('singleMetricDialog').close();else $('singleMetricDialog').removeAttribute('open')};
 $('singleMetricDialog').addEventListener('click',e=>{if(e.target===$('singleMetricDialog'))$('singleMetricDialog').close()});
-$('needsClose').onclick=()=>{$('needsEditor').open=false;syncLifeModalMask()};
+$('needsClose').onclick=()=>{const modal=$('needsNativeModal');if(modal?.open)modal.close();$('needsEditor').open=false;syncLifeModalMask()};
 $('lifeModalMask').onclick=closeAllLifeOverlays;
 document.addEventListener('keydown',e=>{
  if(e.key==='Escape')closeAllLifeOverlays();
