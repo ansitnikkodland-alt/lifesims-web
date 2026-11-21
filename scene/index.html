@@ -4231,12 +4231,12 @@ async function apply(automatic=false){
  try{await saveDetails(selected.collections,selected.from,selected.to);note=' Подробные данные добавлены в историю.'}
  catch(e){note=' ⚠ Подробности не сохранились: '+e.message}
  renderToday();
- preview=null;renderPreview();saveSetting(LAST_KEY,String(Date.now()));
+ preview=null;renderPreview();saveSetting(LAST_KEY,String(Date.now()));saveSetting(CORE_KEY,String(Date.now()));
  status('✓ Oura: обновлено '+done.fields+' показателей за '+done.days+' дней; ручные записи не перезаписаны.'+note+
    (selected.failures.length?' Недоступные категории: '+selected.failures.join('; '):'')+(automatic?' Автопроверка завершена.':''));
  update();
 }
-async function load(automatic=false){
+async function load(automatic=false,coreOnly=false){
  if(busy)return;
  if(!connected()){
   status('Сначала нажми «Подключить Oura» и закончи вход на сайте Oura. Без успешной авторизации проверить данные нельзя.');
@@ -4272,7 +4272,22 @@ async function load(automatic=false){
   if(automatic&&records.length){
    earlyImport=bridge.importDays(records);
    renderToday();
-   status('✓ Автоматически внесены основные показатели Oura за '+earlyImport.days+' дней. Загружаю дополнительные категории…');
+   status('✓ Автоматически внесены основные показатели Oura за '+earlyImport.days+' дней.'+
+     (coreOnly?'':' Загружаю дополнительные категории…'));
+  }
+  if(automatic&&coreOnly){
+   // Daily summaries are enough for a short refresh. Keep detailed categories
+   // on their slower six-hour schedule to avoid unnecessary API traffic.
+   preview=null;renderPreview();
+   saveSetting(CORE_KEY,String(Date.now()));
+   renderToday();
+   const y=bridge.getDays()[dateAdd(end,-1)]||{};
+   const stepMessage=Number.isFinite(y.steps)?y.steps.toLocaleString('ru-RU')+' шагов':
+    'шаги ещё не получены Oura';
+   status('✓ Oura: проверены ежедневные показатели за '+start+' — '+end+
+     '. Вчера: '+stepMessage+'.'+
+     (baseFailures.length?' Ошибки отдельных источников: '+baseFailures.join('; '):''));
+   return;
   }
   const {extra,failures:extraFailures}=await fetchExtras(start,end,baseCollections);
   const failures=[...baseFailures,...extraFailures];
@@ -4291,16 +4306,38 @@ el('ouraApply').onclick=()=>{
  if(!preview||(!preview.records.length&&!preview.collections?.some(c=>c.items.length))){status('Пока нечего сохранять. Нажми «Проверить данные» и дождись результатов Oura за неделю.');return;}
  apply(false).catch(e=>status('⚠ '+e.message));
 };
+const CORE_PERIOD=30*60*1000,DETAIL_PERIOD=6*60*60*1000;
+let lastAttempt=0;
+// No hidden-tab polling: mobile OSes can suspend JavaScript in the background.
+// Resuming or reconnecting can restart a due sync; disabled auto-sync is respected.
+function autoSchedule(force=false){
+ if(!el('ouraAuto').checked||!connected()||busy||document.hidden||!navigator.onLine)return;
+ const time=Date.now(),lastCore=Number(setting(CORE_KEY)||0),lastFull=Number(setting(LAST_KEY)||0);
+ if(!force&&Number.isFinite(lastCore)&&lastCore>0&&time-lastCore<CORE_PERIOD)return;
+ if(time-lastAttempt<3*60*1000)return;
+ lastAttempt=time;
+ const short=lastFull>0&&time-lastFull<DETAIL_PERIOD;
+ load(true,short).catch(e=>status('⚠ Oura: '+e.message));
+}
+window.LifeSimsOuraSync=async()=>{
+ if(!connected()){
+  const msg='Для обновления шагов нужно подключить Oura в разделе «Потребности». Вход может потребоваться заново, если срок доступа истёк.';
+  status(msg);throw Error(msg);
+ }
+ if(busy)throw Error('Oura уже синхронизируется.');
+ // An explicit check fetches the four daily datasets and saves immediately.
+ await load(true,true);
+};
+setInterval(()=>autoSchedule(),5*60*1000);
+document.addEventListener('visibilitychange',()=>{if(!document.hidden)autoSchedule()});
+window.addEventListener('focus',()=>autoSchedule());
+window.addEventListener('online',()=>autoSchedule());
+window.addEventListener('pageshow',()=>autoSchedule());
 renderToday();
 update();
-if(connected()&&el('ouraAuto').checked){
- const last=Number(setting(LAST_KEY)||0);
- if(!bridge.wasImported()||!Number.isFinite(last)||Date.now()-last>6*60*60*1000){
-  // Don't premark a successful fetch: if it fails, allow a fresh attempt.
-  load(true).catch(e=>status('⚠ Oura: '+e.message));
- }
-}
-window.LifeSimsOuraVersion='oura-v27-https-bridge';
+if(connected()&&el('ouraAuto').checked)autoSchedule();
+else if(!connected())status('Oura не подключена в этом сеансе. Чтобы загрузить вчерашние шаги, нажми «Подключить Oura» и разреши Daily.');
+window.LifeSimsOuraVersion='oura-v50-auto-30min';
 })();
 </script>
 
