@@ -732,7 +732,7 @@ body{background:#091428}
 #habitBackdateOpen,#calendarHabitBackdate,#agendaHabitBackdate{min-height:44px}
 #topHabitsList .habit-backdate{min-height:38px;font-size:12px}
 </style></head>
-<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v54</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
+<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v55</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
 <img id="sceneRugColor" class="rug-color-layer" alt="" aria-hidden="true">
 <span id="sceneCrystalTint" aria-hidden="true"></span>
@@ -780,8 +780,8 @@ body{background:#091428}
 <div id="needsEnergyTop" class="needs-energy-pair" aria-label="Баланс калорий и голод">
 <div id="calorieCardHost"><button id="calorieCardFallback" type="button" class="meter need-action calorie-balance-card"><span><strong>⚖️ Дефицит / профицит калорий</strong><b>—</b></span><div class="bar"><div class="empty"></div></div><small>Записать еду и посмотреть баланс</small></button></div>
 <div id="hungerCardHost" class="needs-hunger-wrap">
-<button id="hungerMeterCard" type="button" class="meter need-action need-hunger" aria-label="Голод — изменить показатель">
-<span><strong>🍽 Голод</strong><b id="hungerMeterValue">—</b></span>
+<button id="hungerMeterCard" type="button" class="meter need-action need-hunger" aria-label="Сытость — изменить показатель">
+<span><strong>🍽 Сытость</strong><b id="hungerMeterValue">—</b></span>
 <div id="hungerMeterTrack" class="bar"><div class="empty"></div></div>
 <small id="hungerMeterOrigin">Нет данных о еде · нажми «Поесть»</small>
 </button>
@@ -1709,7 +1709,7 @@ function openSingleMetric(field,date=today()){
  const titles={
   resource:'◆ Ресурс',sleepHours:'💤 Потребность во сне',mood:'☺ Настроение',
   hygiene:'♨ Гигиена',condition:'♥ Физическое состояние',entropy:'🌀 Энтропия',
-  hunger:'🍽 Голод / сытость',steps:'🚶 Активность',totalCalories:'🔥 Расход калорий'
+  hunger:'🍽 Сытость',steps:'🚶 Активность',totalCalories:'🔥 Расход калорий'
  };
  if(!titles[field])return;
  closeOtherMetricPopups();
@@ -1767,7 +1767,7 @@ function openSingleMetric(field,date=today()){
   addNumber('Расчётная сытость',calc.value==null?null:calc.value+'%');
   if(calc.date)note('Последняя запись: '+freshnessLabel(calc.date,date)+'.');
   addButton('🍽 Поесть — записать еду',()=>{dialog.close();openCalorieBalance(today())});
-   note('Это игровая шкала голода: чем больше заполнение, тем выше сытость. Условно 600 ккал дают 100% сразу после еды. Значение плавно уменьшается до нуля за 16 часов. Это не медицинская оценка и не рекомендация по питанию.');
+   note('Это игровая шкала сытости: чем больше заполнение, тем выше сытость. Условно 600 ккал дают 100% сразу после еды. Значение плавно уменьшается до нуля за 16 часов. Это не медицинская оценка и не рекомендация по питанию.');
   if(date!==today()){
    note('Ручная корректировка доступна за сегодняшний день. Прошлые приёмы пищи можно редактировать в календаре.');
   }else{
@@ -1781,7 +1781,7 @@ function openSingleMetric(field,date=today()){
     const value=Number(input.value);
     if(!Number.isFinite(value)||value<0||value>100)return message.textContent='Выбери значение от 0 до 100%.';
     const updated={...currentRecord(date),hunger:value,hungerSetAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
-    if(setDay(date,updated)){renderAll();dialog.close();toast('Голод изменён вручную')}
+    if(setDay(date,updated)){renderAll();dialog.close();toast('Сытость изменена вручную')}
     else message.textContent='Не удалось сохранить значение.';
    });
    addButton('Сбросить ручную корректировку',()=>{
