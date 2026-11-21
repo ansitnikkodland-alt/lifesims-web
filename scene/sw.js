@@ -1,5 +1,5 @@
-const CACHE='lifesims-scene-v59';
-const FILES=['./','./index.html','./room-illustrated-v42.jpg','./calendar-style.css','./task-premium.css','./task-premium.js','./habit-grid.js','./focus-timer.js','./oura-style.css','./food-log.css','./food-log.js','./meal-chat.css','./meal-photo.js','./meal-chat.js','./oura-sync.js','./privacy.html','./terms.html','./manifest.webmanifest','../icon.svg'];
+const CACHE='lifesims-scene-v60';
+const FILES=['./','./index.html','./room-illustrated-v42.jpg','./calendar-style.css','./task-premium.css?v=60','./task-premium.js?v=60','./habit-grid.js?v=60','./focus-timer.js?v=60','./oura-style.css','./food-log.css','./food-log.js','./meal-chat.css','./meal-photo.js','./meal-chat.js','./oura-sync.js','./privacy.html','./terms.html','./manifest.webmanifest','../icon.svg'];
 self.addEventListener('install',event=>{
  event.waitUntil(caches.open(CACHE)
   .then(cache=>cache.addAll(FILES.map(path=>new Request(path,{cache:'reload'}))))
@@ -30,11 +30,11 @@ self.addEventListener('fetch',event=>{
   })());
   return;
  }
- event.respondWith(fetch(request).then(response=>{
+ event.respondWith(fetch(request,{cache:(url.pathname.endsWith('.js')||url.pathname.endsWith('.css'))?'no-store':'default'}).then(response=>{
   if(response.ok){
    const copy=response.clone();
    event.waitUntil(caches.open(CACHE).then(cache=>cache.put(request,copy)));
   }
   return response;
- }).catch(()=>caches.match(request)));
+ }).catch(()=>caches.match(request,{ignoreSearch:true})));
 });
