@@ -3138,7 +3138,7 @@ window.LifeSimsTaskBridge={
  today,
  dateAdd:plusDays,
  read:()=>({
-  activities:state.activities||[],events:state.events||[],
+  activities:state.activities||[],events:state.events||[],days:state.days||{},foodMeals:state.foodMeals||[],
   taskProjects:state.taskProjects||[],taskTags:state.taskTags||[],
   focusSettings:state.focusSettings||{focus:25,short:5,long:15},
   focusTimer:state.focusTimer||{mode:'focus',remainingSec:1500,running:false}
