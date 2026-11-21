@@ -2122,6 +2122,18 @@ function renderHungerMeter(){
  }
  note.textContent=calc.date?freshnessLabel(calc.date)+' · сытость снижается за 16 часов':'Нет данных о еде · нажми «Поесть»';
 }
+function removeFoodEntry(id){
+ const entry=(state.foodMeals||[]).find(m=>m.id===id);
+ if(!entry)return toast('Запись о еде не найдена');
+ if(!confirm('Удалить «'+entry.title+'» за '+entry.date+'? Калории и сытость пересчитаются.'))return;
+ try{
+  if(!window.LifeSimsFoodBridge?.remove)throw Error('Модуль питания пока не загружен.');
+  window.LifeSimsFoodBridge.remove(id);
+  window.LifeSimsFood?.render?.();
+  renderAll();
+  toast('✓ Запись о еде удалена');
+ }catch(error){toast('Не удалось удалить еду: '+error.message)}
+}
 function renderNeeds(){
  renderCrystal();
  const d=today(),r=currentRecord(d),g=$('needsGrid');
@@ -2481,8 +2493,11 @@ function renderDayAgenda(){
     info.textContent=meal.title+(meal.kcal!=null?' · ≈'+meal.kcal+' ккал':'');
     const edit=document.createElement('button');edit.type='button';edit.className='agenda-edit';
     edit.textContent='✎';edit.setAttribute('aria-label','Изменить питание: '+meal.title);
-    edit.onclick=()=>openCalorieBalance(date,meal.id);
-    line.append(tm,info,edit);body.append(line);
+    edit.onclick=()=>{closeDayAgenda();openCalorieBalance(date,meal.id)};
+    const remove=document.createElement('button');remove.type='button';remove.className='agenda-delete';
+    remove.textContent='🗑';remove.setAttribute('aria-label','Удалить еду: '+meal.title);
+    remove.onclick=()=>removeFoodEntry(meal.id);
+    line.append(tm,info,edit,remove);body.append(line);
   }
   const addMeal=document.createElement('button');addMeal.type='button';
   addMeal.className='secondary';addMeal.textContent='＋ Записать приём пищи за '+date;
@@ -2598,7 +2613,9 @@ function renderHistory(){
     text.textContent='🍽 '+meal.time+' · '+meal.title+(meal.kcal!=null?' · ≈'+meal.kcal+' ккал':'');
     const edit=document.createElement('button');edit.type='button';edit.className='secondary';
     edit.textContent='Изменить';edit.onclick=()=>openCalorieBalance(chosen,meal.id);
-    row.append(text,edit);panel.append(row);count++;
+    const remove=document.createElement('button');remove.type='button';remove.className='danger-outline';
+    remove.textContent='Удалить';remove.onclick=()=>removeFoodEntry(meal.id);
+    row.append(text,edit,remove);panel.append(row);count++;
   }
   for(const ev of state.events.filter(x=>x.date===chosen)){
     const text=ev.kind==='legacy'?'↩ '+ev.name+' · '+ev.legacyXP+' XP (старая версия)':
