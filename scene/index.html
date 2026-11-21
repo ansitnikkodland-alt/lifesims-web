@@ -711,8 +711,18 @@ body{background:#091428}
 #needs .heading{align-items:center;flex-wrap:wrap}
 #ouraMount{scroll-margin-top:92px;margin:12px 0}
 #ouraMount .oura-panel{border-color:#6ca3ce}
+</style><style id="lifesims-v53-hunger">
+#needsEnergyTop{display:grid!important;grid-template-columns:minmax(0,1fr) minmax(0,1fr)!important;gap:9px!important;align-items:stretch!important;margin:8px 0 14px;visibility:visible!important;opacity:1!important}
+#calorieCardHost,#hungerCardHost{min-width:0;display:flex;flex-direction:column;gap:7px}
+#calorieCardHost>.meter,#hungerCardHost>.meter{width:100%;flex:1;min-height:125px}
+#hungerMeterCard{display:flex!important;flex-direction:column;align-items:stretch;text-align:left;visibility:visible!important;opacity:1!important;border:1px solid #80bfaa;background:#263e49}
+#hungerMeterCard>span{width:100%;display:flex;flex-wrap:wrap;justify-content:space-between;gap:4px}
+#hungerMeterTrack{width:100%;height:12px;flex-shrink:0}
+#hungerMeterOrigin{color:#c9e5db;line-height:1.4}
+#hungerEatButton{display:block!important;visibility:visible!important;opacity:1!important}
+@media(max-width:390px){#needsEnergyTop{gap:7px!important}#needsEnergyTop .meter{padding:9px!important}#needsEnergyTop .meter strong{font-size:12px}#hungerEatButton{padding:8px 5px}}
 </style></head>
-<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v52</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
+<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v53</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
 <img id="sceneRugColor" class="rug-color-layer" alt="" aria-hidden="true">
 <span id="sceneCrystalTint" aria-hidden="true"></span>
@@ -757,7 +767,17 @@ body{background:#091428}
 <nav class="nav" aria-label="Разделы"><button class="active" type="button" data-tab="needs">◈ Потребности</button><button type="button" data-tab="tasks">☑ Дела</button><button type="button" data-tab="habits">◇ Привычки</button><button type="button" data-tab="history">▦ Календарь</button></nav>
 <div class="content"><div id="storageStatus" class="notice" role="status">Проверка локального хранения…</div>
 <section class="section active" id="needs"><div class="heading"><h2>Потребности</h2><div class="row"><button class="secondary" id="openNeedsEditor" type="button">Все показатели</button><a id="ouraJump" class="secondary" href="#ouraMount">💍 Oura · подключение</a></div></div>
-<div id="needsEnergyTop" class="needs-energy-pair" aria-label="Баланс калорий и голод"><p class="hint">Загрузка шкалы голода…</p></div>
+<div id="needsEnergyTop" class="needs-energy-pair" aria-label="Баланс калорий и голод">
+<div id="calorieCardHost"><button id="calorieCardFallback" type="button" class="meter need-action calorie-balance-card"><span><strong>⚖️ Дефицит / профицит калорий</strong><b>—</b></span><div class="bar"><div class="empty"></div></div><small>Записать еду и посмотреть баланс</small></button></div>
+<div id="hungerCardHost" class="needs-hunger-wrap">
+<button id="hungerMeterCard" type="button" class="meter need-action need-hunger" aria-label="Голод — изменить показатель">
+<span><strong>🍽 Голод</strong><b id="hungerMeterValue">—</b></span>
+<div id="hungerMeterTrack" class="bar"><div class="empty"></div></div>
+<small id="hungerMeterOrigin">Нет данных о еде · нажми «Поесть»</small>
+</button>
+<button id="hungerEatButton" type="button" class="secondary hunger-eat">🍽 Поесть · записать еду</button>
+</div>
+</div>
 <div class="grid" id="needsGrid"></div><div id="ouraMount" class="oura-mount" aria-label="Синхронизация Oura"><p class="hint">Загрузка панели Oura…</p></div>
 <p class="hint">Нажми на любую потребность, чтобы изменить её показатель. Ресурс автоматически рассчитывается по доступным оценкам: сон, восстановление Oura и записанные настроение, физическое состояние, гигиена и питание. Неизвестные показатели остаются пустыми. Если записана еда, питание оценивается только по времени после последнего приёма пищи (игровая сытость, не качество рациона). Ручное значение питания имеет приоритет. Потребность во сне — игровая оценка по фактическому сну и накопленному недосыпу. Подключение Oura доступно ниже.</p><hr class="separator"><div class="card"><h3>Сегодня</h3><div id="todaySummary" class="muted">Нет записей</div></div><details id="needsEditor" class="card needs-editor"><summary>✎ Показатели дня</summary><button type="button" id="needsClose" class="secondary needs-popup-close">× Закрыть</button><div class="heading"><h3>Показатели и состояние</h3><input type="date" id="stateDate" aria-label="Дата записи"></div><p class="hint">Нажми на потребность выше, чтобы открыть нужное поле. Здесь также доступны сон, шаги, вес, лекарства и питание.</p><form id="stateForm"><div class="cols"><label class="field">Фактический сон, часов <input id="sleepHours" type="number" min="0" max="24" step="0.01" placeholder="Не записано"></label><label class="field">Недосып (ручная корректировка, ч) <input id="sleepDebtAdjustment" type="number" min="0" max="500" step="0.01" placeholder="Автоматический расчёт"></label><p class="hint">◆ Ресурс — игровая оценка по имеющимся данным. Физическое состояние автоматически использует Oura Readiness за сегодня (или вчера при отсутствии сегодняшнего); это не медицинская оценка. Ручное значение физического состояния используется только при отсутствии Oura.</p><label class="field">Настроение: <output id="moodValue">—</output>% <input id="mood" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="moodUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Физическое состояние: <output id="conditionValue">—</output>% <input id="condition" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="conditionUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Гигиена: <output id="hygieneValue">—</output>% <input id="hygiene" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="hygieneUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Питание: <output id="nutritionValue">—</output>% <input id="nutrition" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="nutritionUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Шаги <input id="steps" type="number" min="0" max="100000" step="1" placeholder="Не записано"></label><label class="field">Общий расход, ккал <input id="totalCalories" type="number" min="0" max="20000" step="1" placeholder="Не записано"></label><label class="field">Вес, кг <input id="weight" type="number" min="20" max="350" step="0.1" placeholder="Не записано"></label><label class="field">Талия, см <input id="waist" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label><label class="field">Бёдра, см <input id="hips" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label><label class="field">Грудь, см <input id="chest" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label></div><label class="field">Лекарства <button class="secondary" type="button" id="medsYesterday">Как вчера</button><textarea id="meds" placeholder="Только реально принятые лекарства"></textarea></label><label class="field">Питание <button class="secondary" type="button" id="foodYesterday">Как вчера</button><textarea id="foodLegacy" placeholder="Прежняя текстовая запись еды"></textarea></label><label class="field">Цикл <input id="cycle" maxlength="200" placeholder="Заметка о цикле"></label><button class="primary" type="submit">Сохранить запись за дату</button></form><div class="notice" id="sleepDebtNote">Долг сна рассчитывается по записанным дням.</div>
 <div class="card"><h3>🌀 Энтропия в комнате</h3><label class="field">Уровень игрового беспорядка: <output id="entropyValue">—</output><input id="entropyRange" class="color-slider" type="range" min="0" max="100" step="5"></label><p class="hint">Ползунок корректирует игровую оценку. Уборка уменьшает энтропию, время постепенно повышает. Это не измерение реального дома.</p></div></details></section><div id="lifeModalMask" class="life-modal-mask" hidden></div>
@@ -1996,6 +2016,21 @@ function openCalorieBalance(day=today(),mealId=null){
  closeDayAgenda();closeOtherMetricPopups();
  window.LifeSimsFood?.open?.(day,mealId);
 }
+function renderHungerMeter(){
+ const val=$('hungerMeterValue'),track=$('hungerMeterTrack'),note=$('hungerMeterOrigin');
+ if(!val||!track||!note)return;
+ const calc=satietyAssessment(today()),level=calc.value;
+ val.textContent=level==null?'—':level+'%';
+ track.replaceChildren();
+ if(level==null){const empty=document.createElement('div');empty.className='empty';track.append(empty)}
+ else{
+  const fill=document.createElement('b');
+  fill.style.setProperty('--val',Math.max(0,Math.min(100,level))+'%');
+  fill.style.setProperty('--meter-color',meterColor(level));
+  track.append(fill);
+ }
+ note.textContent=calc.date?freshnessLabel(calc.date)+' · сытость снижается за 16 часов':'Нет данных о еде · нажми «Поесть»';
+}
 function renderNeeds(){
  renderCrystal();
  const d=today(),r=currentRecord(d),g=$('needsGrid');
@@ -2008,9 +2043,6 @@ function renderNeeds(){
  // The simulated resource is visible only as the crystal over the Sim.
  metric(g,'☺ Настроение',mood.value,'%',null,'mood',mood.date);
  metric(g,'♨ Гигиена',hygiene.value,'%',null,'hygiene',hygiene.date,hygiene.detail||'');
- const hair=hairHygieneValue(d),washedAt=state.room?.lastHairWashAt;
- const washedDate=Number.isFinite(Date.parse(washedAt||''))?dayStr(new Date(washedAt)):null;
- metric(g,'💆 Гигиена головы',hair,'%',null,'hygiene',washedDate,'спад до 0% за 72 ч');
  metric(g,'♥ Физическое состояние',physical.value,'%',null,'condition',physical.date);
  const cleaned=state.room?.lastCleanAt||state.createdAt||'';
  const cleanedDay=/^\d{4}-\d\d-\d\d/.test(cleaned)?cleaned.slice(0,10):null;
@@ -2061,17 +2093,8 @@ function renderNeeds(){
   origin.textContent=freshnessLabel(usedDate)+(balance==null?' · неполные данные':'');
   calories.append(origin);
  }
- const pair=$('needsEnergyTop');pair.replaceChildren();
- pair.append(calories);
- // Explicitly render the hunger meter beside calories even when no meal was logged.
- metric(pair,'🍽 Голод',hunger.value,'%',hunger.value==null?'Нет данных':hunger.value+'% сытости',
-  'hunger',hunger.date,hunger.date?'спад за 16 ч':'Нажми, чтобы записать вручную');
- const hungerCard=pair.lastElementChild;hungerCard.classList.add('need-hunger');
- hungerCard.setAttribute('aria-label','Голод — изменить вручную или записать еду');
- const hungerWrap=document.createElement('div');hungerWrap.className='needs-hunger-wrap';
- hungerCard.replaceWith(hungerWrap);hungerWrap.append(hungerCard);
- const eat=document.createElement('button');eat.type='button';eat.className='secondary hunger-eat';
- eat.textContent='🍽 Поесть · записать еду';eat.onclick=()=>openCalorieBalance(today());hungerWrap.append(eat);
+ $('calorieCardHost').replaceChildren(calories);
+ renderHungerMeter();
  $('xpTop').textContent=xpTotal()+' XP';
  const completed=state.events.filter(e=>e.date===d&&e.kind==='complete').length;
  const vals=[
@@ -2753,7 +2776,7 @@ function duplicateCalendarEvent(id){
   }else toast('Не удалось создать копию');
 }
 function renderAll(){
- const jobs=[['Календарь',renderSchedule],['Потребности',renderNeeds],['Дела и привычки',renderTopActivities],
+ const jobs=[['Голод',renderHungerMeter],['Календарь',renderSchedule],['Потребности',renderNeeds],['Дела и привычки',renderTopActivities],
   ['История',renderHistory],['Недосып',updateDebt],['Персонаж',renderWork]];
  if(typeof renderRoomMess==='function')jobs.push(['Комната',renderRoomMess]);
  jobs.push(['3D',()=>window.LifeSims3D?.sync?.(window.LifeSims3DBridge?.snapshot?.())]);
@@ -2830,6 +2853,9 @@ function bindCriticalActions(){
  };
 }
 bindCriticalActions();
+$('hungerMeterCard').onclick=()=>openSingleMetric('hunger',today());
+$('hungerEatButton').onclick=()=>openCalorieBalance(today());
+$('calorieCardFallback').onclick=()=>openCalorieBalance(today());
 
 load();
 try{fillState(activeDay);fillDiary(activeDay);renderAll()}
