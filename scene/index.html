@@ -636,10 +636,28 @@ body{background:#091428}
 #scene #workIndicator{z-index:32!important}
 #scene .scene-hint{display:none!important}
 #scene #life3dCanvas,#scene #life3dControls{display:none!important}
+</style>
+<style id="lifesims-v43-interactions">
+/* The original illustration holds the only crystal; only the underlying pixels are tinted. */
+#scene #plumbob.plumbob{left:33%!important;top:8%!important;width:7.5%!important;height:16%!important;
+ min-width:44px!important;min-height:44px!important;z-index:55!important;
+ background:transparent!important;clip-path:none!important;touch-action:manipulation!important;cursor:pointer}
+#scene #plumbob::before,#scene #plumbob::after,#scene #plumbob svg{display:none!important}
+#scene #sceneCrystalTint{position:absolute;left:34.6%;top:11.1%;width:4.1%;height:10.2%;
+ pointer-events:none!important;z-index:48;clip-path:polygon(50% 0%,100% 39%,50% 100%,0 39%);
+ -webkit-backdrop-filter:hue-rotate(var(--crystal-hue,0deg)) saturate(1.25);
+ backdrop-filter:hue-rotate(var(--crystal-hue,0deg)) saturate(1.25)}
+#scene .touchmap{z-index:40!important;pointer-events:none!important}
+#scene .touchmap .hot{pointer-events:auto!important;cursor:pointer}
+#scene.scene3d-active #sceneCrystalTint{display:none!important}
+.coffee-habit{display:flex;align-items:center;flex-wrap:wrap;gap:7px}
+.coffee-habit .itemtext{flex:1;min-width:100px}
+.coffee-habit button{min-height:44px;min-width:44px}
 </style></head>
-<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v42</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
+<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v43</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
 <img id="sceneRugColor" class="rug-color-layer" alt="" aria-hidden="true">
+<span id="sceneCrystalTint" aria-hidden="true"></span>
 
 <button id="plumbob" class="plumbob" type="button" aria-label="Кристалл: записать ресурс" title="Записать ресурс"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 70 122" aria-hidden="true"><path d="M35 2 65 42 35 120 5 42Z" fill="var(--gem-middle,#76c9ef)" stroke="#c5f9ff" stroke-width="2"/><path d="M35 2 5 42 35 52Z" fill="var(--gem-light,#c5edff)"/><path d="M35 2 65 42 35 52Z" fill="var(--gem-middle,#76c9ef)"/><path d="M5 42 35 52 35 120Z" fill="var(--gem-middle,#76c9ef)"/><path d="M65 42 35 52 35 120Z" fill="var(--gem-dark,#2169b6)"/><path d="M35 9 13 42 35 49" fill="none" stroke="#fff9" stroke-width="2"/></svg></button><div id="sceneSky" class="scene-sky" aria-hidden="true"><span class="sky-stars">✧ · ✧</span></div>
 <div id="sceneLampGlow" class="scene-lamp-glow" aria-hidden="true"></div><div id="sceneMovie" class="scene-movie" hidden aria-live="polite">🎬 Смотрит кино</div>
@@ -673,6 +691,9 @@ body{background:#091428}
 <rect class="hot" tabindex="0" role="button" aria-label="Персонаж — действия" data-object="sim" x="431" y="242" width="233" height="604"/>
 <polygon class="hot" tabindex="0" role="button" aria-label="Раковина — действия" data-object="sink" points="0,802 234,765 282,958 106,1086 0,1086"/>
 <polygon class="hot" tabindex="0" role="button" aria-label="Диван — действия" data-object="sofa" points="1170,522 1448,470 1448,876 1157,875 1071,766"/>
+<polygon class="hot" tabindex="0" role="button" aria-label="Холодильник — поесть, помыть или разобрать" data-object="fridge" points="0,354 104,365 111,723 82,775 0,775"/>
+<polygon class="hot" tabindex="0" role="button" aria-label="Душ — помыться или вымыть ванную" data-object="shower" points="1193,0 1345,0 1353,255 1186,263"/>
+<ellipse class="hot" tabindex="0" role="button" aria-label="Чашка кофе — записать эспрессо" data-object="coffee" cx="329" cy="424" rx="75" ry="78"/>
 </svg><div class="work-indicator" id="workIndicator" hidden role="status"><strong>Анюта на мероприятии</strong><span id="workName"></span><button id="returnHome" type="button">Вернуться домой</button></div><div class="sheetwrap" id="sheetWrap" aria-hidden="true"><div class="sheet" role="dialog" aria-modal="false" aria-labelledby="sheetTitle"><div class="sheethead"><h2 id="sheetTitle">Действия</h2><button id="closeSheet" aria-label="Закрыть меню">×</button></div><div class="sheetacts" id="sheetActions"></div></div></div><span class="sr-only" id="sceneStatus" aria-live="polite"></span></div>
 <nav class="nav" aria-label="Разделы"><button class="active" type="button" data-tab="needs">◈ Потребности</button><button type="button" data-tab="tasks">☑ Дела</button><button type="button" data-tab="habits">◇ Привычки</button><button type="button" data-tab="history">▦ Календарь</button></nav>
 <div class="content"><div id="storageStatus" class="notice" role="status">Проверка локального хранения…</div>
@@ -812,7 +833,7 @@ const defs=[
 {id:'sim_appearance',object:'sim',name:'Посмотреть внешность',xp:0,repeat:'daily',open:'state'},
 {id:'sim_diary',object:'sim',name:'Записать в дневник',xp:0,repeat:'daily',open:'diary'},
 {id:'sofa_rest',object:'sofa',name:'Отдохнуть',xp:5,repeat:'daily',skill:'Здоровье'}];
-const labels={window:'🪟 Окно · мероприятия',bed:'🛏 Кровать',books:'📚 Книжная полка',desk:'💻 Компьютер',phone:'📱 Телефон',fridge:'🧊 Холодильник',clutter:'🧹 Уборка',sink:'🚰 Раковина',sim:'👤 Персонаж',sofa:'🛋 Диван',shower:'🚿 Душевая кабина',toilet:'🚽 Туалет',catLitter:'🐈 Туалет котиков'};
+const labels={window:'🪟 Окно · мероприятия',bed:'🛏 Кровать',books:'📚 Книжная полка',desk:'💻 Компьютер',phone:'📱 Телефон',fridge:'🧊 Холодильник',coffee:'☕ Кофе',clutter:'🧹 Уборка',sink:'🚰 Раковина',sim:'👤 Персонаж',sofa:'🛋 Диван',shower:'🚿 Ванная',toilet:'🚽 Туалет',catLitter:'🐈 Туалет котиков'};
 const base=()=>({schema:VERSION,createdAt:new Date().toISOString(),days:{},activities:defs.filter(a=>a.xp>0).map(a=>({...a,kind:'habit',completions:[]})),events:[],schedule:[],googleHidden:[],foodMeals:[],financeChecks:[],room:{work:null,lastShowerDateReported:'2026-11-18'},legacySkills:{},legacyCopy:null});
 let state,storageOK=true,storageBlocked=false,activeDay=today(),historyView='month',selectedTab='needs';
 function normalize(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.schema!==VERSION||!raw.days||typeof raw.days!=='object'||Array.isArray(raw.days)||!Array.isArray(raw.activities)||!Array.isArray(raw.events))throw Error('Неизвестный или повреждённый формат');const safe=base();return {...safe,...raw,foodMeals:Array.isArray(raw.foodMeals)?raw.foodMeals.filter(x=>x&&typeof x==='object'&&typeof x.id==='string'&&typeof x.date==='string'):[],googleHidden:Array.isArray(raw.googleHidden)?raw.googleHidden.filter(x=>x&&typeof x.calendarId==='string'&&typeof x.id==='string').map(x=>({calendarId:x.calendarId,id:x.id,title:typeof x.title==='string'?x.title:'',hiddenAt:typeof x.hiddenAt==='string'?x.hiddenAt:''})):[],schedule:Array.isArray(raw.schedule)?raw.schedule:(Array.isArray(raw.legacyCopy?.events)?raw.legacyCopy.events.map((e,i)=>({id:'legacy-schedule-'+i,title:e.title||'Мероприятие',startsAt:e.startsAt,endsAt:e.endsAt,repeat:e.repeat==='weekly'?'weekly':'none',weekdays:e.repeat==='weekly'&&e.startsAt?[((new Date(e.startsAt.slice(0,10)+'T12:00:00').getDay()+6)%7)+1]:[]})):[]),room:(raw.room&&typeof raw.room==='object'&&!Array.isArray(raw.room))?{...safe.room,...raw.room}:safe.room};}
@@ -923,6 +944,21 @@ function makeActivityItem(a,date){
  el.append(edit);
  return el;
 }
+function makeCoffeeHabitItem(date){
+ const count=espressoCount(date),el=document.createElement('div');el.className='item coffee-habit';
+ const info=document.createElement('div');info.className='itemtext';
+ const title=document.createElement('strong');title.textContent='☕ Кофе';
+ const desc=document.createElement('small');desc.textContent=count+' эспрессо · '+date;
+ info.append(title,desc);
+ const add=document.createElement('button');add.className='secondary';add.type='button';
+ add.textContent='+1 эспрессо';add.setAttribute('aria-label','Добавить эспрессо за '+date);
+ add.disabled=date>today();add.onclick=()=>recordEspresso(date);
+ const undo=document.createElement('button');undo.className='secondary';undo.type='button';
+ undo.textContent='−1';undo.disabled=count===0;
+ undo.setAttribute('aria-label','Убрать один эспрессо за '+date);
+ undo.onclick=()=>undoEspresso(date);
+ el.append(info,add,undo);return el;
+}
 function renderActivities(){
  const d=$('taskDate').value||today();
  for(const [kind,id,empty] of [
@@ -931,8 +967,9 @@ function renderActivities(){
  ]){
   const list=$(id);list.replaceChildren();
   const items=relevantActivities(d,kind);
+  if(kind==='habit')list.append(makeCoffeeHabitItem(d));
   if(items.length)items.forEach(a=>list.append(makeActivityItem(a,d)));
-  else{const p=document.createElement('p');p.className='hint';p.textContent=empty;list.append(p)}
+  else if(kind!=='habit'){const p=document.createElement('p');p.className='hint';p.textContent=empty;list.append(p)}
  }
 }
 function renderTopActivities(){
@@ -940,9 +977,10 @@ function renderTopActivities(){
   const list=$(listId);if(!list)continue;
   list.replaceChildren();
   const day=$(dateId).value||today(),items=relevantActivities(day,kind);
+  if(kind==='habit')list.append(makeCoffeeHabitItem(day));
   if(items.length)for(const a of items)list.append(makeActivityItem(a,day));
-  else{const p=document.createElement('p');p.className='hint';
-   p.textContent=kind==='task'?'На выбранную дату дел нет':'На выбранную дату привычек нет';list.append(p)}
+  else if(kind!=='habit'){const p=document.createElement('p');p.className='hint';
+   p.textContent='На выбранную дату дел нет';list.append(p)}
  }
 }
 
@@ -1039,10 +1077,37 @@ function placeSheet(anchor){
 }
 function startWork(name){if(state.room?.work)return toast('Анюта уже на мероприятии');const workName=name.trim().slice(0,130)||'Рабочее мероприятие',stamp=new Date().toISOString(),session=uid();if(transact(()=>{state.room={...(state.room||{}),work:{id:session,name:workName,startedAt:stamp}};state.events.push({id:uid(),kind:'work_start',sessionId:session,name:'Выход на работу: '+workName,date:today(),at:stamp,xp:0})})){renderWork();renderAll();toast('Анюта отправилась на мероприятие')}}
 function finishWork(){if(!state.room?.work)return;const work=state.room.work,stamp=new Date().toISOString();if(transact(()=>{state.room={...(state.room||{}),work:null};state.events.push({id:uid(),kind:'work_end',sessionId:work.id,name:'Возвращение с работы: '+work.name,date:today(),at:stamp,xp:0})})){renderWork();renderAll();toast('Анюта вернулась домой')}}
+// A cup is a dated event, so multiple espressos can be counted and corrected.
+function espressoCount(date){return (state.events||[]).filter(e=>e.kind==='espresso'&&e.date===date).length}
+function recordEspresso(date=today()){
+ if(date>today())return toast('Нельзя записать будущий кофе');
+ const stamp=new Date().toISOString();
+ if(!transact(()=>state.events.push({id:uid(),kind:'espresso',name:'☕ Эспрессо',date,at:stamp,xp:0})))
+  return toast('Не удалось сохранить эспрессо');
+ renderAll();toast('☕ Эспрессо записан · '+espressoCount(date)+' за '+(date===today()?'сегодня':date));
+}
+function undoEspresso(date){
+ const index=state.events.findLastIndex(e=>e.kind==='espresso'&&e.date===date);
+ if(index<0)return;
+ if(!transact(()=>state.events.splice(index,1)))return toast('Не удалось исправить счётчик');
+ renderAll();toast('☕ Исправлено · '+espressoCount(date)+' за '+date);
+}
+function cleanFridge(kind){
+ const wash=kind==='wash',name=wash?'Помыть холодильник':'Разобрать холодильник';
+ const stamp=new Date().toISOString(),before=gameEntropy();
+ if(!transact(()=>{
+  state.room??={};
+  state.room.lastCleanAt=stamp;
+  state.room.entropyOffset=Math.max(0,before-(wash?6:9))-12;
+  state.room[wash?'lastFridgeWashedAt':'lastFridgeOrganizedAt']=stamp;
+  state.events.push({id:uid(),kind:'clean',name,date:today(),at:stamp,xp:0});
+ }))return toast('Не удалось записать действие');
+ renderAll();toast('✓ '+name+' · энтропия снижена');
+}
 function logShowerAction(action){
  const now=new Date().toISOString();
  const isWash=action==='wash';
- const name=isWash?'Помыть душевую кабину':'Принять душ';
+ const name=isWash?'Вымыть ванную':'Помыться';
  if(!transact(()=>{
   state.room??={};
   if(isWash){state.room.lastCleanAt=now;state.room.entropyOffset=Math.min(0,(state.room.entropyOffset||0)-12)}
@@ -1219,8 +1284,8 @@ if(object==='clutter'){
  button.onclick=()=>{closeSheet();cleanRoom(id)};$('sheetActions').append(button);
 }
 if(object==='shower'){
- const shower=document.createElement('button');shower.textContent='🚿 Принять душ';shower.onclick=()=>{closeSheet();logShowerAction('take')};
- const wash=document.createElement('button');wash.textContent='🧽 Помыть душевую кабину';wash.onclick=()=>{closeSheet();logShowerAction('wash')};
+ const shower=document.createElement('button');shower.type='button';shower.textContent='🚿 Помыться';shower.onclick=()=>{closeSheet();logShowerAction('take')};
+ const wash=document.createElement('button');wash.type='button';wash.textContent='🧽 Вымыть ванную';wash.onclick=()=>{closeSheet();logShowerAction('wash')};
  $('sheetActions').append(shower,wash);
 }
 if(object==='toilet'){
@@ -1233,9 +1298,23 @@ if(object==='catLitter'){
 }
 if(object==='fridge'){
  const food=document.createElement('button');food.type='button';
- food.textContent='🍽 Поесть и записать еду';
+ food.textContent='🍽 Поесть';
  food.onclick=()=>{closeSheet();openCalorieBalance(today())};
- $('sheetActions').append(food);
+ const wash=document.createElement('button');wash.type='button';
+ wash.textContent='🧽 Помыть холодильник';
+ wash.onclick=()=>{closeSheet();cleanFridge('wash')};
+ const organize=document.createElement('button');organize.type='button';
+ organize.textContent='🧺 Разобрать холодильник';
+ organize.onclick=()=>{closeSheet();cleanFridge('organize')};
+ $('sheetActions').append(food,wash,organize);
+}
+if(object==='coffee'){
+ const count=document.createElement('p');count.className='hint';
+ count.textContent='Эспрессо за сегодня: '+espressoCount(today());
+ const drink=document.createElement('button');drink.type='button';
+ drink.textContent='☕ Выпила 1 эспрессо';
+ drink.onclick=()=>{closeSheet();recordEspresso(today())};
+ $('sheetActions').append(count,drink);
 }
 if(object==='phone'){
  const action=document.createElement('button');action.textContent='💰 Финансовый контроль';
@@ -1566,7 +1645,7 @@ function derivedResource(r,d){
  const base=available.length?available.reduce((a,b)=>a+b,0)/available.length:50;
  return Math.max(0,Math.min(100,Math.round(base+influence)));
 }
-function renderCrystal(){const r=currentRecord(today());const v=derivedResource(r,today());const p=v==null?['#c2e9ff','#76c9ef','#2169b6']:v>65?['#c7fff0','#55dfa5','#0e9874']:v>35?['#fff2b1','#edbf53','#a57a15']:['#ffc2cd','#f4778c','#af405b'];const el=$('plumbob');el.style.setProperty('--gem-light',p[0]);el.style.setProperty('--gem-middle',p[1]);el.style.setProperty('--gem-dark',p[2]);el.title=v==null?'Ресурс не записан; нажми, чтобы записать':`Ресурс: ${v}%`}
+function renderCrystal(){const r=currentRecord(today());const v=derivedResource(r,today());const p=v==null?['#c2e9ff','#76c9ef','#2169b6']:v>65?['#c7fff0','#55dfa5','#0e9874']:v>35?['#fff2b1','#edbf53','#a57a15']:['#ffc2cd','#f4778c','#af405b'];const el=$('plumbob');el.style.setProperty('--gem-light',p[0]);el.style.setProperty('--gem-middle',p[1]);el.style.setProperty('--gem-dark',p[2]);const tint=$('sceneCrystalTint');if(tint)tint.style.setProperty('--crystal-hue',v==null?'0deg':v>65?'-55deg':v>35?'-135deg':'-185deg');el.title=v==null?'Ресурс не записан; нажми, чтобы записать':`Ресурс: ${v}%`}
 function sleepAssessment(date){const dates=Object.keys(state.days).filter(d=>d<=date&&state.days[d]?.sleepHours!=null).sort();if(!dates.length)return {need:null,debt:null,last:null};let debt=0,prev=null,gaps=false;for(const d of dates){const rec=state.days[d],hours=Number(rec.sleepHours);if(prev&&plusDays(prev,1)!==d)gaps=true;debt=Math.max(0,debt+7.5-hours);if(rec.sleepDebtAdjustment!=null)debt=Number(rec.sleepDebtAdjustment);prev=d}const last=Number(state.days[dates[dates.length-1]].sleepHours);if(dates[dates.length-1]!==date)return {need:null,debt:gaps?null:debt,last};
  // Missing days make cumulative debt unknown, but last night's measured sleep
  // still supports a transparent, partial estimate of the sleep need.
