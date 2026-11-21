@@ -740,7 +740,7 @@ body{background:#091428}
 .agenda-metric-row .agenda-edit{min-width:42px;min-height:42px}
 .agenda-source-label{font-size:11px;opacity:.65}
 </style></head>
-<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v55</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
+<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v56</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
 <img id="sceneRugColor" class="rug-color-layer" alt="" aria-hidden="true">
 <span id="sceneCrystalTint" aria-hidden="true"></span>
@@ -803,11 +803,11 @@ body{background:#091428}
 
 <section class="section food-popup" id="food" aria-label="Журнал питания" role="dialog" aria-modal="true">
 <div class="heading"><h2>🍽 Питание</h2><input id="mealDay" type="date" aria-label="Дата журнала питания"><button id="foodDismiss" type="button" class="secondary" aria-label="Закрыть питание">×</button></div>
-<div class="food-total card"><h3>⚖️ Дефицит / профицит калорий</h3>
-<div class="food-balance-grid"><div><small>🔥 Сожжено (Oura)</small><strong id="mealBurned">—</strong></div>
-<div><small>⚖️ Баланс</small><strong id="mealNet">—</strong></div></div>
-<button type="button" class="secondary" id="mealEditBurned">Изменить расход вручную</button>
-<div class="food-total-number"><span id="mealTotalKcal">—</span><small>ккал съедено · приблизительно</small></div><div id="mealTotalMacros" class="muted"></div><p class="hint">Съеденные калории — отдельно от общего расхода энергии, полученного из Oura. Оценки блюд ориентировочные, могут существенно отличаться от реального состава.</p></div>
+<div class="food-total card"><h3>⚖️ Дефицит / профицит · последние 24 часа</h3>
+<div class="food-balance-grid"><div><small>🔥 Расход (оценка)</small><strong id="mealBurned">—</strong></div>
+<div><small>⚖️ Баланс · 24 ч</small><strong id="mealNet">—</strong></div></div>
+<p id="mealRollingNote" class="hint" role="status">Для оценки расхода нужны данные завершённого дня Oura.</p><button type="button" class="secondary" id="mealEditBurned">Изменить дневной расход за выбранную дату</button>
+<div class="food-total-number"><span id="mealTotalKcal">—</span><small>ккал съедено за выбранную дату · приблизительно</small></div><div id="mealTotalMacros" class="muted"></div><p class="hint">Съеденные калории — отдельно от общего расхода энергии, полученного из Oura. Оценки блюд ориентировочные, могут существенно отличаться от реального состава.</p></div>
 <form id="mealForm" class="card">
 <h3 id="mealFormTitle">Записать приём пищи</h3>
 <label class="field">Что съела или выпила<textarea id="mealDescription" rows="2" maxlength="600" placeholder="Например: гречка с овощами, курица, чай с сахаром"></textarea></label><div id="mealSuggestions" class="meal-suggestions" hidden></div>
@@ -4168,9 +4168,15 @@ function render(){
  $('mealCount').textContent='('+meals.length+')';
  const kcal=total(meals,'kcal'),p=total(meals,'protein'),f=total(meals,'fat'),c=total(meals,'carbs');
  $('mealTotalKcal').textContent=meals.length?'≈ '+Math.round(kcal):'—';
- const burned=bridge.getBurned(day);
- $('mealBurned').textContent=burned==null?'Не загружено':burned+' ккал';
- $('mealNet').textContent=burned==null||!meals.length?'Недостаточно данных':(kcal-burned>0?'+':'')+Math.round(kcal-burned)+' ккал';
+ const rolling=bridge.getRollingBalance();
+ $('mealBurned').textContent=rolling.spent==null?'—':'≈'+rolling.spent+' ккал';
+ $('mealNet').textContent=rolling.balance==null?'—':
+  (rolling.balance>0?'+':'')+rolling.balance+' ккал';
+ $('mealRollingNote').textContent=rolling.estimatedFrom?
+  'За последние 24 часа съедено '+(rolling.eaten==null?'неизвестно':'≈'+rolling.eaten+' ккал')+
+  '; расход за 24 часа оценён по '+rolling.source+' за '+rolling.estimatedFrom+'.'+
+  (rolling.unknownMeals?' Ещё '+rolling.unknownMeals+' приём(ов) пищи без подсчёта калорий.':''):
+  'Нет расхода за завершённый день Oura за последнюю неделю. Подключи и обнови Oura либо внеси суточный расход вручную за прошлый день.';
  $('mealTotalMacros').textContent=meals.length?'Белки ≈'+p+' г · Жиры ≈'+f+' г · Углеводы ≈'+c+' г':'Пока нет записей';
  const list=$('mealList');list.replaceChildren();
  if(!meals.length){const empty=document.createElement('p');empty.className='hint';empty.textContent='За выбранную дату приёмов пищи нет.';list.append(empty)}
