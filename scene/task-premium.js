@@ -134,6 +134,15 @@
    '<input type="checkbox" id="tpNegativeHabit"> Отрицательная привычка (отмечать красным)</label>'+
    '<p class="tp-note">Например, алкоголь. Положительные привычки отмечаются обычным цветом. Это не влияет на уже записанные выполнения.</p>';
   form.insertBefore(nature,before);
+  const goal=el('fieldset','tp-editor tp-habit-goal');goal.id='tpHabitGoalEditor';
+  goal.innerHTML=`<legend>📊 Измерение и норма привычки</legend>
+  <div class="tp-editor-grid"><label>Единица измерения<input id="tpHabitUnit" maxlength="24" placeholder="чаш., км, мин, раз"></label><label>Цвет<input id="tpHabitColor" type="color" value="#68b9f6"></label></div>
+  <label>Вопрос при записи<input id="tpHabitQuestion" maxlength="160" placeholder="Сколько чашек кофе сегодня?"></label>
+  <div class="tp-editor-grid"><label>Тип цели<select id="tpHabitGoalType"><option value="">Без границы</option><option value="max">Не больше (верхняя граница)</option><option value="min">Не меньше (нижняя граница)</option></select></label>
+  <label>Норма<input id="tpHabitGoalValue" type="number" min="0" max="100000" step="any" placeholder="Например, 2"></label></div>
+  <label>Заметки<textarea id="tpHabitNotes" maxlength="800" rows="2" placeholder="Необязательно"></textarea></label>
+  <p class="tp-note">Выше верхней или ниже нижней границы день отмечается красным. Отсутствие записи не считается нулём. Запись количества сама по себе не начисляет XP.</p>`;
+  form.insertBefore(goal,before);
   const resource=el('fieldset','tp-editor tp-resource-editor');resource.id='tpResourceEditor';
   resource.innerHTML="<legend>⚡ Влияние дела или привычки на состояние</legend>\n<label>Какой показатель меняется<select id=\"tpEffectTarget\">\n<option value=\"\">Не влияет</option>\n<option value=\"resource\">◆ Общий ресурс (кристалл)</option>\n<option value=\"mood\">☺ Настроение</option>\n<option value=\"condition\">♥ Физическое состояние</option>\n<option value=\"hygiene\">♨ Гигиена</option>\n<option value=\"nutrition\">🍎 Питание</option>\n<option value=\"hunger\">🍽 Сытость</option>\n<option value=\"sleepNeed\">💤 Потребность во сне</option>\n<option value=\"entropy\">🌀 Энтропия / беспорядок</option>\n<option value=\"activity\">🚶 Активность (игровая)</option>\n</select></label>\n<div id=\"tpEffectFields\" hidden><div class=\"tp-editor-grid\">\n<label>Как изменить<select id=\"tpEffectMode\"><option value=\"delta\">Прибавить / вычесть</option><option value=\"set\">Установить значение</option></select></label>\n<label>На сколько, п. п.<input id=\"tpEffectAmount\" type=\"number\" min=\"-100\" max=\"100\" step=\"1\" value=\"10\" required></label>\n<label>Срок действия<select id=\"tpEffectHours\">\n<option value=\"0\">Только выбранный день</option>\n<option value=\"24\">24 часа</option>\n<option value=\"72\">72 часа</option>\n<option value=\"168\">7 дней</option>\n</select></label></div>\n<p class=\"tp-note\">«+15» добавляет 15 пунктов к игровой шкале. «Установить 100» действует как отдельное событие. Каждый повтор учитывается отдельно. Измерения Oura и ручные записи не изменяются; эффекты исчезают по окончании срока.</p></div>";
   form.insertBefore(resource,before);
@@ -151,6 +160,7 @@
   $('taskKind').addEventListener('change',e=>{
    panel.hidden=e.target.value==='habit';
    $('tpHabitNature').hidden=e.target.value!=='habit';
+   $('tpHabitGoalEditor').hidden=e.target.value!=='habit';
   });
  }
  function fillForm(a,formKind){
@@ -170,6 +180,13 @@
   }
   panel.hidden=formKind==='habit';
   $('tpHabitNature').hidden=formKind!=='habit';
+  $('tpHabitGoalEditor').hidden=formKind!=='habit';
+  $('tpHabitGoalType').value=['max','min'].includes(a?.habitGoal?.type)?a.habitGoal.type:'';
+  $('tpHabitGoalValue').value=Number.isFinite(Number(a?.habitGoal?.value))&&a?.habitGoal?.value!=null?String(a.habitGoal.value):'';
+  $('tpHabitUnit').value=a?.habitUnit||'';
+  $('tpHabitQuestion').value=a?.habitQuestion||'';
+  $('tpHabitNotes').value=a?.habitNotes||'';
+  $('tpHabitColor').value=/^#[0-9a-f]{6}$/i.test(a?.habitColor||'')?a.habitColor:'#68b9f6';
   $('tpNegativeHabit').checked=a?.negative===true||
    (a?.negative!==false&&(Number(a?.xp)<0||String(a?.name||'').trim().toLocaleLowerCase('ru')==='алкоголь'));
   const effect=a?.resourceEffect||null;
@@ -185,7 +202,10 @@
    amount:Number($('tpEffectAmount').value),hours:Number($('tpEffectHours').value)
   }:null;
   const difficulty=difficultyValue({difficulty:$('tpDifficulty')?.value});
-  if($('taskKind').value==='habit')return {resourceEffect,difficulty,negative:!!$('tpNegativeHabit').checked};
+  if($('taskKind').value==='habit')return {resourceEffect,difficulty,negative:!!$('tpNegativeHabit').checked,
+   habitGoal:$('tpHabitGoalType').value?{type:$('tpHabitGoalType').value,value:$('tpHabitGoalValue').value.trim()===''?NaN:Number($('tpHabitGoalValue').value)}:null,
+   habitUnit:$('tpHabitUnit').value.trim().slice(0,24),habitQuestion:$('tpHabitQuestion').value.trim().slice(0,160),
+   habitNotes:$('tpHabitNotes').value.trim().slice(0,800),habitColor:$('tpHabitColor').value};
   if(!$('tpEditor')||$('tpEditor').hidden)return {resourceEffect,difficulty};
   return {resourceEffect,difficulty,projectId:$('tpEditorProject').value||null,
    priority:Number($('tpEditorPriority').value)||0,
