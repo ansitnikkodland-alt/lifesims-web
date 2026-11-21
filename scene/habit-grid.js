@@ -15,7 +15,9 @@
  const old=area.querySelector('.card');if(old)old.classList.add('premium-hide-old');
  const dialog=el('dialog','tp-dialog');dialog.id='tpHabitDayDialog';
  dialog.innerHTML=`<div class="tp-modal-top"><h3 id="tpHabitDayTitle">Привычка</h3><button id="tpHabitDayClose" type="button" aria-label="Закрыть">×</button></div>
- <p id="tpHabitDayCount" class="tp-note"></p><div class="tp-habit-actions">
+ <p id="tpHabitDayCount" class="tp-note"></p>
+ <div class="tp-habit-quantity"><label id="tpHabitQuantityLabel" for="tpHabitQuantity">Количество за день</label><div class="tp-habit-quantity-actions"><input id="tpHabitQuantity" type="number" min="0" max="100000" step="any" inputmode="decimal"><button id="tpHabitDaySet" class="tp-minor" type="button">Сохранить значение</button></div></div>
+ <div class="tp-habit-actions">
  <button id="tpHabitDayAdd" class="tp-primary" type="button">＋ Записать выполнение</button>
  <button id="tpHabitDayRemove" class="tp-minor" type="button">− Убрать одно выполнение</button>
  <button id="tpHabitDayEdit" class="tp-minor" type="button">✎ Редактировать привычку</button></div>`;
@@ -29,21 +31,36 @@
  const negative=habit=>habit.negative===true||
   (habit.negative!==false&&(Number(habit.xp)<0||String(habit.name||'').trim().toLocaleLowerCase('ru')==='алкоголь'));
  const openHabitEditor=habit=>{
-  if(habit.id==='__coffee')return;
   if(dialog.open)dialog.close();
   api.edit(habit.id);
  };
  const weekday=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
- const count=(habit,date)=>habit.id==='__coffee'?api.coffeeCount(date):(habit.completions||[]).filter(x=>x.date===date).length;
+ const count=(habit,date)=>api.habitAmount(habit.id,date);
+ const has=(habit,date)=>api.habitHasAmount(habit.id,date);
+ const unit=habit=>habit.habitUnit||'раз';
+ const format=n=>Number(n).toLocaleString('ru-RU',{maximumFractionDigits:2});
+ const normText=habit=>habit.habitGoal?.type==='max'?'не больше '+format(habit.habitGoal.value)+' '+unit(habit):
+  habit.habitGoal?.type==='min'?'не меньше '+format(habit.habitGoal.value)+' '+unit(habit):'';
+ const badOn=(habit,date)=>{
+  if(!has(habit,date))return false;
+  const goal=habit.habitGoal,n=count(habit,date);
+  if(goal&&['min','max'].includes(goal.type)&&Number.isFinite(Number(goal.value)))
+   return goal.type==='max'?n>Number(goal.value):n<Number(goal.value);
+  return negative(habit);
+ };
  const button=(txt,fn,cls='tp-minor')=>{const x=el('button',cls,txt);x.type='button';x.onclick=fn;return x};
  const selectedDate=()=>activeDate||api.today();
  function openDay(habit,date){
   active=habit;activeDate=date;
   $('tpHabitDayTitle').textContent=habit.name;
   const n=count(habit,date);
-  $('tpHabitDayCount').textContent=date+' · '+n+(n===1?' выполнение':' выполнений');
-  $('tpHabitDayRemove').disabled=n===0;
-  $('tpHabitDayEdit').hidden=habit.id==='__coffee';
+  $('tpHabitDayCount').textContent=date+' · '+(has(habit,date)?format(n)+' '+unit(habit):'нет записи')+(normText(habit)?' · '+normText(habit)+(badOn(habit,date)?' · ❗ вне нормы':''):'');
+  $('tpHabitDayRemove').disabled=api.habitHistoryCount(habit.id,date)===0||date>api.today();
+  $('tpHabitDayAdd').disabled=date>api.today();
+  $('tpHabitDaySet').disabled=date>api.today();
+  $('tpHabitQuantityLabel').textContent=habit.habitQuestion||'Количество за день ('+unit(habit)+')';
+  $('tpHabitQuantity').value=has(habit,date)?String(n):'';
+  $('tpHabitDayEdit').hidden=false;
   if(!dialog.open)dialog.showModal();
  }
  function render(){
@@ -54,7 +71,7 @@
   $('tpHabitRange').textContent=days[6].slice(5)+' — '+days[0].slice(5);
   const saved=api.read();
   const habits=saved.activities.filter(x=>x&&x.kind==='habit'&&!x.legacyDone);
-  habits.push({id:'__coffee',name:'Кофе',kind:'habit',completions:[]});
+  // Coffee is now a persisted editable habit, backed by the original espresso-event history.
   const table=el('table','tp-habit-table'),header=el('thead'),headRow=el('tr');
   headRow.append(el('th','tp-habit-name','Привычка'));
   for(const date of days){const dt=new Date(date+'T12:00:00');headRow.append(el('th','',weekday[dt.getDay()]+'\n'+dt.getDate()))}
@@ -64,13 +81,13 @@
   for(const habit of habits){
    const row=el('tr'),title=el('th','tp-habit-name');
    const bad=negative(habit);
-   const dot=el('span','tp-habit-dot');dot.style.background=bad?'#fa6a77':shade(habit.name);
+   const dot=el('span','tp-habit-dot');dot.style.background=bad&&!habit.habitGoal?'#fa6a77':(/^#[\da-f]{6}$/i.test(habit.habitColor||'')?habit.habitColor:shade(habit.name));
    const titleButton=button(habit.name,()=>openHabitEditor(habit),'tp-habit-edit-name');
    titleButton.title='Изменить привычку «'+habit.name+'»';
    titleButton.setAttribute('aria-label','Редактировать привычку '+habit.name);
    if(bad)titleButton.classList.add('negative');
    title.append(dot,titleButton);
-   if(habit.id!=='__coffee')title.append(el('small','tp-habit-resource','Сложность '+difficultyValue(habit)+'/5'));
+   title.append(el('small','tp-habit-resource','Сложность '+difficultyValue(habit)+'/5'+(normText(habit)?' · '+normText(habit):'')));
    if(habit.resourceEffect?.target){
     const related=el('small','tp-habit-resource','⚡ '+({
      mood:'Настроение',condition:'Физическое состояние',hygiene:'Гигиена',resource:'Ресурс',
@@ -80,16 +97,18 @@
    }
    row.append(title);
    for(const date of days){
-    const n=count(habit,date),cell=el('td'),b=button(n>1?n+'×':n?'✓':'?',()=>openDay(habit,date),'tp-habit-day'+(n?' was-done':'')+(n&&bad?' is-negative':''));
-    b.setAttribute('aria-label',habit.name+' · '+date+' · '+n+' выполнений');
-    if(n)b.style.color=bad?'#ff7281':shade(habit.name);
+    const n=count(habit,date),recorded=has(habit,date),badToday=badOn(habit,date),cell=el('td');
+    const label=recorded?(habit.habitGoal||habit.habitUnit||habit.id==='coffee_habit'?format(n):n>1?format(n)+'×':n?'✓':'0'):'?';
+    const b=button(label,()=>openDay(habit,date),'tp-habit-day'+(recorded?' was-done':'')+(badToday?' is-negative':''));
+    b.setAttribute('aria-label',habit.name+' · '+date+' · '+(recorded?format(n)+' '+unit(habit):'без записи')+(badToday?' · вне нормы':''));
+    if(recorded)b.style.color=badToday?'#ff7281':(/^#[\da-f]{6}$/i.test(habit.habitColor||'')?habit.habitColor:shade(habit.name));
     cell.append(b);row.append(cell);
    }
    tbody.append(row);
-   const line=el('div','tp-task'+(bad?' tp-negative-habit':'')),info=el('div','tp-info'),name=el('strong','',habit.name),note=el('small','',days.reduce((sum,d)=>sum+count(habit,d),0)+' раз за неделю'+(habit.id==='__coffee'?'':' · сложность '+difficultyValue(habit)+'/5'));
+   const line=el('div','tp-task'+(badOn(habit,anchor)?' tp-negative-habit':'')),info=el('div','tp-info'),name=el('strong','',habit.name),note=el('small','',days.reduce((sum,d)=>sum+count(habit,d),0)+' '+unit(habit)+' за неделю · сложность '+difficultyValue(habit)+'/5'+(normText(habit)?' · '+normText(habit):''));
    info.append(name,note);line.append(info);
    line.append(button('＋',()=>openDay(habit,anchor)));
-   if(habit.id!=='__coffee')line.append(button('✎',()=>api.edit(habit.id)));
+   line.append(button('✎',()=>api.edit(habit.id)));
    list.append(line);
   }
   // Read-only measured/history metrics, as in the supplied habit-tracker reference.
@@ -134,13 +153,17 @@
  $('tpHabitDayClose').onclick=()=>dialog.close();
  $('tpHabitDayAdd').onclick=()=>{
   if(!active)return;
-  if(active.id==='__coffee')api.coffeeAdd(selectedDate());else api.recordHabit(active.id,selectedDate());
+  api.recordHabit(active.id,selectedDate());
   dialog.close();render();
  };
  $('tpHabitDayRemove').onclick=()=>{
   if(!active)return;
-  if(active.id==='__coffee')api.coffeeUndo(selectedDate());else api.undoHabit(active.id,selectedDate());
+  api.undoHabit(active.id,selectedDate());
   dialog.close();render();
+ };
+ $('tpHabitDaySet').onclick=()=>{
+  if(!active||$('tpHabitQuantity').value.trim()==='')return;
+  if(api.setHabitAmount(active.id,selectedDate(),$('tpHabitQuantity').value)){dialog.close();render()}
  };
  $('tpHabitDayEdit').onclick=()=>{if(active)openHabitEditor(active)};
  dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});
