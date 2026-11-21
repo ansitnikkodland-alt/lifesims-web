@@ -1,0 +1,75 @@
+name: LifeSims skill details and last meal smoke
+on:
+  push:
+    paths:
+      - 'scene/index.html'
+      - 'scene/skill-detail.js'
+      - 'scene/habit-grid.js'
+      - 'scene/task-premium.css'
+      - '.github/workflows/lifesims-skill-food-smoke.yml'
+  workflow_dispatch:
+jobs:
+  skill-and-food:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright
+        run: npm install --no-save playwright-core@1.56.1
+      - name: Serve site
+        run: |
+          python3 -m http.server 8765 > /tmp/lifesims-test-http.log 2>&1 &
+          sleep 2
+      - name: Test skills navigation and last meal edit
+        run: |
+          cat > /tmp/lifesims-skill-food.cjs <<'JS'
+          const {chromium}=require(process.cwd()+'/node_modules/playwright-core');
+          (async()=>{
+            const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
+            const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2});
+            const pageErrors=[];
+            page.on('pageerror',e=>pageErrors.push(e.message));
+            await page.goto('http://127.0.0.1:8765/scene/?smoke=skill-food',{waitUntil:'domcontentloaded'});
+            await page.locator('[data-tab="skills"]').click();
+            await page.locator('.skill-clickable').first().waitFor();
+            const p=page.locator('.skill-clickable').filter({hasText:'Психология'}).first();
+            await p.click();
+            await page.locator('#skillDetailDialog').waitFor({state:'visible'});
+            if(!await page.locator('#skillDetailBody').innerText().then(t=>t.includes('Читать')&&t.includes('История практики')&&t.includes('Текущий опыт')))
+              throw Error('Skill detail missing linked habit or metrics');
+            await page.locator('#skillDetailBody .skill-detail-action').filter({hasText:'Читать'}).first().locator('button').click();
+            await page.locator('#calendarTaskPopup').waitFor({state:'visible'});
+            if(await page.locator('#taskSkill').inputValue()!=='Психология')throw Error('Skill linked editor lost skill binding');
+            await page.locator('#taskCancel').click();
+            console.log('SKILL DETAILS + ASSOCIATED HABIT EDITOR: PASS');
+            const setup=await page.evaluate(()=>{
+              const b=window.LifeSimsFoodBridge,day=b.today();
+              const old=b.upsert({date:day,time:'08:00',title:'Завтрак для проверки',grams:150,kcal:200,protein:10,fat:8,carbs:20});
+              const last=b.upsert({date:day,time:'19:15',title:'Ужин для проверки',grams:220,kcal:420,protein:25,fat:15,carbs:40});
+              return {day,oldId:old.id,lastId:last.id};
+            });
+            await page.locator('[data-tab="habits"]').click();
+            const row=page.locator('tr.tp-habit-observed').filter({hasText:'Последний приём пищи'});
+            await row.locator('button.tp-habit-meal-edit').first().click();
+            await page.locator('#food.open').waitFor({state:'visible'});
+            if(await page.locator('#mealDescription').inputValue()!=='Ужин для проверки')throw Error('Opened wrong meal');
+            if(await page.locator('#mealTime').inputValue()!=='19:15')throw Error('Last meal time was not loaded');
+            await page.locator('#mealTime').fill('20:30');
+            await page.locator('#mealKcal').fill('425');
+            await page.locator('#mealSave').click();
+            const after=await page.evaluate(()=>{
+              const b=window.LifeSimsFoodBridge,day=b.today();
+              return b.list().filter(x=>x.date===day&&x.title.includes('для проверки'));
+            });
+            if(after.length!==2||!after.some(x=>x.id===setup.oldId&&x.time==='08:00')||
+               !after.some(x=>x.id===setup.lastId&&x.time==='20:30'&&x.kcal===425))
+              throw Error('Editing last meal created a duplicate or failed: '+JSON.stringify(after));
+            console.log('LAST MEAL EDIT BY ID, TIME, CALORIES, NO DUPLICATES: PASS');
+            if(pageErrors.length)throw Error('Unexpected page error: '+pageErrors.join(' | '));
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
+          node /tmp/lifesims-skill-food.cjs
