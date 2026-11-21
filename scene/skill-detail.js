@@ -88,8 +88,9 @@
    const button=make('button','skill-detail-edit',kind==='task'?'＋ Дело':'＋ Привычка');
    button.type='button';
    button.onclick=()=>{
+    const skillName=selected;
     dialog.close();bridge.create(kind);
-    const input=$('taskSkill');if(input)input.value=selected||'';
+    const input=$('taskSkill');if(input)input.value=skillName||'';
    };
    controls.append(button);
   }
