@@ -3130,6 +3130,130 @@ $('hungerMeterCard').onclick=()=>openSingleMetric('hunger',today());
 $('hungerEatButton').onclick=()=>openCalorieBalance(today());
 $('calorieCardFallback').onclick=()=>openCalorieBalance(today());
 
+// Shared, validated bridge for the independent planner, habit-grid and focus modules.
+window.LifeSimsTaskBridge={
+ today,
+ dateAdd:plusDays,
+ read:()=>({
+  activities:state.activities||[],events:state.events||[],
+  taskProjects:state.taskProjects||[],taskTags:state.taskTags||[],
+  focusSettings:state.focusSettings||{focus:25,short:5,long:15},
+  focusTimer:state.focusTimer||{mode:'focus',remainingSec:1500,running:false}
+ }),
+ create:kind=>openNewCalendarTask(kind==='habit'?'habit':'task'),
+ edit:id=>openActivityEditor(id),
+ backdate:(id,date)=>openHabitBackdateDialog(id,date),
+ due:(id,date)=>{const a=state.activities.find(x=>x.id===id);return !!a&&due(a,date)},
+ complete:(id,date)=>{
+  const a=state.activities.find(x=>x.id===id);
+  if(!a)return toast('Дело не найдено');
+  if(date>today())return toast('Нельзя выполнять дела в будущем');
+  complete(a,date);
+ },
+ patch:(id,changes)=>{
+  const item=state.activities.find(a=>a.id===id);
+  if(!item)return toast('Дело не найдено');
+  const clean={};
+  if('urgent'in changes)clean.urgent=!!changes.urgent;
+  if('important'in changes)clean.important=!!changes.important;
+  if('priority'in changes)clean.priority=Math.max(0,Math.min(3,Number(changes.priority)||0));
+  if(!Object.keys(clean).length)return false;
+  if(!transact(()=>Object.assign(item,clean)))return false;
+  renderAll();return true;
+ },
+ catalog:(kind,action,data)=>{
+  const key=kind==='project'?'taskProjects':kind==='tag'?'taskTags':null;
+  if(!key)return false;
+  const list=state[key]||[],name=String(data?.name||'').trim().slice(0,65),id=data?.id;
+  const existing=list.find(x=>x.id===id);
+  if(action!=='delete'){
+   if(!name){toast('Введи название');return false}
+   if(list.some(x=>x.name.toLocaleLowerCase('ru')===name.toLocaleLowerCase('ru')&&x.id!==id)){
+    toast('Такое название уже существует');return false;
+   }
+  }
+  if(action==='rename'&&!existing||action==='delete'&&!existing){toast('Запись не найдена');return false}
+  if(!['add','rename','delete'].includes(action))return false;
+  if(!transact(()=>{
+   if(action==='add')state[key].push({id:uid(),name});
+   if(action==='rename')existing.name=name;
+   if(action==='delete'){
+    state[key]=list.filter(x=>x.id!==id);
+    for(const a of state.activities){
+     if(key==='taskProjects'&&a.projectId===id)a.projectId=null;
+     if(key==='taskTags'&&Array.isArray(a.tags))a.tags=a.tags.filter(x=>x!==id);
+    }
+   }
+  }))return false;
+  renderAll();return true;
+ },
+ coffeeCount:date=>espressoCount(date),
+ coffeeAdd:date=>recordEspresso(date),
+ coffeeUndo:date=>undoEspresso(date),
+ recordHabit:(id,date)=>{
+  const a=state.activities.find(x=>x.id===id&&x.kind==='habit');
+  if(!a)return toast('Привычка не найдена');
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||dayStr(asDay(date))!==date||date>today())
+   return toast('Выбери прошедшую дату');
+  if(due(a,date)){complete(a,date);return true}
+  const stamp=new Date().toISOString(),xp=Number.isFinite(a.xp)?a.xp:0;
+  if(!transact(()=>{
+   a.completions??=[];
+   a.completions.push({date,at:stamp,xp,recordedAt:stamp,performedAt:null});
+   state.events.push({id:uid(),kind:'complete',activityId:a.id,name:a.name,date,at:stamp,
+    recordedAt:stamp,performedAt:null,xp});
+  }))return false;
+  renderAll();return true;
+ },
+ undoHabit:(id,date)=>{
+  const a=state.activities.find(x=>x.id===id&&x.kind==='habit');
+  if(!a)return false;
+  const arr=a.completions||[],index=arr.findLastIndex(x=>x.date===date);
+  if(index<0)return false;
+  const entry=arr[index];
+  if(!transact(()=>{
+   arr.splice(index,1);
+   const eventIndex=state.events.findLastIndex(e=>e.kind==='complete'&&e.activityId===a.id&&
+    e.date===date&&(e.at===entry.at||!entry.at));
+   if(eventIndex>=0)state.events.splice(eventIndex,1);
+   if(a.id==='hygiene_antiperspirant'){
+    const latest=(a.completions||[]).slice().sort((x,y)=>String(y.at||'').localeCompare(String(x.at||'')))[0];
+    state.room??={};state.room.lastAntiperspirantAt=latest?.at||null;
+   }
+  }))return false;
+  renderAll();return true;
+ },
+ writeFocus:patch=>{
+  const mode=['focus','short','long','stopwatch'].includes(patch?.mode)?patch.mode:'focus';
+  const remainingSec=Math.max(0,Math.min(7200,Number(patch?.remainingSec)||0));
+  const elapsedSec=Math.max(0,Math.min(360000,Number(patch?.elapsedSec)||0));
+  const endAt=Number.isFinite(Number(patch?.endAt))&&Number(patch.endAt)>0?Number(patch.endAt):null;
+  const startAt=Number.isFinite(Number(patch?.startAt))&&Number(patch.startAt)>0?Number(patch.startAt):null;
+  if(!transact(()=>{state.focusTimer={mode,remainingSec,elapsedSec,running:!!patch.running,
+   endAt,startAt,taskId:String(patch?.taskId||'').slice(0,120)}}))return false;
+  return true;
+ },
+ finishFocus:()=>{
+  const f=state.focusTimer;
+  if(!f?.running||f.mode==='stopwatch'||!Number.isFinite(Number(f.endAt))||Date.now()<f.endAt)return false;
+  if(!transact(()=>{
+   if(f.mode==='focus'){
+    const min=Number(state.focusSettings?.focus)||25;
+    state.events.push({id:uid(),kind:'focus',name:'Помодоро · '+min+' мин',
+     date:today(),at:new Date().toISOString(),durationMin:min,activityId:f.taskId||null,xp:0});
+   }
+   state.focusTimer={...f,running:false,endAt:null,remainingSec:0};
+  }))return false;
+  renderHistory();return true;
+ },
+ saveFocusSettings:settings=>{
+  if(!['focus','short','long'].every(k=>Number.isInteger(settings[k])&&settings[k]>=1&&settings[k]<=120)){
+   toast('Интервалы должны быть от 1 до 120 минут');return false;
+  }
+  if(!transact(()=>{state.focusSettings={focus:settings.focus,short:settings.short,long:settings.long}}))return false;
+  return true;
+ }
+};
 load();
 try{fillState(activeDay);fillDiary(activeDay);renderAll()}
 catch(error){console.error('LifeSims initial render:',error);
