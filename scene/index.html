@@ -34,7 +34,15 @@
 #importConfirmPanel[hidden]{display:none!important}
 #importConfirmPanel{margin-top:10px;padding:12px;border:1px solid #84bca6;border-radius:12px;background:#244148}
 #importConfirmPanel button{margin:5px 5px 0 0}
-.color-slider{width:100%;accent-color:#50d9b2;background:linear-gradient(90deg,#e36b79,#e9be5b,#55dca7);height:14px;border-radius:20px}.unset{font-size:12px;color:#bdcbe3;display:flex;gap:6px;align-items:center}.unset input{width:auto}.field output{font-weight:700}</style><style>
+.color-slider{width:100%;accent-color:#50d9b2;background:linear-gradient(90deg,#e36b79,#e9be5b,#55dca7);height:14px;border-radius:20px}.unset{font-size:12px;color:#bdcbe3;display:flex;gap:6px;align-items:center}.unset input{width:auto}.field output{font-weight:700}.skills-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,245px),1fr));gap:10px}
+.skill-item{background:linear-gradient(145deg,#233a60,#182744);border:1px solid #526d99;border-radius:15px;padding:13px}
+.skill-item-head{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.skill-item-head b{color:#9de4df;white-space:nowrap}
+.skill-track{height:9px;border-radius:10px;background:#10213a;overflow:hidden;margin:12px 0 9px}
+.skill-track div{height:100%;background:#54c9c3;border-radius:inherit}
+.skill-item small{display:block;color:#bfd0e3;font-size:12px}
+.skill-item .skill-loss{color:#f4bd8a}
+</style><style>
 .calendar-dayhead{margin:14px 0 10px;display:flex;flex-direction:column;gap:8px}
 .calendar-dayhead h3{margin:0}
 .calendar-editor{margin-top:12px}
@@ -748,7 +756,7 @@ body{background:#091428}
 #calorieCardHost>.calorie-balance-card>small.metric-origin{font-size:11px;color:#b7d2e2}
 #mealRollingNote{white-space:pre-wrap;line-height:1.5}
 </style></head>
-<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v60</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
+<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v61</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
 <img id="sceneRugColor" class="rug-color-layer" alt="" aria-hidden="true">
 <span id="sceneCrystalTint" aria-hidden="true"></span>
@@ -790,7 +798,7 @@ body{background:#091428}
 <polygon class="hot" tabindex="0" role="button" aria-label="Душ — помыться или вымыть ванную" data-object="shower" points="1193,0 1345,0 1353,255 1186,263"/>
 <ellipse class="hot" tabindex="0" role="button" aria-label="Чашка кофе — записать эспрессо" data-object="coffee" cx="329" cy="424" rx="75" ry="78"/>
 </svg><div class="work-indicator" id="workIndicator" hidden role="status"><strong>Анюта на мероприятии</strong><span id="workName"></span><button id="returnHome" type="button">Вернуться домой</button></div><div class="sheetwrap" id="sheetWrap" aria-hidden="true"><div class="sheet" role="dialog" aria-modal="false" aria-labelledby="sheetTitle"><div class="sheethead"><h2 id="sheetTitle">Действия</h2><button id="closeSheet" aria-label="Закрыть меню">×</button></div><div class="sheetacts" id="sheetActions"></div></div></div><span class="sr-only" id="sceneStatus" aria-live="polite"></span></div>
-<nav class="nav" aria-label="Разделы"><button class="active" type="button" data-tab="needs">◈ Потребности</button><button type="button" data-tab="tasks">☑ Дела</button><button type="button" data-tab="habits">◇ Привычки</button><button type="button" data-tab="history">▦ Календарь</button></nav>
+<nav class="nav" aria-label="Разделы"><button class="active" type="button" data-tab="needs">◈ Потребности</button><button type="button" data-tab="tasks">☑ Дела</button><button type="button" data-tab="habits">◇ Привычки</button><button type="button" data-tab="skills">↗ Навыки</button><button type="button" data-tab="history">▦ Календарь</button></nav>
 <div class="content"><div id="storageStatus" class="notice" role="status">Проверка локального хранения…</div>
 <section class="section active" id="needs"><div class="heading"><h2>Потребности</h2><div class="row"><button class="secondary" id="openNeedsEditor" type="button">Все показатели</button><a id="ouraJump" class="secondary" href="#ouraMount">💍 Oura · подключение</a></div></div>
 <div id="needsEnergyTop" class="needs-energy-pair" aria-label="Баланс калорий и сытость">
@@ -844,7 +852,7 @@ body{background:#091428}
 </section>
 <section class="section activities-page" id="tasks"><div class="heading"><h2>☑ Дела</h2><input id="topTasksDate" type="date" aria-label="Дата дел"></div><div class="card"><div id="topTasksList" class="activity-list"></div><button class="secondary activity-add" type="button" id="topTasksAdd">+ Добавить дело</button></div></section>
 <section class="section activities-page" id="habits"><div class="heading"><h2>◇ Привычки</h2><input id="topHabitsDate" type="date" aria-label="Дата привычек"></div><div class="card"><div id="topHabitsList" class="activity-list"></div><div class="row"><button class="secondary activity-add" type="button" id="topHabitsAdd">+ Добавить привычку</button><button class="secondary" type="button" id="habitBackdateOpen">📅 Записать задним числом</button></div></div></section>
-<section class="section" id="history">
+<section class="section" id="skills"><div class="heading"><h2>↗ Навыки</h2></div><p class="hint">Практика повышает навык. После 14 дней без практики его очки постепенно снижаются на 1% в неделю. История и общий XP сохраняются.</p><div id="skillsList" class="skills-list" aria-live="polite"></div></section><section class="section" id="history">
 <div class="heading"><h2>Календарь жизни</h2><input type="date" id="historyDate" aria-label="Выбранная дата"></div>
 <div class="history-controls"><button data-view="day">День</button><button data-view="week">Неделя</button><button data-view="month">Месяц</button><button type="button" id="todayPeriod">Сегодня</button><button id="prevPeriod" aria-label="Предыдущий период">◀</button><button id="nextPeriod" aria-label="Следующий период">▶</button></div>
 <div id="historyRange" class="hint"></div><div id="calendar"></div>
@@ -879,7 +887,7 @@ body{background:#091428}
 <label class="field">Повтор <select id="taskRepeat"><option value="once">Однократно</option><option value="daily">Ежедневно</option><option value="weekly">По дням недели</option></select></label></div>
 <fieldset id="taskWeekdays" hidden><legend>Конкретные дни недели</legend><div class="row"><label><input type="checkbox" name="taskWeekday" value="1"> Пн</label><label><input type="checkbox" name="taskWeekday" value="2"> Вт</label><label><input type="checkbox" name="taskWeekday" value="3"> Ср</label><label><input type="checkbox" name="taskWeekday" value="4"> Чт</label><label><input type="checkbox" name="taskWeekday" value="5"> Пт</label><label><input type="checkbox" name="taskWeekday" value="6"> Сб</label><label><input type="checkbox" name="taskWeekday" value="7"> Вс</label></div></fieldset>
 <div class="cols"><label class="field">Начало <input id="taskStartDate" type="date" required></label><label class="field">Влияние на ресурс <select id="taskXP"><option value="-40">−40 XP · сильное снижение</option><option value="-20">−20 XP</option><option value="-15">−15 XP</option><option value="-10">−10 XP</option><option value="-5">−5 XP</option><option value="0">0 XP · без влияния</option><option value="5">+5 XP</option><option value="10" selected>+10 XP</option><option value="15">+15 XP</option><option value="20">+20 XP</option><option value="40">+40 XP</option></select></label></div>
-<label class="field">Связать с предметом в комнате <select id="taskObject"><option value="">Без связи</option><option value="bed">🛏 Кровать</option><option value="books">📚 Книжный шкаф</option><option value="tableBook">📖 Книга на журнальном столике</option><option value="phone">📱 Телефон</option><option value="coffee">☕ Чашка кофе</option><option value="clutter">🧹 Вещи для уборки</option><option value="desk">💻 Рабочий стол</option><option value="sink">🚰 Раковина</option><option value="shower">🚿 Душевая кабина</option><option value="fridge">🧊 Холодильник</option><option value="toilet">🚽 Туалет</option><option value="catLitter">🐈 Туалет котиков</option><option value="sofa">🛋 Диван</option><option value="sim">👤 Персонаж</option><option value="window">🪟 Окно</option></select></label>
+<label class="field">Повышаемый навык <input id="taskSkill" list="skillSuggestions" maxlength="70" autocomplete="off" placeholder="Не повышает навык"><datalist id="skillSuggestions"></datalist><small>Выбери навык или впиши новый, либо оставь пустым.</small></label><label class="field">Связать с предметом в комнате <select id="taskObject"><option value="">Без связи</option><option value="bed">🛏 Кровать</option><option value="books">📚 Книжный шкаф</option><option value="tableBook">📖 Книга на журнальном столике</option><option value="phone">📱 Телефон</option><option value="coffee">☕ Чашка кофе</option><option value="clutter">🧹 Вещи для уборки</option><option value="desk">💻 Рабочий стол</option><option value="sink">🚰 Раковина</option><option value="shower">🚿 Душевая кабина</option><option value="fridge">🧊 Холодильник</option><option value="toilet">🚽 Туалет</option><option value="catLitter">🐈 Туалет котиков</option><option value="sofa">🛋 Диван</option><option value="sim">👤 Персонаж</option><option value="window">🪟 Окно</option></select></label>
 <div class="row"><button class="primary" type="submit" id="taskSave">Сохранить дело/привычку</button><button class="secondary" type="button" id="taskCancel">Отмена</button><button class="secondary" type="button" id="taskDelete" hidden>Удалить</button></div>
 <p class="hint">Изменение или удаление дела не удаляет записи о его прежнем выполнении и уже полученный XP.</p>
 </form></details>
@@ -968,7 +976,7 @@ const defs=[
 {id:'sim_diary',object:'sim',name:'Записать в дневник',xp:0,repeat:'daily',open:'diary'},
 {id:'sofa_rest',object:'sofa',name:'Отдохнуть',xp:5,repeat:'daily',skill:'Здоровье'}];
 const labels={window:'🪟 Окно · мероприятия',bed:'🛏 Кровать',books:'📚 Книжная полка',desk:'💻 Компьютер',phone:'📱 Телефон',tableBook:'📖 Книга на столике',fridge:'🧊 Холодильник',coffee:'☕ Кофе',clutter:'🧹 Уборка',sink:'🚰 Раковина',sim:'👤 Персонаж',sofa:'🛋 Диван',shower:'🚿 Ванная',toilet:'🚽 Туалет',catLitter:'🐈 Туалет котиков'};
-const base=()=>({schema:VERSION,createdAt:new Date().toISOString(),days:{},activities:defs.filter(a=>a.xp>0).map(a=>({...a,kind:'habit',completions:[]})),events:[],schedule:[],googleHidden:[],foodMeals:[],foodTemplates:[],financeChecks:[],room:{work:null,lastShowerDateReported:'2026-11-18',antiperspirantInitialized:true},legacySkills:{},legacyCopy:null,
+const base=()=>({schema:VERSION,createdAt:new Date().toISOString(),days:{},activities:defs.filter(a=>a.xp>0).map(a=>({...a,kind:'habit',completions:[]})),events:[],schedule:[],googleHidden:[],foodMeals:[],foodTemplates:[],financeChecks:[],room:{work:null,lastShowerDateReported:'2026-11-18',antiperspirantInitialized:true},legacySkills:{},legacyCopy:null,skillDecaySince:today(),
  taskProjects:[],taskTags:[{id:'tp-family',name:'Семья'},{id:'tp-work',name:'Работа'}],
  focusSettings:{focus:25,short:5,long:15},focusTimer:{mode:'focus',running:false,remainingSec:1500,elapsedSec:0,endAt:null,startAt:null,taskId:''}});
 let state,storageOK=true,storageBlocked=false,activeDay=today(),historyView='month',selectedTab='needs';
@@ -984,6 +992,9 @@ function normalize(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.
  normalized.taskTags=Array.isArray(raw.taskTags)?raw.taskTags.filter(x=>x&&typeof x.id==='string'&&typeof x.name==='string'):safe.taskTags;
  normalized.focusSettings=raw.focusSettings&&typeof raw.focusSettings==='object'?{...safe.focusSettings,...raw.focusSettings}:safe.focusSettings;
  normalized.focusTimer=raw.focusTimer&&typeof raw.focusTimer==='object'?{...safe.focusTimer,...raw.focusTimer}:safe.focusTimer;
+ normalized.skillDecaySince=typeof raw.skillDecaySince==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(raw.skillDecaySince)?raw.skillDecaySince:today();
+ const skillMap=new Map([...defs,...normalized.activities].filter(a=>a?.id).map(a=>[a.id,a.skill||null]));
+ normalized.events=normalized.events.map(e=>e?.kind==='complete'&&!Object.prototype.hasOwnProperty.call(e,'skill')?{...e,skill:skillMap.get(e.activityId)||null}:e);
  return normalized;
 }
 function migrate(old){const s=base();s.legacyCopy=old;s.legacySkills=(old.skills&&typeof old.skills==='object'&&!Array.isArray(old.skills))?old.skills:{};
@@ -993,7 +1004,7 @@ if(Array.isArray(old.log))for(const l of old.log){if(!l||typeof l.at!=='string'|
 return s}
 function save(){if(storageBlocked){storageOK=false;setStorage('⚠ Сохранение заблокировано: исходные данные не удалось прочитать. Экспортируй JSON и восстанови данные через подтверждённый импорт.');toast('Сохранение заблокировано для защиты прежних данных');return false}try{localStorage.setItem(STORE,JSON.stringify(state));storageOK=true;setStorage();return true}catch(e){storageOK=false;setStorage();toast('Данные не записались в браузер. Экспортируй резервную копию.');return false}}
 function setStorage(message){$('storageStatus').textContent=message|| (storageOK?'✓ Локальное сохранение доступно. Перед обновлением экспортируй JSON.':'⚠ Локальное сохранение недоступно. Не закрывай страницу без экспорта.');$('storageStatus').classList.toggle('error',!storageOK)}
-function load(){try{const x=localStorage.getItem(STORE);if(x){state=normalize(JSON.parse(x));storageOK=true;setStorage();return}const v1=localStorage.getItem(OLD);if(v1){const raw=JSON.parse(v1);if(raw&&Array.isArray(raw.tasks)&&raw.skills){state=migrate(raw);save();setStorage('✓ Найдены старые данные: создана отдельная копия. Старое хранилище не изменено.');return}}state=base();save();setStorage()}catch(e){state=base();storageOK=false;storageBlocked=true;setStorage('⚠ Исходное хранилище не удалось прочитать. Автоматическая запись заблокирована для защиты данных. Не очищай данные браузера; восстанови проверенную копию JSON.')}}
+function load(){try{const x=localStorage.getItem(STORE);if(x){const parsed=JSON.parse(x);state=normalize(parsed);storageOK=true;if(!parsed.skillDecaySince)save();else setStorage();return}const v1=localStorage.getItem(OLD);if(v1){const raw=JSON.parse(v1);if(raw&&Array.isArray(raw.tasks)&&raw.skills){state=migrate(raw);save();setStorage('✓ Найдены старые данные: создана отдельная копия. Старое хранилище не изменено.');return}}state=base();save();setStorage()}catch(e){state=base();storageOK=false;storageBlocked=true;setStorage('⚠ Исходное хранилище не удалось прочитать. Автоматическая запись заблокирована для защиты данных. Не очищай данные браузера; восстанови проверенную копию JSON.')}}
 let toastTimeout;function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>t.classList.remove('show'),3300)}
 function currentRecord(d){const x=state.days[d];return x&&typeof x==='object'?x:{}};
 function transact(fn){const before=JSON.stringify(state);fn();if(save())return true;state=JSON.parse(before);return false}
@@ -1142,7 +1153,7 @@ function complete(a,date){if(a.kind!=='habit'&&done(a,date))return toast('Уже
  if(a.id==='hygiene_antiperspirant'){state.room??={};state.room.lastAntiperspirantAt=stamp}
  if(a.object==='shower'&&/принят.*душ|принять душ|помытьс|приняла душ/i.test(a.name)){state.room??={};state.room.lastShowerAt=stamp}
  if(/уборк|помыть|убрать|постират|мыть посуд|разобрать|пропылесос/i.test(a.name)){state.room??={};state.room.lastCleanAt=stamp;state.room.entropyOffset=Math.min(0,(state.room.entropyOffset||0)-4)}
- state.events.push({id:uid(),kind:'complete',activityId:a.id,name:a.name,date,at:stamp,xp,resourceEffect:effectSnapshot(a)})})){toast(`✓ ${a.name}${xp?' · '+(xp>0?'+':'')+xp+' XP':''}`);$('sceneStatus').textContent='✓ '+a.name;renderAll()}}
+ state.events.push({id:uid(),kind:'complete',activityId:a.id,name:a.name,date,at:stamp,xp,skill:a.skill||null,resourceEffect:effectSnapshot(a)})})){toast(`✓ ${a.name}${xp?' · '+(xp>0?'+':'')+xp+' XP':''}`);$('sceneStatus').textContent='✓ '+a.name;renderAll()}}
 let activeQuickKind='task';
 function relevantActivities(date,kind){
  return state.activities.filter(a=>{
@@ -1227,6 +1238,7 @@ function renderTopActivities(){
 function clearActivityEditor(){
  $('taskForm').reset();$('taskEditId').value='';
  $('taskStartDate').value=$('historyDate').value||today();
+ refreshSkillSuggestions();$('taskSkill').value='';
  document.querySelectorAll('[name=taskWeekday]').forEach(x=>x.checked=false);
  $('taskWeekdays').hidden=true;$('taskDelete').hidden=true;
  $('taskEditorHeading').textContent='Добавить дело или привычку';$('taskSave').textContent='Сохранить';
@@ -1242,6 +1254,7 @@ function openActivityEditor(id){
  $('taskXP').value=String(Number.isFinite(a.xp)?a.xp:0);
  if(!$('taskXP').value)$('taskXP').value='0';
  $('taskObject').value=a.object||'';
+ $('taskSkill').value=a.skill||'';
  $('taskWeekdays').hidden=a.repeat!=='weekly';
  document.querySelectorAll('[name=taskWeekday]').forEach(x=>x.checked=Array.isArray(a.weekdays)?a.weekdays.includes(Number(x.value)):false);
  $('taskDelete').hidden=false;$('taskEditorHeading').textContent='Изменить дело или привычку';
@@ -1260,7 +1273,7 @@ function addActivity(e){
  const meta=window.LifeSimsTaskPremium?.readForm?.()||{};
  if(meta.resourceEffect&&!validatedResourceEffect(meta.resourceEffect))return toast('Проверь настройки влияния на показатель: значение должно быть от −100 до +100, а срок — допустимым.');
  if(meta.resourceEffect)meta.resourceEffect=validatedResourceEffect(meta.resourceEffect);
- const act={...(old||{}),...meta,id:old?.id||uid(),name,repeat,weekdays:repeat==='weekly'?weekdays:[],createdDate:$('taskStartDate').value||today(),kind:$('taskKind').value==='habit'?'habit':'task',xp:Number($('taskXP').value),object:$('taskObject').value||null,completions:old?.completions||[]};
+ const act={...(old||{}),...meta,id:old?.id||uid(),name,repeat,weekdays:repeat==='weekly'?weekdays:[],createdDate:$('taskStartDate').value||today(),kind:$('taskKind').value==='habit'?'habit':'task',xp:Number($('taskXP').value),skill:$('taskSkill').value.trim().slice(0,70)||null,object:$('taskObject').value||null,completions:old?.completions||[]};
  if(!transact(()=>{const i=state.activities.findIndex(x=>x.id===act.id);if(i<0)state.activities.push(act);else state.activities[i]=act;}))return toast('Не удалось сохранить');
  clearActivityEditor();$('calendarTaskEditor').open=false;
  if($('calendarTaskPopup')?.open)$('calendarTaskPopup').close();
@@ -1415,7 +1428,7 @@ function saveHabitBackdate(e){
     activity.completions??=[];
     activity.completions.push({date,at,xp,performedAt:performedAt||null,recordedAt});
     state.events.push({id:uid(),kind:'complete',activityId:activity.id,name:activity.name,
-     date,at,performedAt:performedAt||null,recordedAt,xp,resourceEffect:effectSnapshot(activity)});
+     date,at,performedAt:performedAt||null,recordedAt,xp,skill:activity.skill||null,resourceEffect:effectSnapshot(activity)});
     if(activity.id==='hygiene_antiperspirant'&&performedAt){
      state.room??={};const previous=Date.parse(state.room.lastAntiperspirantAt||'');
      if(!Number.isFinite(previous)||previous<Date.parse(performedAt))state.room.lastAntiperspirantAt=performedAt;
@@ -1486,7 +1499,7 @@ function makeBed(){
    habit.completions??=[];
    const at=new Date().toISOString();
    habit.completions.push({date:today(),at,xp:habit.xp||0});
-   state.events.push({id:uid(),kind:'complete',activityId:habit.id,name:habit.name,date:today(),at,xp:habit.xp||0});
+   state.events.push({id:uid(),kind:'complete',activityId:habit.id,name:habit.name,date:today(),at,xp:habit.xp||0,skill:habit.skill||null});
   }
   state.events.push({id:uid(),kind:'bed',name:'Заправила кровать',date:today(),at:new Date().toISOString(),xp:0});
  })){return toast('Не удалось записать заправление кровати')}
@@ -1767,6 +1780,7 @@ function openTab(tab,jump=false){
   if(tab==='needs')renderNeeds();
 
   if(tab==='history')renderHistory();
+ if(tab==='skills')renderSkills();
   if(tab==='tasks'||tab==='habits')renderTopActivities();
   if(jump)requestAnimationFrame(()=>document.querySelector('.nav').scrollIntoView({behavior:'smooth',block:'start'}));
 }
@@ -2016,6 +2030,53 @@ function showNeedsEditor(field='',date=today()){
  $('needsEditor').open=true;modal.append($('needsEditor'));
  if(!modal.open)modal.showModal();modal.scrollTop=0;
  $('lifeModalMask').hidden=true;
+}
+
+const DEFAULT_SKILLS=['Психология','Программирование','Психотерапия','Экономика','Имидж','Здоровье'];
+function skillDayDiff(a,b){
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(a||'')||!/^\d{4}-\d{2}-\d{2}$/.test(b||''))return 0;
+ const d=[a,b].map(x=>x.split('-').map(Number));
+ return Math.max(0,Math.floor((Date.UTC(d[1][0],d[1][1]-1,d[1][2])-Date.UTC(d[0][0],d[0][1]-1,d[0][2]))/86400000));
+}
+function fadeSkill(x,start,end){return Math.max(0,x*Math.pow(0.99,Math.max(0,skillDayDiff(start,end)-14)/7))}
+function skillScores(day=today()){
+ const since=state.skillDecaySince||day, skills=new Map();
+ function get(n){if(typeof n!=='string'||!n.trim())return null;n=n.trim().slice(0,70);
+  if(!skills.has(n)){const xp=Math.max(0,Number(state.legacySkills?.[n])||0);skills.set(n,{name:n,score:xp,earned:xp,anchor:since,last:null});}
+  return skills.get(n);
+ }
+ for(const n of [...DEFAULT_SKILLS,...defs.map(x=>x.skill),...state.activities.map(x=>x.skill),...Object.keys(state.legacySkills||{})])get(n);
+ const activities=new Map(state.activities.map(a=>[a.id,a]));
+ const original=new Map(defs.map(a=>[a.id,a]));
+ for(const e of state.events.filter(e=>e?.kind==='complete'&&/^\d{4}-\d{2}-\d{2}$/.test(e.date||'')&&e.date<=day&&Number(e.xp)>0).slice().sort((a,b)=>a.date.localeCompare(b.date))){
+  const skill=Object.prototype.hasOwnProperty.call(e,'skill')?e.skill:(activities.get(e.activityId)?.skill||original.get(e.activityId)?.skill);
+  const item=get(skill);if(!item)continue;
+  if(e.date>since){item.score=fadeSkill(item.score,item.anchor,e.date);item.anchor=e.date;}
+  item.score+=Number(e.xp);item.earned+=Number(e.xp);item.last=e.date;
+ }
+ return [...skills.values()].map(x=>{const score=fadeSkill(x.score,x.anchor,day);return {...x,score,loss:Math.max(0,x.earned-score),days:x.last?skillDayDiff(x.last,day):null}}).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name,'ru'));
+}
+function refreshSkillSuggestions(){
+ const list=$('skillSuggestions');if(!list)return;list.replaceChildren();
+ for(const v of skillScores()){const option=document.createElement('option');option.value=v.name;list.append(option)}
+}
+function renderSkills(){
+ const list=$('skillsList');if(!list)return;list.replaceChildren();
+ const f=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:1});
+ for(const skill of skillScores()){
+  const card=document.createElement('article');card.className='skill-item';
+  const header=document.createElement('div');header.className='skill-item-head';
+  const title=document.createElement('strong');title.textContent=skill.name;
+  const value=document.createElement('b');value.textContent=f.format(skill.score)+' XP';header.append(title,value);
+  const bar=document.createElement('div');bar.className='skill-track';
+  const fill=document.createElement('div');fill.style.width=(skill.score%100)+'%';bar.append(fill);
+  const lvl=document.createElement('small');lvl.textContent='Уровень '+(Math.floor(skill.score/100)+1)+' · '+f.format(skill.score%100)+' / 100 XP';
+  const last=document.createElement('small');last.textContent=skill.last?'Последняя практика: '+skill.last+(skill.days===0?' (сегодня)':' · '+skill.days+' дн. назад'):'Практика ещё не записана';
+  card.append(header,bar,lvl,last);
+  if(skill.loss>=0.05){const loss=document.createElement('small');loss.className='skill-loss';loss.textContent='Снижение от отсутствия практики: −'+f.format(skill.loss)+' XP';card.append(loss)}
+  list.append(card);
+ }
+ refreshSkillSuggestions();
 }
 function xpTotal(){const origin=Object.values(state.legacySkills||{}).reduce((sum,x)=>sum+(Number.isFinite(+x)?+x:0),0);const earned=state.events.reduce((sum,e)=>sum+(e.kind==='complete'&&Number.isFinite(+e.xp)?+e.xp:0),0);return Math.max(0,Math.round(origin+earned))}
 function metric(el,name,value,suffix='%',displayValue=null,field='',sourceDate=null,detail=''){
@@ -3173,7 +3234,7 @@ function duplicateCalendarEvent(id){
 }
 function renderAll(){
  const jobs=[['Калории за 24 часа',render24CalorieCard],['Сытость',renderHungerMeter],['Календарь',renderSchedule],['Потребности',renderNeeds],['Дела и привычки',renderTopActivities],
-  ['История',renderHistory],['Недосып',updateDebt],['Персонаж',renderWork]];
+  ['История',renderHistory],['Навыки',renderSkills],['Недосып',updateDebt],['Персонаж',renderWork]];
  if(typeof renderRoomMess==='function')jobs.push(['Комната',renderRoomMess]);
  jobs.push(['3D',()=>window.LifeSims3D?.sync?.(window.LifeSims3DBridge?.snapshot?.())]);
  const failures=[];
@@ -3335,7 +3396,7 @@ window.LifeSimsTaskBridge={
    a.completions??=[];
    a.completions.push({date,at:stamp,xp,recordedAt:stamp,performedAt:null});
    state.events.push({id:uid(),kind:'complete',activityId:a.id,name:a.name,date,at:stamp,
-    recordedAt:stamp,performedAt:null,xp,resourceEffect:effectSnapshot(a)});
+    recordedAt:stamp,performedAt:null,xp,skill:a.skill||null,resourceEffect:effectSnapshot(a)});
   }))return false;
   renderAll();return true;
  },
