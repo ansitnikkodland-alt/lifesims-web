@@ -1484,7 +1484,8 @@ function gameEntropy(){
  const origin=Date.parse(state.room?.lastCleanAt||state.createdAt||new Date().toISOString());
  const days=Number.isFinite(origin)?Math.max(0,(Date.now()-origin)/86400000):0;
  const offset=Number(state.room?.entropyOffset)||0;
- return Math.max(0,Math.min(100,Math.round(12+days*7+offset)));
+ const raw=Math.max(0,Math.min(100,Math.round(12+days*7+offset)));
+ return actionAdjustedNeed('entropy',today(),raw);
 }
 function renderRoomMess(){
  const value=gameEntropy(),layer=$('sceneMess');
@@ -1998,26 +1999,34 @@ function latestObserved(check,ref=today()){
  return Object.keys(state.days||{}).filter(day=>day<=ref&&/^\d{4}-\d\d-\d\d$/.test(day)&&check(state.days[day],day)).sort().pop()||null;
 }
 function metricSnapshot(field,ref=today()){
- const date=latestObserved(r=>Number.isFinite(r?.[field]),ref);
- return date?{value:state.days[date][field],date}:{value:null,date:null};
+ const observed=latestObserved(r=>Number.isFinite(r?.[field]),ref);
+ const linked=field==='mood'?latestResourceEffectDate('mood',ref):null;
+ const date=[observed,linked].filter(Boolean).sort().pop()||null;
+ const base=observed?state.days[observed][field]:null;
+ const value=field==='mood'?actionAdjustedNeed('mood',ref,base):base;
+ return date?{value,date}:{value:null,date:null};
 }
 function physicalSnapshot(ref=today()){
- const date=latestObserved(r=>Number.isFinite(r?.condition)||Number.isFinite(r?.ouraScores?.readiness),ref);
- if(!date)return {value:null,date:null};
- const r=currentRecord(date);
- const value=r.conditionManual&&Number.isFinite(r.condition)?r.condition:
-  Number.isFinite(r.ouraScores?.readiness)?r.ouraScores.readiness:r.condition;
- return {value:Number.isFinite(value)?value:null,date};
+ const observed=latestObserved(r=>Number.isFinite(r?.condition)||Number.isFinite(r?.ouraScores?.readiness),ref);
+ const effected=latestResourceEffectDate('condition',ref);
+ const date=[observed,effected].filter(Boolean).sort().pop()||null;
+ const base=observed?unadjustedPhysicalCondition(currentRecord(observed),observed):null;
+ return {value:actionAdjustedNeed('condition',ref,base),date};
 }
 function sleepSnapshot(ref=today()){
- const date=latestObserved(r=>Number.isFinite(r?.sleepHours),ref);
- return date?{value:sleepAssessment(date).need,date}:{value:null,date:null};
+ const observed=latestObserved(r=>Number.isFinite(r?.sleepHours),ref);
+ const effected=latestResourceEffectDate('sleepNeed',ref);
+ const date=[observed,effected].filter(Boolean).sort().pop()||null;
+ if(!date)return {value:null,date:null};
+ const value=sleepAssessment(ref).need;
+ return {value:value==null&&observed?sleepAssessment(observed).need:value,date};
 }
 function hygieneSnapshot(ref=today()){
  const direct=metricSnapshot('hygiene',ref),shower=showerReference();
  const wash=state.room?.lastHairWashAt;
  const hairDate=typeof wash==='string'&&Number.isFinite(Date.parse(wash))?dayStr(new Date(wash)):null;
- const dates=[direct.date,shower?.day,hairDate].filter(d=>d&&d<=ref).sort();
+ const effectDate=latestResourceEffectDate('hygiene',ref);
+ const dates=[direct.date,shower?.day,hairDate,effectDate].filter(d=>d&&d<=ref).sort();
  const date=dates.pop()||null;
  return {value:date?hygieneCondition(currentRecord(ref),ref):null,date,
   detail:date?(hygieneActivityMultiplier(ref)>1?'ускоренный спад · активность':'включая гигиену головы'):''};
@@ -2104,14 +2113,17 @@ function estimatedFoodNeed(d){
  const hours=Math.max(0,currentMinute-lastMinute)/60;
  return Math.max(0,Math.min(100,Math.round(100-12*hours)));
 }
-function physicalCondition(r,d=today()){
- // Explicit manual adjustment takes priority; underlying Oura Readiness is still kept.
+function unadjustedPhysicalCondition(r,d=today()){
+ // Oura raw scores stay unmodified; the linked task effect is a separate simulation.
  if(r.conditionManual===true&&Number.isFinite(r.condition))return r.condition;
  const current=r.ouraScores?.readiness;
  if(Number.isFinite(current))return current;
  const previous=state.days[plusDays(d,-1)]?.ouraScores?.readiness;
  if(Number.isFinite(previous))return previous;
  return Number.isFinite(r.condition)?r.condition:null;
+}
+function physicalCondition(r,d=today()){
+ return actionAdjustedNeed('condition',d,unadjustedPhysicalCondition(r,d));
 }
 function showerReference(){
  // A date supplied by the user can be used without fabricating a time of day.
@@ -2172,8 +2184,8 @@ function hygieneCondition(r,date){
  // 25% to the overall hygiene score where the body baseline is known.
  const combined=body!=null&&head!=null?Math.round(body*0.75+head*0.25):body;
  const manual=Number.isFinite(r.hygiene)?r.hygiene:null;
- if(combined==null)return manual;
- return manual==null?combined:Math.min(manual,combined);
+ if(combined==null)return actionAdjustedNeed('hygiene',date,manual);
+ return actionAdjustedNeed('hygiene',date,manual==null?combined:Math.min(manual,combined));
 }
 function resourceActivityImpact(date){
  // Recorded completion XP is a signed, once-per-activity contribution.
