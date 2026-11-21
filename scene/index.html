@@ -3880,7 +3880,7 @@ const AUTH='https://cloud.ouraring.com/oauth/authorize', API='https://lifesims-o
 // All nine data categories enabled in the Oura developer application (no email or personal profile).
 const REQUESTED_SCOPES='daily heartrate tag workout session spo2 ring_configuration stress heart_health';
 const REDIRECT='https://ansitnikkodland-alt.github.io/lifesims-web/scene/';
-const ID_KEY='lifesims-oura-client-id',STATE_KEY='lifesims-oura-state',STATE_FALLBACK_KEY='lifesims-oura-auth-pending',TOKEN_KEY='lifesims-oura-session',AUTO_KEY='lifesims-oura-auto',LAST_KEY='lifesims-oura-last-check';
+const ID_KEY='lifesims-oura-client-id',STATE_KEY='lifesims-oura-state',STATE_FALLBACK_KEY='lifesims-oura-auth-pending',TOKEN_KEY='lifesims-oura-session',AUTO_KEY='lifesims-oura-auto',LAST_KEY='lifesims-oura-last-check',CORE_KEY='lifesims-oura-last-core';
 let token='',expiry=0,preview=null,busy=false,grantedScopes=[];
 const EXTRA_COLLECTIONS=[
  {name:'heartrate',scope:'heartrate',time:true,label:'Пульс'},
@@ -3900,9 +3900,11 @@ const EXTRA_COLLECTIONS=[
 const el=id=>document.getElementById(id);
 const panel=document.createElement('div');panel.className='card oura-panel';
 panel.innerHTML=[
-'<h3>💍 Oura Ring · v27</h3>',
+'<h3>💍 Oura Ring · v50</h3>',
 '<div id="ouraToday" class="oura-today" role="status">Оценки Oura за сегодня пока не загружены.</div>',
-'<p class="hint">После подключения Oura показатели за последние 7 дней загружаются и сохраняются автоматически, если включено автообновление ниже. При необходимости можно вручную нажать «Проверить данные», затем «Сохранить в LifeSims». Пульс, тренировки, стресс и другие разрешённые категории сохраняются отдельно.</p>',
+'<div id="ouraYesterday" class="oura-today" role="status">Шаги за вчера: ожидаются данные Oura.</div>',
+'<p id="ouraSyncFreshness" class="hint" role="status">Синхронизация пока не выполнена.</p>',
+'<p class="hint">При подключённой Oura и открытом LifeSims ежедневные показатели проверяются при запуске, каждые 30 минут и после возвращения на вкладку. Расширенные категории обновляются не чаще раза в 6 часов. Наличие данных за вчера зависит от синхронизации кольца с Oura.</p>',
 '<details id="ouraSettings" open><summary>Подключение Oura</summary>',
 '<p class="hint">Создай OAuth-приложение на <a href="https://developer.ouraring.com/applications" target="_blank" rel="noopener noreferrer">Oura Developer → Applications</a>. Добавь Redirect URI ниже. Секретный ключ (Client Secret) сюда вводить нельзя.</p>',
 '<label class="field">Redirect URI <input id="ouraRedirect" type="text" readonly></label>',
@@ -3910,13 +3912,13 @@ panel.innerHTML=[
 '<label class="field">Oura Client ID <input id="ouraClientId" autocomplete="off" spellcheck="false" placeholder="Только публичный Client ID"></label>',
 '<div class="row"><button type="button" class="primary" id="ouraConnect">Подключить Oura</button><button type="button" class="secondary" id="ouraDisconnect" disabled>Отключить на устройстве</button></div></details>',
 '<p class="hint">Период синхронизации: только последние 7 календарных дней (включая сегодня). Ранее сохранённые данные остаются в истории.</p>',
-'<label class="oura-auto"><input id="ouraAuto" type="checkbox"> Обновлять при открытии LifeSims (не чаще раза в 6 часов)</label>',
+'<label class="oura-auto"><input id="ouraAuto" type="checkbox"> Автообновление Oura · при открытии, каждые 30 минут и при возвращении</label>',
 '<div class="row"><button type="button" class="secondary" id="ouraPreview" disabled>Проверить данные</button><button type="button" class="primary" id="ouraApply" disabled>Сохранить в LifeSims</button></div>',
 '<p id="ouraStatus" class="hint" role="status" aria-live="polite">Oura не подключена.</p>',
 '<div id="ouraResults"></div>',
 '<p id="ouraScopeStatus" class="hint">Расширенные показатели запрашиваются только при разрешении соответствующей категории Oura.</p>',
 '<button type="button" class="secondary" id="ouraExportDetails">Скачать подробные данные за неделю (JSON)</button>',
-'<p class="hint">Ручные записи не заменяются данными Oura. OAuth-токен хранится только в сеансе этой вкладки, не в JSON. Автообновление работает при подключённой Oura и открытом LifeSims; при новом сеансе браузера может потребоваться вход заново.</p>',
+'<p class="hint">Ручные записи не заменяются данными Oura. Авторизация сохраняется только для текущего сеанса браузера: после закрытия приложения или истечения токена может понадобиться повторный вход. При закрытом LifeSims фоновая синхронизация не выполняется.</p>',
 '<p class="hint"><a href="./privacy.html" target="_blank" rel="noopener">Privacy Policy</a> · <a href="./terms.html" target="_blank" rel="noopener">Terms of Service</a></p>'
 ].join('');
 root.append(panel);
@@ -3960,6 +3962,17 @@ function renderToday(){
  if(Number.isFinite(scores.activity))vals.push('Активность '+scores.activity+'/100');
  el('ouraToday').textContent=vals.length?'Oura за '+selected+': '+vals.join(' · '):
   (lastAvailable?'Oura: показатели сна или активности есть за '+lastAvailable+'; оценки восстановления ещё не получены.':'Oura: за последние 7 дней показатели ещё не загружены.');
+ const yesterday=dateAdd(today,-1),record=days[yesterday]||{};
+ const steps=Number.isFinite(record.steps)?record.steps:null;
+ const activity=Number.isFinite(record.ouraScores?.activity)?record.ouraScores.activity:null;
+ el('ouraYesterday').textContent=steps!=null
+  ?'Вчера ('+yesterday+'): '+steps.toLocaleString('ru-RU')+' шагов'+(activity!=null?' · оценка активности '+activity+'/100':'')
+  :activity!=null?'Вчера ('+yesterday+'): оценка активности Oura '+activity+'/100 · шаги не получены'
+  :'Вчера ('+yesterday+'): шаги и оценка активности пока не получены от Oura.';
+ const last=Number(setting(CORE_KEY)||setting(LAST_KEY)||0);
+ el('ouraSyncFreshness').textContent=Number.isFinite(last)&&last>0
+  ?'Последняя успешная проверка: '+new Date(last).toLocaleString('ru-RU')
+  :'Успешной проверки Oura в этом браузере ещё нет.';
 }
 const connected=()=>token&&expiry>Date.now()+30000;
 function update(){
@@ -3974,7 +3987,7 @@ el('ouraCopyRedirect').onclick=async()=>{
  try{await navigator.clipboard.writeText(REDIRECT);status('Адрес скопирован.')}
  catch(_){el('ouraRedirect').focus();el('ouraRedirect').select();status('Выдели и скопируй адрес.')}
 };
-el('ouraAuto').onchange=()=>saveSetting(AUTO_KEY,el('ouraAuto').checked?'yes':'no');
+el('ouraAuto').onchange=()=>{saveSetting(AUTO_KEY,el('ouraAuto').checked?'yes':'no');if(el('ouraAuto').checked)autoSchedule(true)};
 el('ouraExportDetails').onclick=()=>exportDetailed().catch(e=>status('⚠ Экспорт Oura: '+e.message));
 function randomState(){
  if(!crypto?.getRandomValues)throw Error('Нужен защищённый браузер.');
@@ -3982,7 +3995,7 @@ function randomState(){
  return Array.from(bytes,n=>n.toString(16).padStart(2,'0')).join('');
 }
 el('ouraConnect').onclick=()=>{
- if(location.origin!=='https://ansitnikkodland-alt.github.io'||location.pathname!=='/lifesims-web/scene/'){
+ if(location.origin!=='https://ansitnikkodland-alt.github.io'||!['/lifesims-web/scene/','/lifesims-web/scene/index.html'].includes(location.pathname)){
   return status('Для входа Oura открой опубликованную LifeSims: '+REDIRECT)
  }
  const id=el('ouraClientId').value.trim();
