@@ -19,6 +19,7 @@
 .meal-chat-summary{border:1px solid #515960;background:#282b31;border-radius:16px;padding:12px 14px;margin-bottom:15px;display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
 .meal-chat-summary strong{font-size:19px;color:#f2f4f6}
 .meal-chat-summary span{font-size:12px;color:#bcbfc9}
+.meal-chat-summary .meal-chat-rolling{width:100%;border-top:1px solid #505b67;padding-top:8px;font-size:12px;line-height:1.4;color:#d7e8e4;overflow-wrap:anywhere}
 .meal-chat-thread{display:flex;flex-direction:column;gap:14px}
 .meal-chat-entry{display:flex;flex-direction:column;gap:6px}
 .meal-chat-message{max-width:90%;align-self:flex-end;background:#43464d;border-radius:18px 18px 5px 18px;padding:12px 14px;word-break:break-word;white-space:pre-wrap;font-size:15px;line-height:1.4}
