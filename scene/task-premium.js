@@ -25,6 +25,7 @@
  <p class="tp-note">Удаление проекта или тега не удаляет сами дела и историю.</p>`;
  document.body.append(manager);
  let view='list',kind='project';
+ const resourceNames={resource:'◆ Ресурс',mood:'☺ Настроение',condition:'♥ Физическое состояние',hygiene:'♨ Гигиена',nutrition:'🍎 Питание',hunger:'🍽 Сытость',sleepNeed:'💤 Потребность во сне',entropy:'🌀 Энтропия',activity:'🚶 Активность'};
  const quadrants=[
   ['I','Срочно и важно','#fa6473'],
   ['II','Не срочно, но важно','#ffc24f'],
@@ -49,7 +50,9 @@
   const info=el('div','tp-info');info.append(el('strong','',a.name));
   const project=data.taskProjects.find(p=>p.id===a.projectId)?.name;
   const tags=(a.tags||[]).map(id=>data.taskTags.find(x=>x.id===id)?.name).filter(Boolean).map(x=>'#'+x);
-  const details=[label(a),project,...tags,Number(a.priority)?'Приоритет '+a.priority:''].filter(Boolean);
+  const effect=a.resourceEffect,description=effect&&resourceNames[effect.target]?
+   resourceNames[effect.target]+' '+(effect.mode==='set'?'→ '+effect.amount+'%':(effect.amount>=0?'+':'')+effect.amount+' п. п.'):'';
+  const details=[label(a),project,...tags,Number(a.priority)?'Приоритет '+a.priority:'',description].filter(Boolean);
   info.append(el('small','',details.join(' · ')));row.append(check,info);
   if(mat){
    const select=el('select','tp-quadrant-switch');select.setAttribute('aria-label','Переместить '+a.name);
@@ -121,6 +124,16 @@
   <div id="tpEditorTags" class="tp-tag-picks"></div>
   <p class="tp-note">Дела «Без срока» всегда остаются во входящих до выполнения. Дата начала не является сроком.</p>`;
   form.insertBefore(panel,before);
+  const resource=el('fieldset','tp-editor tp-resource-editor');resource.id='tpResourceEditor';
+  resource.innerHTML="<legend>⚡ Влияние дела или привычки на состояние</legend>\n<label>Какой показатель меняется<select id=\"tpEffectTarget\">\n<option value=\"\">Не влияет</option>\n<option value=\"resource\">◆ Общий ресурс (кристалл)</option>\n<option value=\"mood\">☺ Настроение</option>\n<option value=\"condition\">♥ Физическое состояние</option>\n<option value=\"hygiene\">♨ Гигиена</option>\n<option value=\"nutrition\">🍎 Питание</option>\n<option value=\"hunger\">🍽 Сытость</option>\n<option value=\"sleepNeed\">💤 Потребность во сне</option>\n<option value=\"entropy\">🌀 Энтропия / беспорядок</option>\n<option value=\"activity\">🚶 Активность (игровая)</option>\n</select></label>\n<div id=\"tpEffectFields\" hidden><div class=\"tp-editor-grid\">\n<label>Как изменить<select id=\"tpEffectMode\"><option value=\"delta\">Прибавить / вычесть</option><option value=\"set\">Установить значение</option></select></label>\n<label>На сколько, п. п.<input id=\"tpEffectAmount\" type=\"number\" min=\"-100\" max=\"100\" step=\"1\" value=\"10\" required></label>\n<label>Срок действия<select id=\"tpEffectHours\">\n<option value=\"0\">Только выбранный день</option>\n<option value=\"24\">24 часа</option>\n<option value=\"72\">72 часа</option>\n<option value=\"168\">7 дней</option>\n</select></label></div>\n<p class=\"tp-note\">«+15» добавляет 15 пунктов к игровой шкале. «Установить 100» действует как отдельное событие. Каждый повтор учитывается отдельно. Измерения Oura и ручные записи не изменяются; эффекты исчезают по окончании срока.</p></div>";
+  form.insertBefore(resource,before);
+  const target=$('tpEffectTarget'),mode=$('tpEffectMode'),amount=$('tpEffectAmount'),settings=$('tpEffectFields');
+  const reflect=()=>{
+   settings.hidden=!target.value;amount.disabled=!target.value;
+   amount.min=mode.value==='set'?'0':'-100';amount.max='100';
+   if(mode.value==='set'&&Number(amount.value)<0)amount.value='0';
+  };
+  target.onchange=reflect;mode.onchange=reflect;reflect();
   const repeat=$('taskRepeat');if(repeat&&!repeat.querySelector('[value="inbox"]')){
    const opt=el('option','','Без срока');opt.value='inbox';repeat.prepend(opt);
   }
@@ -142,10 +155,21 @@
    check.checked=(a?.tags||[]).includes(x.id);label.append(check,document.createTextNode(' #'+x.name));choices.append(label);
   }
   panel.hidden=formKind==='habit';
+  const effect=a?.resourceEffect||null;
+  $('tpEffectTarget').value=effect?.target||'';
+  $('tpEffectMode').value=effect?.mode==='set'?'set':'delta';
+  $('tpEffectAmount').value=effect?.amount!=null&&Number.isFinite(Number(effect.amount))?String(effect.amount):'10';
+  $('tpEffectHours').value=[0,24,72,168].includes(Number(effect?.hours))?String(effect.hours):'24';
+  $('tpEffectTarget').onchange();
  }
  function readForm(){
-  if(!$('tpEditor')||$('tpEditor').hidden)return {};
-  return {projectId:$('tpEditorProject').value||null,priority:Number($('tpEditorPriority').value)||0,
+  const resourceEffect=$('tpEffectTarget')?.value?{
+   target:$('tpEffectTarget').value,mode:$('tpEffectMode').value,
+   amount:Number($('tpEffectAmount').value),hours:Number($('tpEffectHours').value)
+  }:null;
+  if(!$('tpEditor')||$('tpEditor').hidden)return {resourceEffect};
+  return {resourceEffect,projectId:$('tpEditorProject').value||null,
+   priority:Number($('tpEditorPriority').value)||0,
    urgent:$('tpEditorUrgent').checked,important:$('tpEditorImportant').checked,
    tags:[...document.querySelectorAll('[name="tpTagChoice"]:checked')].map(x=>x.value)};
  }
