@@ -2088,8 +2088,10 @@ function satietyAssessment(ref=today(),now=new Date()){
  }
  const newest=meals[meals.length-1];
  const source=manual&&(!newest||manualAt>=newest.atMs)?ref:newest?.date||null;
- return {value:source?Math.round(Math.max(0,Math.min(100,pct))):null,date:source,
-  detail:manual?'ручная оценка · спад за 16 ч':'игровая сытость · спад за 16 ч'};
+ const linked=latestResourceEffectDate('hunger',ref);
+ const base=source?Math.round(Math.max(0,Math.min(100,pct))):null;
+ return {value:actionAdjustedNeed('hunger',ref,base),date:[source,linked].filter(Boolean).sort().pop()||null,
+  detail:linked?'игровой эффект привычки / дела':manual?'ручная оценка · спад за 16 ч':'игровая сытость · спад за 16 ч'};
 }
 function resourceSnapshot(ref=today()){
  const dates=new Set(Object.keys(state.days||{}).filter(d=>d<=ref&&
@@ -2191,22 +2193,29 @@ function resourceActivityImpact(date){
  // Recorded completion XP is a signed, once-per-activity contribution.
  // Count only completions performed on this day, not future tasks.
  return (state.events||[]).reduce((sum,event)=>sum+(
-   event?.kind==='complete'&&event.date===date&&Number.isFinite(Number(event.xp))?
+   event?.kind==='complete'&&event.date===date&&!validatedResourceEffect(event.resourceEffect)&&Number.isFinite(Number(event.xp))?
    Number(event.xp):0),0);
 }
 function derivedResource(r,d){
  const sleepNeed=sleepAssessment(d).need;
- const vals=[sleepNeed==null?null:100-sleepNeed,r.mood,physicalCondition(r,d),hygieneCondition(r,d),r.nutrition==null?satietyAssessment(d).value:r.nutrition];
+ const mood=actionAdjustedNeed('mood',d,r.mood);
+ const nutrition=actionAdjustedNeed('nutrition',d,r.nutrition==null?satietyAssessment(d).value:r.nutrition);
+ const vals=[sleepNeed==null?null:100-sleepNeed,mood,physicalCondition(r,d),hygieneCondition(r,d),nutrition];
+ if(activeResourceEffects('activity',d).length){
+  const steps=Number.isFinite(r.steps)?Math.round(Math.min(100,r.steps/10000*100)):r.ouraScores?.activity;
+  vals.push(actionAdjustedNeed('activity',d,steps));
+ }
+ if(d===today()&&activeResourceEffects('entropy',d).length)vals.push(100-gameEntropy());
  const available=vals.filter(x=>typeof x==='number'&&Number.isFinite(x));
  const influence=resourceActivityImpact(d);
- if(!available.length&&!influence)return null;
+ if(!available.length&&!influence&&!activeResourceEffects('resource',d).length)return null;
  const base=available.length?available.reduce((a,b)=>a+b,0)/available.length:50;
- return Math.max(0,Math.min(100,Math.round(base+influence)));
+ return actionAdjustedNeed('resource',d,Math.max(0,Math.min(100,Math.round(base+influence))));
 }
 function renderCrystal(){const snapshot=resourceSnapshot(today()),v=snapshot.value;const p=v==null?['#c2e9ff','#76c9ef','#2169b6']:v>65?['#c7fff0','#55dfa5','#0e9874']:v>35?['#fff2b1','#edbf53','#a57a15']:['#ffc2cd','#f4778c','#af405b'];const el=$('plumbob');el.style.setProperty('--gem-light',p[0]);el.style.setProperty('--gem-middle',p[1]);el.style.setProperty('--gem-dark',p[2]);const tint=$('sceneCrystalTint');if(tint)tint.style.setProperty('--crystal-hue',v==null?'0deg':v>65?'-55deg':v>35?'-135deg':'-185deg');el.title=v==null?'Ресурс не записан; нажми, чтобы записать':`Ресурс: ${v}% · ${freshnessLabel(snapshot.date)}`}
 function sleepAssessment(date){
  const dates=Object.keys(state.days).filter(d=>d<=date&&Number.isFinite(state.days[d]?.sleepHours)).sort();
- if(!dates.length)return {need:null,debt:null,last:null};
+ if(!dates.length)return {need:actionAdjustedNeed('sleepNeed',date,null),debt:null,last:null};
  let debt=0,prev=null,gaps=false;
  for(const d of dates){
   const rec=state.days[d],hours=Number(rec.sleepHours);
@@ -2216,9 +2225,9 @@ function sleepAssessment(date){
   prev=d;
  }
  const last=Number(state.days[dates[dates.length-1]].sleepHours);
- if(dates[dates.length-1]!==date)return {need:null,debt:gaps?null:debt,last};
+ if(dates[dates.length-1]!==date)return {need:actionAdjustedNeed('sleepNeed',date,null),debt:gaps?null:debt,last};
  const need=Math.max(0,Math.min(100,Math.round(Math.max(0,7.5-last)*12+(gaps?0:Math.min(debt,20)*4))));
- return {need,debt:gaps?null:debt,last,partial:gaps};
+ return {need:actionAdjustedNeed('sleepNeed',date,need),debt:gaps?null:debt,last,partial:gaps};
 }
 window.LifeSimsOpenCalories=(date)=>openSingleMetric('totalCalories',date);
 function openCalorieBalance(day=today(),mealId=null){
@@ -2303,12 +2312,14 @@ function renderNeeds(){
  const cleanedDay=/^\d{4}-\d\d-\d\d/.test(cleaned)?cleaned.slice(0,10):null;
  metric(g,'🌀 Энтропия · хаос',gameEntropy(),'%',null,'entropy',cleanedDay,'расчёт сейчас');
  const activityFromSteps=steps.value!=null;
- const activityValue=activityFromSteps?Math.min(100,Math.round(steps.value/10000*100)):ouraActivity.value;
+ const baseActivity=activityFromSteps?Math.min(100,Math.round(steps.value/10000*100)):ouraActivity.value;
+ const activityValue=actionAdjustedNeed('activity',d,baseActivity);
+ const isActivityGameEffect=!!latestResourceEffectDate('activity',d);
  const activityDisplay=activityFromSteps?steps.value.toLocaleString('ru-RU')+' / 10 000 шагов':
   ouraActivity.value!=null?'Oura: '+ouraActivity.value+'/100':'—';
- const activityDate=activityFromSteps?steps.date:ouraActivity.date;
- metric(g,'🚶 Активность',activityValue,'%',activityDisplay,'steps',activityDate,
-  activityFromSteps?'шаги':ouraActivity.value!=null?'оценка активности Oura · шаги недоступны':'ожидаются данные Oura');
+ const activityDate=[activityFromSteps?steps.date:ouraActivity.date,latestResourceEffectDate('activity',d)].filter(Boolean).sort().pop()||null;
+ metric(g,'🚶 Активность',activityValue,'%',isActivityGameEffect?String(activityValue)+'% · '+activityDisplay:activityDisplay,'steps',activityDate,
+  isActivityGameEffect?'игровая поправка от дел / привычек':activityFromSteps?'шаги':ouraActivity.value!=null?'оценка активности Oura · шаги недоступны':'ожидаются данные Oura');
  if(!activityFromSteps){
   const card=g.lastElementChild;
   const button=document.createElement('button');button.type='button';button.className='secondary activity-sync-detail';
@@ -2575,11 +2586,11 @@ function renderDayMetrics(date,body,heading){
   ['Фактический сон',number(rec.sleepHours,' ч'),'sleepHours'],
   ['Расчётный недосып',number(sleep.debt,' ч'),'sleepDebtAdjustment'],
   ['Ручная корректировка недосыпа',number(rec.sleepDebtAdjustment,' ч'),'sleepDebtAdjustment'],
-  ['☺ Настроение',number(rec.mood,'%'),'mood'],
+  ['☺ Настроение',number(actionAdjustedNeed('mood',date,rec.mood),'%'),'mood'],
   ['♥ Физическое состояние',number(physicalCondition(rec,date),'%'),'condition'],
   ['♨ Гигиена',number(hygieneCondition(rec,date),'%'),'hygiene'],
   ['🍽 Сытость',number(full.value,'%'),'hunger'],
-  ['Питание (ручная оценка)',number(rec.nutrition,'%'),'nutrition'],
+  ['Питание (ручная оценка + игровые поправки)',number(actionAdjustedNeed('nutrition',date,rec.nutrition),'%'),'nutrition'],
   ['🚶 Шаги',number(rec.steps),'steps'],
   ['Активность Oura',number(rec.ouraScores?.activity,'/100'),'steps'],
   ['🔥 Общий расход',number(rec.totalCalories,' ккал'),'totalCalories'],
