@@ -732,7 +732,7 @@ body{background:#091428}
 #habitBackdateOpen,#calendarHabitBackdate,#agendaHabitBackdate{min-height:44px}
 #topHabitsList .habit-backdate{min-height:38px;font-size:12px}
 </style><style id="v55-calendar-metrics">
-#dayAgendaOverlay .agenda-dialog{max-height:94dvh;overflow:auto}
+#dayAgendaOverlay .agenda-dialog{max-height:94dvh}
 .agenda-metric-row{align-items:center;gap:8px;border-bottom:1px solid #9facbd30;padding:7px 0}
 .agenda-metric-row .agenda-event-main{min-width:0;flex:1}
 .agenda-metric-row .agenda-event-title{font-size:13px;line-height:1.4}
@@ -785,7 +785,7 @@ body{background:#091428}
 <nav class="nav" aria-label="Разделы"><button class="active" type="button" data-tab="needs">◈ Потребности</button><button type="button" data-tab="tasks">☑ Дела</button><button type="button" data-tab="habits">◇ Привычки</button><button type="button" data-tab="history">▦ Календарь</button></nav>
 <div class="content"><div id="storageStatus" class="notice" role="status">Проверка локального хранения…</div>
 <section class="section active" id="needs"><div class="heading"><h2>Потребности</h2><div class="row"><button class="secondary" id="openNeedsEditor" type="button">Все показатели</button><a id="ouraJump" class="secondary" href="#ouraMount">💍 Oura · подключение</a></div></div>
-<div id="needsEnergyTop" class="needs-energy-pair" aria-label="Баланс калорий и голод">
+<div id="needsEnergyTop" class="needs-energy-pair" aria-label="Баланс калорий и сытость">
 <div id="calorieCardHost"><button id="calorieCardFallback" type="button" class="meter need-action calorie-balance-card"><span><strong>⚖️ Дефицит / профицит калорий</strong><b>—</b></span><div class="bar"><div class="empty"></div></div><small>Записать еду и посмотреть баланс</small></button></div>
 <div id="hungerCardHost" class="needs-hunger-wrap">
 <button id="hungerMeterCard" type="button" class="meter need-action need-hunger" aria-label="Сытость — изменить показатель">
@@ -2984,7 +2984,7 @@ function duplicateCalendarEvent(id){
   }else toast('Не удалось создать копию');
 }
 function renderAll(){
- const jobs=[['Голод',renderHungerMeter],['Календарь',renderSchedule],['Потребности',renderNeeds],['Дела и привычки',renderTopActivities],
+ const jobs=[['Сытость',renderHungerMeter],['Календарь',renderSchedule],['Потребности',renderNeeds],['Дела и привычки',renderTopActivities],
   ['История',renderHistory],['Недосып',updateDebt],['Персонаж',renderWork]];
  if(typeof renderRoomMess==='function')jobs.push(['Комната',renderRoomMess]);
  jobs.push(['3D',()=>window.LifeSims3D?.sync?.(window.LifeSims3DBridge?.snapshot?.())]);
