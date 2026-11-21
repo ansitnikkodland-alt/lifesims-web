@@ -63,7 +63,7 @@
 .needs-editor .heading{margin:10px 0}
 .needs-editor #stateForm{margin-top:12px}
 </style><link rel="stylesheet" href="./calendar-style.css">
-<link rel="stylesheet" href="./task-premium.css?v=64">
+<link rel="stylesheet" href="./task-premium.css?v=65">
 <link rel="stylesheet" href="./oura-style.css">
 <style>
 
@@ -788,8 +788,13 @@ body{background:#091428}
 </style><style id="lifesims-v64-agenda-meter">
 .agenda-metric-track{height:11px;background:#0c1930;border:1px solid #526a90;border-radius:20px;overflow:hidden;margin:8px 0 3px;width:100%}
 .agenda-metric-track>span{display:block;height:100%;border-radius:18px;transition:width .2s ease}
+</style><style id="lifesims-v65-recovery">
+#localDataReport .recovery-result{padding:10px 0;border-bottom:1px solid #465e84;display:flex;gap:9px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+#localDataReport .recovery-result strong{font-size:13px}
+#localDataReport .recovery-result small{display:block;color:#bed3e4;font-size:12px}
+#localDataReport button{min-height:44px}
 </style></head>
-<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v64</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
+<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v65</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
 <img id="sceneRugColor" class="rug-color-layer" alt="" aria-hidden="true">
 <span id="sceneCrystalTint" aria-hidden="true"></span>
@@ -934,7 +939,11 @@ body{background:#091428}
 <div id="agendaBody" class="agenda-body"></div>
 <div class="agenda-actions"><button type="button" id="agendaAddEvent" class="primary">+ Мероприятие</button><button type="button" id="agendaAddTask" class="secondary">+ Дело</button><button type="button" id="agendaHabitBackdate" class="secondary">◇ Отметить привычку</button><button type="button" id="agendaAddMeal" class="secondary">+ Питание</button></div>
 </div></div>
-<section class="section" id="data"><div class="heading"><h2>Резервная копия</h2></div><div class="card"><h3>Локальное сохранение</h3><p>Записи хранятся в браузере этого устройства и этого адреса. При очистке данных браузера они могут исчезнуть. Перед обновлением сохрани JSON.</p><div class="row" style="margin-top:13px"><button class="primary" id="exportData">⬇ Скачать JSON</button><button class="secondary" id="downloadHTML" type="button">⬇ Скачать HTML</button></div><p class="hint">HTML содержит оформление и функции, но сохраняет прогресс отдельно от веб-сайта. Переноси данные через JSON.</p></div><div class="card"><h3>Восстановить данные</h3><label class="field">Файл резервной копии<input type="file" accept=".json,application/json" id="importFile"></label><button class="secondary" id="importData" type="button">Проверить файл JSON</button><p id="importStatus" role="status">Выбери резервную копию JSON. Данные не заменяются до подтверждения.</p><div id="importConfirmPanel" hidden><p id="importPreview" role="status"></p><button class="primary" id="confirmImport" type="button">Подтвердить импорт</button><button class="secondary" id="cancelImport" type="button">Отмена</button></div><p class="hint">Перед импортом скачай текущую резервную копию JSON. Если файл LifeSims открыт через content://, хранилище браузера может быть недоступно — импортируй через HTTPS-сайт.</p></div><div class="card"><h3>Совместимость</h3><p>При первом открытии на опубликованном сайте приложение пытается скопировать данные старого LifeSims без изменения оригинала. При открытии скачанного HTML-файла эти данные автоматически не доступны — используй экспорт/импорт.</p></div><p class="hint">Oura доступна в «Потребностях»: подключение требует регистрации OAuth-приложения и разрешения владельца аккаунта. Health Connect, ZenMoney, системные уведомления и автоматическое изменение тела персонажа ещё не реализованы. Google Calendar работает только после настройки OAuth и разрешения доступа.</p></section>
+<section class="section" id="data"><div class="heading"><h2>Резервная копия</h2></div>
+<div class="card" id="recoveryCard"><h3>🔎 Проверка прежних записей</h3>
+<p class="hint">Проверка не меняет прогресс. Показывает только доступные сохранения LifeSims в этом браузере на этом сайте. Сохранения другого браузера или адреса здесь не появятся.</p>
+<button class="secondary" id="inspectLocalData" type="button">Проверить локальные сохранения</button>
+<div id="localDataReport" role="status" aria-live="polite"></div></div><div class="card"><h3>Локальное сохранение</h3><p>Записи хранятся в браузере этого устройства и этого адреса. При очистке данных браузера они могут исчезнуть. Перед обновлением сохрани JSON.</p><div class="row" style="margin-top:13px"><button class="primary" id="exportData">⬇ Скачать JSON</button><button class="secondary" id="downloadHTML" type="button">⬇ Скачать HTML</button></div><p class="hint">HTML содержит оформление и функции, но сохраняет прогресс отдельно от веб-сайта. Переноси данные через JSON.</p></div><div class="card"><h3>Восстановить данные</h3><label class="field">Файл резервной копии<input type="file" accept=".json,application/json" id="importFile"></label><button class="secondary" id="importData" type="button">Проверить файл JSON</button><p id="importStatus" role="status">Выбери резервную копию JSON. Данные не заменяются до подтверждения.</p><div id="importConfirmPanel" hidden><p id="importPreview" role="status"></p><button class="primary" id="confirmImport" type="button">Подтвердить импорт</button><button class="secondary" id="cancelImport" type="button">Отмена</button></div><p class="hint">Перед импортом скачай текущую резервную копию JSON. Если файл LifeSims открыт через content://, хранилище браузера может быть недоступно — импортируй через HTTPS-сайт.</p></div><div class="card"><h3>Совместимость</h3><p>При первом открытии на опубликованном сайте приложение пытается скопировать данные старого LifeSims без изменения оригинала. При открытии скачанного HTML-файла эти данные автоматически не доступны — используй экспорт/импорт.</p></div><p class="hint">Oura доступна в «Потребностях»: подключение требует регистрации OAuth-приложения и разрешения владельца аккаунта. Health Connect, ZenMoney, системные уведомления и автоматическое изменение тела персонажа ещё не реализованы. Google Calendar работает только после настройки OAuth и разрешения доступа.</p></section>
 </div><footer class="bottom-tools"><button class="secondary" id="footerData" data-tab="data" type="button">▤ Данные и резервная копия</button></footer></main>
 <div class="toast" id="toast" role="status"></div>
 <dialog id="financeDialog" aria-labelledby="financeTitle" class="finance-dialog">
@@ -1035,7 +1044,37 @@ if(Array.isArray(old.tasks))for(const t of old.tasks){if(!t||typeof t.name!=='st
 if(Array.isArray(old.log))for(const l of old.log){if(!l||typeof l.at!=='string'||!/^\d{4}-\d\d-\d\dT/.test(l.at))continue;s.events.push({id:uid(),kind:'legacy',name:String(l.text||'Действие'),date:l.at.slice(0,10),at:l.at,xp:0,legacyXP:Number(l.xp)||0})}
 // Legacy resource is a stored value without a verified observation date: do not invent a dated history record.
 return s}
-function save(){if(storageBlocked){storageOK=false;setStorage('⚠ Сохранение заблокировано: исходные данные не удалось прочитать. Экспортируй JSON и восстанови данные через подтверждённый импорт.');toast('Сохранение заблокировано для защиты прежних данных');return false}try{localStorage.setItem(STORE,JSON.stringify(state));storageOK=true;setStorage();return true}catch(e){storageOK=false;setStorage();toast('Данные не записались в браузер. Экспортируй резервную копию.');return false}}
+const RECOVERY_KEY='lifesims-visual-v1-recovery';
+function lifeDataCounts(obj){
+ const fields=['days','activities','events','foodMeals','foodTemplates','taskProjects','taskTags','schedule','financeChecks'];
+ const count=k=>k==='days'?Object.keys(obj?.days||{}).length:(Array.isArray(obj?.[k])?obj[k].length:0);
+ return Object.fromEntries(fields.map(k=>[k,count(k)]));
+}
+function lifeDataScore(obj){
+ const v=lifeDataCounts(obj);
+ return v.days*2+v.events+v.foodMeals*3+v.foodTemplates*2+v.schedule+v.financeChecks+
+ Math.max(0,v.activities-defs.filter(a=>a.xp>0).length)+v.taskProjects+Math.max(0,v.taskTags-2);
+}
+function rememberPreviousLifeSimsSave(previousRaw){
+ try{
+  if(!previousRaw)return;
+  const previous=JSON.parse(previousRaw);
+  if(!previous||previous.schema!==VERSION||!previous.days||!Array.isArray(previous.activities)||!Array.isArray(previous.events)||lifeDataScore(previous)<=0)return;
+  const existing=localStorage.getItem(RECOVERY_KEY);
+  let oldScore=-1;try{if(existing)oldScore=lifeDataScore(JSON.parse(existing))}catch(_){}
+  if(lifeDataScore(previous)>oldScore)localStorage.setItem(RECOVERY_KEY,previousRaw);
+ }catch(_){/* A full quota must never corrupt the primary saved state. */}
+}
+function save(){
+ if(storageBlocked){storageOK=false;setStorage('⚠ Сохранение заблокировано: исходные данные не удалось прочитать. Экспортируй JSON и восстанови данные через подтверждённый импорт.');toast('Сохранение заблокировано для защиты прежних данных');return false}
+ try{
+  const next=JSON.stringify(state);
+  const previous=localStorage.getItem(STORE);
+  if(previous&&previous!==next)rememberPreviousLifeSimsSave(previous);
+  localStorage.setItem(STORE,next);
+  storageOK=true;setStorage();return true;
+ }catch(e){storageOK=false;setStorage();toast('Данные не записались в браузер. Экспортируй резервную копию.');return false}
+}
 function setStorage(message){$('storageStatus').textContent=message|| (storageOK?'✓ Локальное сохранение доступно. Перед обновлением экспортируй JSON.':'⚠ Локальное сохранение недоступно. Не закрывай страницу без экспорта.');$('storageStatus').classList.toggle('error',!storageOK)}
 function load(){try{const x=localStorage.getItem(STORE);if(x){
  const parsed=JSON.parse(x);
@@ -1049,7 +1088,7 @@ function load(){try{const x=localStorage.getItem(STORE);if(x){
   try{localStorage.setItem('lifesims-skill-anchor-v1',state.skillDecaySince)}catch(_){}
  }
  return
-}const v1=localStorage.getItem(OLD);if(v1){const raw=JSON.parse(v1);if(raw&&Array.isArray(raw.tasks)&&raw.skills){state=migrate(raw);save();setStorage('✓ Найдены старые данные: создана отдельная копия. Старое хранилище не изменено.');return}}state=base();save();setStorage('ℹ На этом устройстве и в этом браузере прежнее сохранение не найдено. Если записи были в другой версии или браузере, открой их там либо импортируй резервную копию JSON.')}catch(e){state=base();storageOK=false;storageBlocked=true;setStorage('⚠ Исходное хранилище не удалось прочитать. Автоматическая запись заблокирована для защиты данных. Не очищай данные браузера; восстанови проверенную копию JSON.')}}
+}const v1=localStorage.getItem(OLD);if(v1){const raw=JSON.parse(v1);if(raw&&Array.isArray(raw.tasks)&&raw.skills){state=migrate(raw);save();setStorage('✓ Найдены старые данные: создана отдельная копия. Старое хранилище не изменено.');return}}state=base();storageOK=true;setStorage('⚠ Здесь не найдено прежнее сохранение. Пустые данные автоматически не записывались. Проверь раздел «Данные» и прежний браузер или резервную копию.')}catch(e){state=base();storageOK=false;storageBlocked=true;setStorage('⚠ Исходное хранилище не удалось прочитать. Автоматическая запись заблокирована для защиты данных. Не очищай данные браузера; восстанови проверенную копию JSON.')}}
 let toastTimeout;function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>t.classList.remove('show'),3300)}
 function currentRecord(d){const x=state.days[d];return x&&typeof x==='object'?x:{}};
 function transact(fn){const before=JSON.stringify(state);fn();if(save())return true;state=JSON.parse(before);return false}
@@ -3310,9 +3349,9 @@ function downloadHTML(){const html='<!doctype html>\n'+document.documentElement.
 function parseBackup(raw){const inputs=[raw,raw?.state,raw?.data,raw?.backup];for(const obj of inputs){if(!obj||typeof obj!=='object'||Array.isArray(obj))continue;if(obj.schema===VERSION)return normalize(obj);if(Array.isArray(obj.tasks)&&obj.skills&&typeof obj.skills==='object'&&!Array.isArray(obj.skills))return migrate(obj)}throw Error('Неизвестный формат. Нужен JSON из раздела «Сохранения / Данные» LifeSims. HTML-файл не содержит сохранения.')}
 let pendingImport=null;
 function importMessage(message,error=false){const el=$('importStatus');el.textContent=message;el.classList.toggle('error',error)}
-function importSummary(proposed){const dayCount=Object.keys(proposed.days||{}).length,activityCount=proposed.activities.length,doneCount=proposed.events.filter(e=>e.kind==='complete').length,oldCount=proposed.activities.filter(x=>x.legacyDone).length,calendarCount=(proposed.schedule||[]).length;return `Найдено: ${dayCount} датированных записей, ${activityCount} дел и привычек, ${calendarCount} мероприятий, ${doneCount} выполненных действий${oldCount?', '+oldCount+' ранее выполненных задач':''}. Данные текущей версии заменятся только после подтверждения.`}
+function importSummary(proposed){const dayCount=Object.keys(proposed.days||{}).length,activityCount=proposed.activities.length,doneCount=proposed.events.filter(e=>e.kind==='complete').length,oldCount=proposed.activities.filter(x=>x.legacyDone).length,calendarCount=(proposed.schedule||[]).length,meals=(proposed.foodMeals||[]).length,projects=(proposed.taskProjects||[]).length,tags=(proposed.taskTags||[]).length;return `Найдено: ${dayCount} датированных записей, ${activityCount} дел и привычек, ${calendarCount} мероприятий, ${meals} приёмов пищи, ${projects} проектов, ${tags} тегов, ${doneCount} выполненных действий${oldCount?', '+oldCount+' ранее выполненных задач':''}. Данные текущей версии заменятся только после подтверждения.`}
 async function restore(){pendingImport=null;$('importConfirmPanel').hidden=true;const file=$('importFile').files?.[0];if(!file){importMessage('Сначала выбери JSON-файл с прогрессом.',true);return}if(file.size>6_000_000){importMessage('Файл слишком большой (максимум 6 МБ).',true);return}try{const text=await file.text();pendingImport=parseBackup(JSON.parse(text));$('importPreview').textContent=importSummary(pendingImport);$('importConfirmPanel').hidden=false;importMessage('Файл распознан: '+file.name+'. Проверь количество записей и подтверди импорт.')}catch(e){pendingImport=null;importMessage('Не удалось прочитать копию: '+e.message,true)}}
-function confirmImport(){if(!pendingImport){importMessage('Сначала выбери и проверь JSON.',true);return}const old=state,wasBlocked=storageBlocked,wasOK=storageOK;let oldContents;try{oldContents=localStorage.getItem(STORE)}catch(e){importMessage('Браузер не разрешил доступ к сохранению. Открой HTTPS-версию LifeSims и повтори импорт.',true);return}const proposed=pendingImport;state=proposed;storageBlocked=false;let written=save();if(written){try{const read=normalize(JSON.parse(localStorage.getItem(STORE)));written=JSON.stringify(read.days)===JSON.stringify(state.days)&&JSON.stringify(read.activities)===JSON.stringify(state.activities)&&JSON.stringify(read.events)===JSON.stringify(state.events)&&JSON.stringify(read.schedule)===JSON.stringify(state.schedule)&&JSON.stringify(read.googleHidden)===JSON.stringify(state.googleHidden)}catch(e){written=false}}if(!written){try{if(oldContents===null)localStorage.removeItem(STORE);else localStorage.setItem(STORE,oldContents)}catch(e){}state=old;storageBlocked=wasBlocked;storageOK=wasOK;setStorage();importMessage('Не удалось записать и проверить импорт. Прежние данные не заменены. Открой HTTPS-версию LifeSims и попробуй снова.',true);return}pendingImport=null;$('importConfirmPanel').hidden=true;activeDay=today();for(const id of ['stateDate','taskDate','diaryDate','historyDate'])$(id).value=activeDay;fillState(activeDay);fillDiary(activeDay);renderAll();importMessage('✓ Импорт записан и проверен. '+importSummary(proposed)+' Проверь вкладки «Дела» и «История».');toast('✓ Прогресс импортирован и сохранён')}
+function confirmImport(){if(!pendingImport){importMessage('Сначала выбери и проверь JSON.',true);return}const old=state,wasBlocked=storageBlocked,wasOK=storageOK;let oldContents;try{oldContents=localStorage.getItem(STORE)}catch(e){importMessage('Браузер не разрешил доступ к сохранению. Открой HTTPS-версию LifeSims и повтори импорт.',true);return}const proposed=pendingImport;state=proposed;storageBlocked=false;let written=save();if(written){try{const read=normalize(JSON.parse(localStorage.getItem(STORE)));written=JSON.stringify(read.days)===JSON.stringify(state.days)&&JSON.stringify(read.activities)===JSON.stringify(state.activities)&&JSON.stringify(read.events)===JSON.stringify(state.events)&&JSON.stringify(read.schedule)===JSON.stringify(state.schedule)&&JSON.stringify(read.googleHidden)===JSON.stringify(state.googleHidden)&&JSON.stringify(read.foodMeals)===JSON.stringify(state.foodMeals)&&JSON.stringify(read.foodTemplates)===JSON.stringify(state.foodTemplates)&&JSON.stringify(read.taskProjects)===JSON.stringify(state.taskProjects)&&JSON.stringify(read.taskTags)===JSON.stringify(state.taskTags)&&JSON.stringify(read.financeChecks)===JSON.stringify(state.financeChecks)}catch(e){written=false}}if(!written){try{if(oldContents===null)localStorage.removeItem(STORE);else localStorage.setItem(STORE,oldContents)}catch(e){}state=old;storageBlocked=wasBlocked;storageOK=wasOK;setStorage();importMessage('Не удалось записать и проверить импорт. Прежние данные не заменены. Открой HTTPS-версию LifeSims и попробуй снова.',true);return}pendingImport=null;$('importConfirmPanel').hidden=true;activeDay=today();for(const id of ['stateDate','taskDate','diaryDate','historyDate'])$(id).value=activeDay;fillState(activeDay);fillDiary(activeDay);renderAll();importMessage('✓ Импорт записан и проверен. '+importSummary(proposed)+' Проверь вкладки «Дела» и «История».');toast('✓ Прогресс импортирован и сохранён')}
 for(const b of document.querySelectorAll('.touchmap .hot')){b.addEventListener('click',()=>openObject(b.dataset.object,b));b.addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openObject(b.dataset.object,b)}})}$('plumbob').onclick=()=>openSingleMetric('resource',today());$('returnHome').onclick=finishWork;$('portraitBtn').onclick=()=>openObject('sim',document.querySelector('.touchmap .hot[data-object=sim]'));$('xpChip').onclick=()=>openTab('history',true);$('closeSheet').onclick=closeSheet;
 document.addEventListener('click',event=>{
  const button=event.target.closest('button');
@@ -3337,6 +3376,55 @@ $('addCalendarDiary').onclick=()=>openDiary($('historyDate').value||today());
 $('addCalendarMeal').onclick=()=>openCalorieBalance($('historyDate').value||today());
 $('diaryText').addEventListener('input',()=>{diaryTagTouched=false;diaryPaint()});
 $('diaryAddTag').onclick=()=>{const name=$('diaryCustomTag').value.trim().toLowerCase();if(!name)return;diaryTagTouched=true;diaryChosenTags.add(name);$('diaryCustomTag').value='';diaryTagsRender(diaryAnalyze($('diaryText').value).tags)};
+
+function inspectLocalLifeSimsSaves(){
+ const report=$('localDataReport');if(!report)return;
+ report.replaceChildren();let found=0;
+ for(const [scope,store] of [['Хранилище сайта',localStorage],['Сеансовое хранилище',sessionStorage]]){
+  try{
+   for(let i=0;i<store.length;i++){
+    const key=store.key(i);
+    if(!key||!(key===STORE||key===OLD||key===RECOVERY_KEY||/^lifesims-.*(?:backup|recovery|visual|personal)/i.test(key)))continue;
+    const raw=store.getItem(key);if(!raw)continue;
+    let data;try{data=JSON.parse(raw)}catch(_){continue}
+    const valid=data?.schema===VERSION&&data.days&&Array.isArray(data.activities)&&Array.isArray(data.events);
+    const legacy=Array.isArray(data?.tasks)&&data.skills&&typeof data.skills==='object';
+    if(!valid&&!legacy)continue;
+    found++;
+    const summary=valid?lifeDataCounts(data):null;
+    const line=document.createElement('div');line.className='recovery-result';
+    const details=document.createElement('div');
+    const label=document.createElement('strong');
+    label.textContent=key===STORE?'Текущее сохранение':key===RECOVERY_KEY?'Снимок до изменения':'Прежнее сохранение';
+    const count=document.createElement('small');
+    count.textContent=scope+' · '+key+' · '+(valid?
+     summary.days+' дней, '+summary.foodMeals+' приёмов пищи, '+summary.activities+' дел/привычек, '+summary.taskProjects+' проектов, '+summary.taskTags+' тегов':
+     data.tasks.length+' старых дел');
+    details.append(label,count);
+    const download=document.createElement('button');download.className='secondary';download.type='button';download.textContent='⬇ Сохранить JSON';
+    download.onclick=()=>{
+     const file=new Blob([raw],{type:'application/json;charset=utf-8'});
+     const uri=URL.createObjectURL(file),a=document.createElement('a');
+     a.href=uri;a.download='LifeSims-'+(key===STORE?'current':key===RECOVERY_KEY?'snapshot':'legacy')+'-'+today()+'.json';
+     document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(uri),4000);
+    };
+    line.append(details,download);report.append(line);
+   }
+  }catch(err){
+   const warning=document.createElement('p');warning.className='hint';
+   warning.textContent=scope+': проверка недоступна ('+String(err?.message||'ошибка')+').';report.append(warning);
+  }
+ }
+ if(!found){
+  const note=document.createElement('p');note.className='hint';
+  note.textContent='В этом браузере не обнаружены сохранения LifeSims. Проверь прежний браузер, адрес приложения или скачанные JSON-копии. Не очищай данные сайта.';
+  report.append(note);
+ }
+ const help=document.createElement('p');help.className='hint';
+ help.textContent='Проверка ничего не восстанавливает и не заменяет. Сначала скачай подходящий JSON и сравни количество записей перед подтверждением импорта.';
+ report.append(help);
+}
+$('inspectLocalData').onclick=inspectLocalLifeSimsSaves;
 $('exportData').onclick=backup;$('downloadHTML').onclick=downloadHTML;$('importData').onclick=restore;$('confirmImport').onclick=confirmImport;$('cancelImport').onclick=()=>{pendingImport=null;$('importConfirmPanel').hidden=true;importMessage('Импорт отменён. Текущий прогресс не изменён.')};$('importFile').onchange=()=>{pendingImport=null;$('importConfirmPanel').hidden=true;importMessage('Файл выбран. Нажми «Проверить файл JSON».')};
 $('taskRepeat').onchange=()=>{$('taskWeekdays').hidden=$('taskRepeat').value!=='weekly'};
 $('taskCancel').onclick=()=>{clearActivityEditor();$('calendarTaskEditor').open=false;if($('calendarTaskPopup')?.open)$('calendarTaskPopup').close()};
@@ -3624,7 +3712,7 @@ window.LifeSims3DBridge={
 };
 window.addEventListener('resize',()=>{if(currentSheetAnchor)placeSheet(currentSheetAnchor)},{passive:true});
 window.addEventListener('scroll',()=>{if(currentSheetAnchor)placeSheet(currentSheetAnchor)},{passive:true});
-if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=64',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
+if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=65',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 window.LifeSimsCalendarBridge={
   getSchedule:()=>JSON.parse(JSON.stringify(state.schedule||[])),
   getHidden:()=>JSON.parse(JSON.stringify(state.googleHidden||[])),
@@ -3814,9 +3902,9 @@ window.LifeSimsFoodBridge={
 };
 })();
 </script>
-<script src="./task-premium.js?v=64"></script>
-<script src="./habit-grid.js?v=64"></script>
-<script src="./focus-timer.js?v=64"></script>
+<script src="./task-premium.js?v=65"></script>
+<script src="./habit-grid.js?v=65"></script>
+<script src="./focus-timer.js?v=65"></script>
 <script>
 /* LifeSims Google Calendar sync. OAuth tokens remain in memory; no background writes. */
 (function () {
