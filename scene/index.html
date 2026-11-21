@@ -731,6 +731,14 @@ body{background:#091428}
 #habitBackdateError{min-height:15px;color:#ffd0c9}
 #habitBackdateOpen,#calendarHabitBackdate,#agendaHabitBackdate{min-height:44px}
 #topHabitsList .habit-backdate{min-height:38px;font-size:12px}
+</style><style id="v55-calendar-metrics">
+#dayAgendaOverlay .agenda-dialog{max-height:94dvh;overflow:auto}
+.agenda-metric-row{align-items:center;gap:8px;border-bottom:1px solid #9facbd30;padding:7px 0}
+.agenda-metric-row .agenda-event-main{min-width:0;flex:1}
+.agenda-metric-row .agenda-event-title{font-size:13px;line-height:1.4}
+.agenda-metric-row .agenda-event-meta{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.4}
+.agenda-metric-row .agenda-edit{min-width:42px;min-height:42px}
+.agenda-source-label{font-size:11px;opacity:.65}
 </style></head>
 <body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v55</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
@@ -2406,6 +2414,91 @@ function deleteHistoryLog(){
  }))return toast('Не удалось удалить запись');
  $('historyLogDialog').close();renderAll();toast('Историческая запись удалена');
 }
+
+function editIndicatorForDay(date,field){
+ closeDayAgenda();
+ if(field==='diary'){openDiary(date);return}
+ if(field==='foodMeals'||field==='nutrition'){openCalorieBalance(date);return}
+ if(field==='finance'){openFinanceControl(date);return}
+ if(field==='hunger'||field==='resource'||field==='sleepHours'||field==='mood'||
+   field==='condition'||field==='hygiene'||field==='steps'||field==='totalCalories'){
+  openSingleMetric(field,date);return;
+ }
+ if(field==='entropy'){if(date===today())openSingleMetric('entropy',date);return}
+ showNeedsEditor('',date);
+ const element=$(field==='food'?'foodLegacy':field);
+ if(element)requestAnimationFrame(()=>{element.scrollIntoView({block:'center'});element.focus({preventScroll:true})});
+}
+function renderDayMetrics(date,body,heading){
+ const rec=currentRecord(date),sleep=sleepAssessment(date),full=satietyAssessment(date),energy=calorieValues(date);
+ const number=(val,suffix='')=>Number.isFinite(val)?val+suffix:'—';
+ const stringify=val=>val==null||val===''?'—':typeof val==='object'?JSON.stringify(val):String(val);
+ const items=[
+  ['◆ Ресурс',number(derivedResource(rec,date),'%'),'resource'],
+  ['💤 Потребность во сне',number(sleep.need,'%'),'sleepHours'],
+  ['Фактический сон',number(rec.sleepHours,' ч'),'sleepHours'],
+  ['Расчётный недосып',number(sleep.debt,' ч'),'sleepDebtAdjustment'],
+  ['Ручная корректировка недосыпа',number(rec.sleepDebtAdjustment,' ч'),'sleepDebtAdjustment'],
+  ['☺ Настроение',number(rec.mood,'%'),'mood'],
+  ['♥ Физическое состояние',number(physicalCondition(rec,date),'%'),'condition'],
+  ['♨ Гигиена',number(hygieneCondition(rec,date),'%'),'hygiene'],
+  ['🍽 Сытость',number(full.value,'%'),'hunger'],
+  ['Питание (ручная оценка)',number(rec.nutrition,'%'),'nutrition'],
+  ['🚶 Шаги',number(rec.steps),'steps'],
+  ['Активность Oura',number(rec.ouraScores?.activity,'/100'),'steps'],
+  ['🔥 Общий расход',number(rec.totalCalories,' ккал'),'totalCalories'],
+  ['Съедено',number(energy.eaten,' ккал'),'foodMeals'],
+  ['Баланс калорий',energy.spent!=null&&energy.eaten!=null?number(energy.eaten-energy.spent,' ккал'):'—','foodMeals'],
+  ['Вес',number(rec.weight,' кг'),'weight'],
+  ['Талия',number(rec.waist,' см'),'waist'],
+  ['Бёдра',number(rec.hips,' см'),'hips'],
+  ['Грудь',number(rec.chest,' см'),'chest'],
+  ['💊 Лекарства',stringify(rec.meds),'meds'],
+  ['Питание (текстовая запись)',stringify(rec.food),'food'],
+  ['Цикл',stringify(rec.cycle),'cycle'],
+  ['Теги самочувствия',Array.isArray(rec.physicalTags)?rec.physicalTags.join(', ')||'—':'—','condition'],
+  ['Заметка о самочувствии',stringify(rec.physicalNote),'condition'],
+  ['📓 Дневник',stringify(rec.diary),'diary'],
+  ['Эмоции',Array.isArray(rec.diaryTags)?rec.diaryTags.join(', ')||'—':'—','diary']
+ ];
+ const tracked=new Set(['sleepHours','sleepDebtAdjustment','mood','condition','hygiene','hunger','hungerSetAt',
+ 'nutrition','steps','totalCalories','weight','waist','hips','chest','meds','food','cycle','physicalTags','physicalNote','diary','diaryTags','updatedAt','ouraScores']);
+ const scores=rec.ouraScores&&typeof rec.ouraScores==='object'?rec.ouraScores:{};
+ for(const [key,value] of Object.entries(scores))items.push(['💍 Oura · '+key,stringify(value),null]);
+ for(const [key,value] of Object.entries(rec)){
+  if(tracked.has(key))continue;
+  items.push(['Дополнительно · '+key,stringify(value),null]);
+ }
+ const money=(state.financeChecks||[]).filter(x=>x?.date===date);
+ for(const e of money)items.push(['💰 Финансовый контроль','Баланс '+number(e.balance,' ₽')+', долги '+number(e.debt,' ₽')+
+  ', доходы '+number(e.income,' ₽')+', расходы '+number(e.expenses,' ₽')+(e.notes?' · '+e.notes:''),'finance']);
+ if(!money.length)items.push(['💰 Финансовый контроль','—','finance']);
+ if(date===today())items.push(['🌀 Энтропия сейчас',number(gameEntropy(),'%'),'entropy']);
+ else items.push(['🌀 Энтропия','Нет исторического снимка',null]);
+ heading('📊 Все показатели');
+ const explanation=document.createElement('p');explanation.className='hint';
+ explanation.textContent='«—» означает отсутствие записи. Расчётные значения являются игровыми оценками. Исходные данные Oura доступны для просмотра; можно изменить ручные показатели, но не подменять данные кольца.';
+ body.append(explanation);
+ for(const [name,value,editor] of items){
+  const row=document.createElement('div');row.className='agenda-entry agenda-metric-row';
+  const main=document.createElement('div');main.className='agenda-event-main';
+  const label=document.createElement('strong');label.className='agenda-event-title';label.textContent=name;
+  const val=document.createElement('div');val.className='agenda-event-meta';val.textContent=value;
+  main.append(label,val);row.append(main);
+  if(editor){
+   const edit=document.createElement('button');edit.type='button';edit.className='agenda-edit';
+   edit.textContent='✎';edit.setAttribute('aria-label','Изменить: '+name);
+   edit.onclick=()=>editIndicatorForDay(date,editor);row.append(edit);
+  }else{
+   const readonly=document.createElement('small');readonly.className='agenda-source-label';
+   readonly.textContent='данные';row.append(readonly);
+  }
+  body.append(row);
+ }
+ const all=document.createElement('button');all.type='button';all.className='secondary';
+ all.textContent='✎ Все поля за '+date;all.onclick=()=>editIndicatorForDay(date,'all');body.append(all);
+}
+
 function renderDayAgenda(){
   if($('dayAgendaOverlay').hidden)return;
   const date=$('historyDate').value||today();
@@ -2420,6 +2513,7 @@ function renderDayAgenda(){
   $('agendaSubtitle').textContent=occurrences.length+' мероприятий · '+taskCount+' дел · '+habitCount+' привычек';
   const body=$('agendaBody');body.replaceChildren();
   function title(label){const h=document.createElement('div');h.className='agenda-group-title';h.textContent=label;body.append(h)}
+  renderDayMetrics(date,body,title);
   function eventLine(item,allDay){
     const row=document.createElement('div');row.className='agenda-entry';
     const time=document.createElement('span');time.className='agenda-time';
@@ -2502,21 +2596,6 @@ function renderDayAgenda(){
   const addMeal=document.createElement('button');addMeal.type='button';
   addMeal.className='secondary';addMeal.textContent='＋ Записать приём пищи за '+date;
   addMeal.onclick=()=>openCalorieBalance(date);body.append(addMeal);
-  const rec=state.days[date];
-  if(rec && Object.keys(rec).some(k=>rec[k]!=null&&k!=='updatedAt')){
-    title('Записи состояния');
-    const row=document.createElement('div');row.className='agenda-entry';
-    const main=document.createElement('div');main.className='agenda-event-main';
-    const pieces=[];
-    if(rec.sleepHours!=null)pieces.push('Сон: '+rec.sleepHours+' ч');
-    if(rec.steps!=null)pieces.push('Шаги: '+rec.steps);
-    if(rec.mood!=null)pieces.push('Настроение: '+rec.mood+'%');
-    if(rec.diary)pieces.push('Дневник: '+rec.diary);
-    main.textContent=pieces.join(' · ')||'Состояние записано';
-    const edit=document.createElement('button');edit.type='button';edit.className='agenda-edit';edit.textContent='Открыть';
-    edit.onclick=()=>{closeDayAgenda();showNeedsEditor('',date)};
-    row.append(main,edit);body.append(row);
-  }
   if(!body.children.length){
     const empty=document.createElement('p');empty.className='agenda-empty';
     empty.textContent='На этот день записей нет. Можно добавить мероприятие или дело.';
