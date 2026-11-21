@@ -671,8 +671,25 @@ body{background:#091428}
 #needsGrid .calorie-balance-card .metric-origin{padding-top:4px}
 #singleMetricContent #hungerManualSlider{width:100%;min-height:44px}
 #singleMetricContent output{display:block;margin:6px 0 10px;color:#e1f7ef}
+</style>
+<style id="lifesims-v50-needs">
+#needsGrid .needs-energy-pair{grid-column:1 / -1;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:stretch}
+#needsGrid .needs-energy-pair>.meter{grid-column:auto!important;min-width:0;width:100%;height:100%;padding:12px}
+#needsGrid .needs-energy-pair .meter>span:first-child{display:flex;align-items:flex-start;gap:7px;flex-wrap:wrap}
+#needsGrid .needs-energy-pair .meter>span:first-child strong{overflow-wrap:anywhere;word-break:normal}
+#needsGrid .needs-energy-pair .meter>span:first-child b{white-space:normal;font-size:14px}
+#needsGrid .needs-energy-pair small{font-size:11px;line-height:1.4;display:block;margin-top:7px;overflow-wrap:anywhere}
+#needsGrid .needs-energy-pair .bar{height:12px;margin-top:9px}
+#needsGrid .needs-energy-pair .need-hunger{border-color:#9db39a;background:#283c40}
+#needsGrid .activity-card-wrap{min-width:0;display:flex;flex-direction:column;gap:7px}
+#needsGrid .activity-card-wrap>.meter{width:100%;height:100%}
+#needsGrid .activity-card-wrap>.activity-sync-detail{min-height:44px}
+#needsGrid .needs-energy-pair .need-hunger .bar b{background:linear-gradient(90deg,#e1a15d,#74d9a3)}
+#needsGrid .activity-sync-detail{color:#c6d8e7;margin-top:7px}
+#ouraToday{white-space:pre-line}
+@media(max-width:380px){#needsGrid .needs-energy-pair{gap:6px}#needsGrid .needs-energy-pair>.meter{padding:9px}}
 </style></head>
-<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v49</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
+<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v50</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
 <img id="sceneRugColor" class="rug-color-layer" alt="" aria-hidden="true">
 <span id="sceneCrystalTint" aria-hidden="true"></span>
@@ -1911,6 +1928,8 @@ function renderNeeds(){
  g.replaceChildren();
  const sleep=sleepSnapshot(d),mood=metricSnapshot('mood',d),physical=physicalSnapshot(d);
  const hygiene=hygieneSnapshot(d),steps=metricSnapshot('steps',d),hunger=satietyAssessment(d);
+ const ouraScoreDate=latestObserved(q=>Number.isFinite(q?.ouraScores?.activity),d);
+ const ouraActivity=ouraScoreDate?{value:state.days[ouraScoreDate].ouraScores.activity,date:ouraScoreDate}:{value:null,date:null};
  metric(g,'💤 Потребность во сне',sleep.value,'%',null,'sleepHours',sleep.date);
  // The simulated resource is visible only as the crystal over the Sim.
  metric(g,'☺ Настроение',mood.value,'%',null,'mood',mood.date);
@@ -1919,8 +1938,23 @@ function renderNeeds(){
  const cleaned=state.room?.lastCleanAt||state.createdAt||'';
  const cleanedDay=/^\d{4}-\d\d-\d\d/.test(cleaned)?cleaned.slice(0,10):null;
  metric(g,'🌀 Энтропия · хаос',gameEntropy(),'%',null,'entropy',cleanedDay,'расчёт сейчас');
- metric(g,'🚶 Активность · шаги',steps.value==null?null:Math.min(100,Math.round(steps.value/10000*100)),
-  '%',steps.value==null?'—':steps.value.toLocaleString('ru-RU')+' / 10 000','steps',steps.date);
+ const activityFromSteps=steps.value!=null;
+ const activityValue=activityFromSteps?Math.min(100,Math.round(steps.value/10000*100)):ouraActivity.value;
+ const activityDisplay=activityFromSteps?steps.value.toLocaleString('ru-RU')+' / 10 000 шагов':
+  ouraActivity.value!=null?'Oura: '+ouraActivity.value+'/100':'—';
+ const activityDate=activityFromSteps?steps.date:ouraActivity.date;
+ metric(g,'🚶 Активность',activityValue,'%',activityDisplay,'steps',activityDate,
+  activityFromSteps?'шаги':ouraActivity.value!=null?'оценка активности Oura · шаги недоступны':'ожидаются данные Oura');
+ if(!activityFromSteps){
+  const card=g.lastElementChild;
+  const button=document.createElement('button');button.type='button';button.className='secondary activity-sync-detail';
+  button.textContent='↻ Проверить Oura';
+  button.setAttribute('aria-label','Синхронизировать шаги с Oura');
+  button.onclick=e=>{e.stopPropagation();window.LifeSimsOuraSync?.().catch(err=>toast('Oura: '+err.message))};
+  // Avoid nesting a button inside a button (invalid HTML): the action is a sibling.
+  const group=document.createElement('div');group.className='activity-card-wrap';
+  card.replaceWith(group);group.append(card,button);
+ }
  // Today's partial values are displayed as partial; when both are missing use
  // the most recent day with food or energy expenditure.
  const current=calorieValues(d);
@@ -1950,14 +1984,18 @@ function renderNeeds(){
   origin.textContent=freshnessLabel(usedDate)+(balance==null?' · неполные данные':'');
   calories.append(origin);
  }
- g.append(calories);
- // The UI calls this "hunger", but filled pixels represent approximate satiety.
- metric(g,'🍽 Голод',hunger.value,'%',hunger.value==null?'—':hunger.value+'% сытости',
-  'hunger',hunger.date,'заполнение после еды · спад за 16 ч');
+ const pair=document.createElement('div');pair.className='needs-energy-pair';
+ pair.append(calories);g.append(pair);
+ // Explicitly render the hunger meter beside calories even when no meal was logged.
+ metric(pair,'🍽 Голод',hunger.value,'%',hunger.value==null?'Нет данных':hunger.value+'% сытости',
+  'hunger',hunger.date,hunger.date?'спад за 16 ч':'Нажми, чтобы записать вручную');
+ const hungerCard=pair.lastElementChild;hungerCard.classList.add('need-hunger');
+ hungerCard.setAttribute('aria-label','Голод — открыть ручную корректировку');
  $('xpTop').textContent=xpTotal()+' XP';
  const completed=state.events.filter(e=>e.date===d&&e.kind==='complete').length;
  const vals=[
-  steps.value==null?'шаги не записаны':'Шаги: '+steps.value.toLocaleString('ru-RU')+' ('+freshnessLabel(steps.date)+')',
+  steps.value==null?(ouraActivity.value!=null?'Оценка активности Oura: '+ouraActivity.value+'/100 ('+freshnessLabel(ouraActivity.date)+'), шаги не получены':'Шаги не получены от Oura'):
+    'Шаги: '+steps.value.toLocaleString('ru-RU')+' ('+freshnessLabel(steps.date)+')',
   values.spent==null?'общий расход не записан':'Общий расход: '+values.spent+' ккал ('+freshnessLabel(usedDate)+')',
   'Выполнено действий сегодня: '+completed
  ];
