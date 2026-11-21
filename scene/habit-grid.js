@@ -116,6 +116,13 @@
   const observed=document.createElement('tr');observed.className='tp-habit-subheading';
   const observedLabel=el('th','tp-habit-name','Показатели дня');observedLabel.colSpan=8;
   observed.append(observedLabel);tbody.append(observed);
+  const lastMeal=date=>(saved.foodMeals||[]).filter(m=>m&&m.date===date&&/^\d{2}:\d{2}$/.test(m.time||''))
+   .sort((a,b)=>String(a.time).localeCompare(String(b.time))||String(a.createdAt||'').localeCompare(String(b.createdAt||''))||String(a.id||'').localeCompare(String(b.id||''))).at(-1)||null;
+  const editLastMeal=date=>{
+   const meal=lastMeal(date);if(!meal)return;
+   if(typeof window.LifeSimsFood?.openDetailed==='function')window.LifeSimsFood.openDetailed(date,meal.id);
+   else if(typeof window.LifeSimsFood?.open==='function')window.LifeSimsFood.open(date,meal.id);
+  };
   const metrics=[
    {name:'Шаги',get:d=>Number.isFinite(saved.days?.[d]?.steps)?
     saved.days[d].steps.toLocaleString('ru-RU'):'?'},
@@ -123,20 +130,31 @@
     saved.days[d].sleepHours.toLocaleString('ru-RU',{maximumFractionDigits:1})+' ч':'?'},
    {name:'Readiness',get:d=>Number.isFinite(saved.days?.[d]?.ouraScores?.readiness)?
     saved.days[d].ouraScores.readiness+'%':'?'},
-   {name:'Последний приём пищи',get:d=>{
-    const meals=(saved.foodMeals||[]).filter(m=>m.date===d&&typeof m.time==='string');
-    return meals.length?meals.map(m=>m.time).sort().pop():'?';
-   }}
+   {name:'Последний приём пищи',meal:true,get:d=>lastMeal(d)?.time||'?'}
   ];
   for(const metric of metrics){
    const tr=el('tr','tp-habit-observed'),name=el('th','tp-habit-name');
    const dot=el('span','tp-habit-dot');dot.style.background=shade(metric.name);
-   name.append(dot,document.createTextNode(metric.name));tr.append(name);
+   if(metric.meal){
+    const label=el('button','tp-habit-metric-link',metric.name);label.type='button';
+    label.setAttribute('aria-label','Редактировать последний приём пищи за '+anchor);
+    label.onclick=()=>editLastMeal(anchor);
+    name.append(dot,label);
+   }else name.append(dot,document.createTextNode(metric.name));
+   tr.append(name);
    for(const date of days){
     const td=el('td'),value=metric.get(date);
-    const txt=el('span','tp-habit-readonly'+(value==='?'?' unknown':''),value);
-    txt.title='Запись показателя за '+date;
-    td.append(txt);tr.append(td);
+    if(metric.meal&&value!=='?'){
+     const meal=lastMeal(date),btn=el('button','tp-habit-readonly tp-habit-meal-edit',value);
+     btn.type='button';btn.title='Изменить: '+meal.title+' · '+date+' · '+meal.time;
+     btn.setAttribute('aria-label','Редактировать '+meal.title+' за '+date+' в '+meal.time);
+     btn.onclick=()=>editLastMeal(date);
+     td.append(btn);
+    }else{
+     const txt=el('span','tp-habit-readonly'+(value==='?'?' unknown':''),value);
+     txt.title='Запись показателя за '+date;td.append(txt);
+    }
+    tr.append(td);
    }
    tbody.append(tr);
   }
