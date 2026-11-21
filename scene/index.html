@@ -721,8 +721,18 @@ body{background:#091428}
 #hungerMeterOrigin{color:#c9e5db;line-height:1.4}
 #hungerEatButton{display:block!important;visibility:visible!important;opacity:1!important}
 @media(max-width:390px){#needsEnergyTop{gap:7px!important}#needsEnergyTop .meter{padding:9px!important}#needsEnergyTop .meter strong{font-size:12px}#hungerEatButton{padding:8px 5px}}
+</style><style id="lifesims-v54-backdate">
+#habitBackdateDialog{color:#f0f6ff;background:linear-gradient(145deg,#2d3b61,#17263f);width:min(94vw,470px);max-height:90dvh;overflow:auto;border:1px solid #87a5c8;border-radius:18px;padding:18px;box-shadow:0 16px 70px #000b}
+#habitBackdateDialog::backdrop{background:#061125ca;backdrop-filter:blur(3px)}
+#habitBackdateDialog .field{display:flex;flex-direction:column;gap:8px;margin:12px 0}
+#habitBackdateDialog select,#habitBackdateDialog input{box-sizing:border-box;width:100%;min-height:45px}
+#habitBackdateDialog .row{display:flex;gap:9px;flex-wrap:wrap;margin-top:14px}
+#habitBackdateDialog .row button{min-height:45px}
+#habitBackdateError{min-height:15px;color:#ffd0c9}
+#habitBackdateOpen,#calendarHabitBackdate,#agendaHabitBackdate{min-height:44px}
+#topHabitsList .habit-backdate{min-height:38px;font-size:12px}
 </style></head>
-<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v53</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
+<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v54</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
 <img id="sceneRugColor" class="rug-color-layer" alt="" aria-hidden="true">
 <span id="sceneCrystalTint" aria-hidden="true"></span>
@@ -817,12 +827,12 @@ body{background:#091428}
 <button class="primary" id="saveDiary">Сохранить дневник</button>
 </section>
 <section class="section activities-page" id="tasks"><div class="heading"><h2>☑ Дела</h2><input id="topTasksDate" type="date" aria-label="Дата дел"></div><div class="card"><div id="topTasksList" class="activity-list"></div><button class="secondary activity-add" type="button" id="topTasksAdd">+ Добавить дело</button></div></section>
-<section class="section activities-page" id="habits"><div class="heading"><h2>◇ Привычки</h2><input id="topHabitsDate" type="date" aria-label="Дата привычек"></div><div class="card"><div id="topHabitsList" class="activity-list"></div><button class="secondary activity-add" type="button" id="topHabitsAdd">+ Добавить привычку</button></div></section>
+<section class="section activities-page" id="habits"><div class="heading"><h2>◇ Привычки</h2><input id="topHabitsDate" type="date" aria-label="Дата привычек"></div><div class="card"><div id="topHabitsList" class="activity-list"></div><div class="row"><button class="secondary activity-add" type="button" id="topHabitsAdd">+ Добавить привычку</button><button class="secondary" type="button" id="habitBackdateOpen">📅 Записать задним числом</button></div></div></section>
 <section class="section" id="history">
 <div class="heading"><h2>Календарь жизни</h2><input type="date" id="historyDate" aria-label="Выбранная дата"></div>
 <div class="history-controls"><button data-view="day">День</button><button data-view="week">Неделя</button><button data-view="month">Месяц</button><button type="button" id="todayPeriod">Сегодня</button><button id="prevPeriod" aria-label="Предыдущий период">◀</button><button id="nextPeriod" aria-label="Следующий период">▶</button></div>
 <div id="historyRange" class="hint"></div><div id="calendar"></div>
-<div class="calendar-dayhead"><h3 id="calendarDayTitle">Выбранная дата</h3><div class="row"><button type="button" class="primary" id="addCalendarEvent">+ Мероприятие</button><button type="button" class="secondary" id="addCalendarDiary">✎ Дневник</button><button type="button" class="secondary" id="addCalendarMeal">🍽 Питание</button><button type="button" class="secondary" id="addCalendarTask">+ Дело</button><button type="button" class="secondary" id="addCalendarHabit">+ Привычка</button><button type="button" class="secondary" id="openCalendarGoogle">🔄 Google</button></div></div>
+<div class="calendar-dayhead"><h3 id="calendarDayTitle">Выбранная дата</h3><div class="row"><button type="button" class="primary" id="addCalendarEvent">+ Мероприятие</button><button type="button" class="secondary" id="addCalendarDiary">✎ Дневник</button><button type="button" class="secondary" id="addCalendarMeal">🍽 Питание</button><button type="button" class="secondary" id="addCalendarTask">+ Дело</button><button type="button" class="secondary" id="addCalendarHabit">+ Привычка</button><button type="button" class="secondary" id="calendarHabitBackdate">📅 Отметить привычку</button><button type="button" class="secondary" id="openCalendarGoogle">🔄 Google</button></div></div>
 <div class="card"><h3>📅 События и записи выбранного дня</h3><div id="historyDetails"></div><p class="hint">Запланированное мероприятие не считается выполненным автоматически. Исторические записи не изменяются при синхронизации Google.</p></div>
 <input type="hidden" id="taskDate">
 <div class="card"><h3>☑ Дела на дату</h3><div id="taskList"></div></div>
@@ -865,7 +875,7 @@ body{background:#091428}
 <div class="agenda-top"><div><div class="agenda-eyebrow">РАСПИСАНИЕ ДНЯ</div><h3 id="agendaTitle"></h3><p id="agendaSubtitle"></p></div>
 <button type="button" id="agendaClose" class="agenda-close" aria-label="Закрыть расписание">×</button></div>
 <div id="agendaBody" class="agenda-body"></div>
-<div class="agenda-actions"><button type="button" id="agendaAddEvent" class="primary">+ Мероприятие</button><button type="button" id="agendaAddTask" class="secondary">+ Дело</button><button type="button" id="agendaAddMeal" class="secondary">+ Питание</button></div>
+<div class="agenda-actions"><button type="button" id="agendaAddEvent" class="primary">+ Мероприятие</button><button type="button" id="agendaAddTask" class="secondary">+ Дело</button><button type="button" id="agendaHabitBackdate" class="secondary">◇ Отметить привычку</button><button type="button" id="agendaAddMeal" class="secondary">+ Питание</button></div>
 </div></div>
 <section class="section" id="data"><div class="heading"><h2>Резервная копия</h2></div><div class="card"><h3>Локальное сохранение</h3><p>Записи хранятся в браузере этого устройства и этого адреса. При очистке данных браузера они могут исчезнуть. Перед обновлением сохрани JSON.</p><div class="row" style="margin-top:13px"><button class="primary" id="exportData">⬇ Скачать JSON</button><button class="secondary" id="downloadHTML" type="button">⬇ Скачать HTML</button></div><p class="hint">HTML содержит оформление и функции, но сохраняет прогресс отдельно от веб-сайта. Переноси данные через JSON.</p></div><div class="card"><h3>Восстановить данные</h3><label class="field">Файл резервной копии<input type="file" accept=".json,application/json" id="importFile"></label><button class="secondary" id="importData" type="button">Проверить файл JSON</button><p id="importStatus" role="status">Выбери резервную копию JSON. Данные не заменяются до подтверждения.</p><div id="importConfirmPanel" hidden><p id="importPreview" role="status"></p><button class="primary" id="confirmImport" type="button">Подтвердить импорт</button><button class="secondary" id="cancelImport" type="button">Отмена</button></div><p class="hint">Перед импортом скачай текущую резервную копию JSON. Если файл LifeSims открыт через content://, хранилище браузера может быть недоступно — импортируй через HTTPS-сайт.</p></div><div class="card"><h3>Совместимость</h3><p>При первом открытии на опубликованном сайте приложение пытается скопировать данные старого LifeSims без изменения оригинала. При открытии скачанного HTML-файла эти данные автоматически не доступны — используй экспорт/импорт.</p></div><p class="hint">Oura доступна в «Потребностях»: подключение требует регистрации OAuth-приложения и разрешения владельца аккаунта. Health Connect, ZenMoney, системные уведомления и автоматическое изменение тела персонажа ещё не реализованы. Google Calendar работает только после настройки OAuth и разрешения доступа.</p></section>
 </div><footer class="bottom-tools"><button class="secondary" id="footerData" data-tab="data" type="button">▤ Данные и резервная копия</button></footer></main>
@@ -906,6 +916,21 @@ body{background:#091428}
 <button id="objectLinkNewTask" type="button" class="secondary">＋ Новое дело</button>
 <button id="objectLinkNewHabit" type="button" class="secondary">＋ Новая привычка</button>
 <button id="objectLinkCancel" type="button" class="secondary">Отмена</button></div>
+</dialog>
+<dialog id="habitBackdateDialog" aria-labelledby="habitBackdateTitle">
+ <div class="single-metric-head"><h3 id="habitBackdateTitle">📅 Записать привычку за дату</h3><button id="habitBackdateClose" type="button" class="secondary" aria-label="Закрыть">×</button></div>
+ <form id="habitBackdateForm">
+  <label class="field">Привычка
+   <select id="habitBackdateActivity" required></select>
+  </label>
+  <div class="cols">
+   <label class="field">Дата выполнения<input type="date" id="habitBackdateDate" required></label>
+   <label class="field">Время (если известно)<input type="time" id="habitBackdateTime"></label>
+  </div>
+  <p id="habitBackdateHelp" class="hint">Прошлая дата будет сохранена в истории. Если время неизвестно, оставь его пустым.</p>
+  <p id="habitBackdateError" class="hint" role="status" aria-live="polite"></p>
+  <div class="row"><button type="submit" class="primary">Сохранить выполнение</button><button type="button" id="habitBackdateCancel" class="secondary">Отмена</button></div>
+ </form>
 </dialog>
 <button type="button" id="backToTop" title="Наверх" aria-label="Вернуться наверх">↑</button>
 <script>
