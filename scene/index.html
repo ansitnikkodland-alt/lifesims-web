@@ -697,6 +697,20 @@ body{background:#091428}
 #needsGrid .needs-hunger-wrap{display:flex;flex-direction:column;gap:7px;min-width:0}
 #needsGrid .needs-hunger-wrap>.meter{width:100%;flex:1}
 #needsGrid .needs-hunger-wrap>.hunger-eat{width:100%;min-height:44px;white-space:normal}
+</style><style id="lifesims-v52-visibility">
+#needsEnergyTop{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:9px;align-items:stretch;margin:8px 0 14px}
+#needsEnergyTop .meter{width:100%;min-width:0;padding:11px}
+#needsEnergyTop .meter span{flex-wrap:wrap;gap:3px}
+#needsEnergyTop .needs-hunger-wrap{min-width:0;display:flex;flex-direction:column;gap:7px}
+#needsEnergyTop .needs-hunger-wrap .meter{width:100%;flex:1}
+#needsEnergyTop .hunger-eat{width:100%;font-size:13px;min-height:45px;white-space:normal}
+#needsEnergyTop .need-hunger{border-color:#75b9a5;background:#243d4d}
+#needsEnergyTop small{display:block;font-size:11px;overflow-wrap:anywhere;margin-top:7px}
+#needsEnergyTop strong{overflow-wrap:anywhere}
+#ouraJump{display:inline-flex;align-items:center;justify-content:center;color:#eff9ff;text-decoration:none;border:1px solid #759dc2;background:#2d446b;border-radius:11px;padding:9px 12px;min-height:44px;font-size:13px}
+#needs .heading{align-items:center;flex-wrap:wrap}
+#ouraMount{scroll-margin-top:92px;margin:12px 0}
+#ouraMount .oura-panel{border-color:#6ca3ce}
 </style></head>
 <body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v51</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
@@ -742,9 +756,11 @@ body{background:#091428}
 </svg><div class="work-indicator" id="workIndicator" hidden role="status"><strong>Анюта на мероприятии</strong><span id="workName"></span><button id="returnHome" type="button">Вернуться домой</button></div><div class="sheetwrap" id="sheetWrap" aria-hidden="true"><div class="sheet" role="dialog" aria-modal="false" aria-labelledby="sheetTitle"><div class="sheethead"><h2 id="sheetTitle">Действия</h2><button id="closeSheet" aria-label="Закрыть меню">×</button></div><div class="sheetacts" id="sheetActions"></div></div></div><span class="sr-only" id="sceneStatus" aria-live="polite"></span></div>
 <nav class="nav" aria-label="Разделы"><button class="active" type="button" data-tab="needs">◈ Потребности</button><button type="button" data-tab="tasks">☑ Дела</button><button type="button" data-tab="habits">◇ Привычки</button><button type="button" data-tab="history">▦ Календарь</button></nav>
 <div class="content"><div id="storageStatus" class="notice" role="status">Проверка локального хранения…</div>
-<section class="section active" id="needs"><div class="heading"><h2>Потребности</h2><button class="secondary" id="openNeedsEditor" type="button">Все показатели</button></div><div class="grid" id="needsGrid"></div>
+<section class="section active" id="needs"><div class="heading"><h2>Потребности</h2><div class="row"><button class="secondary" id="openNeedsEditor" type="button">Все показатели</button><a id="ouraJump" class="secondary" href="#ouraMount">💍 Oura · подключение</a></div></div>
+<div id="needsEnergyTop" class="needs-energy-pair" aria-label="Баланс калорий и голод"><p class="hint">Загрузка шкалы голода…</p></div>
+<div class="grid" id="needsGrid"></div><div id="ouraMount" class="oura-mount" aria-label="Синхронизация Oura"><p class="hint">Загрузка панели Oura…</p></div>
 <p class="hint">Нажми на любую потребность, чтобы изменить её показатель. Ресурс автоматически рассчитывается по доступным оценкам: сон, восстановление Oura и записанные настроение, физическое состояние, гигиена и питание. Неизвестные показатели остаются пустыми. Если записана еда, питание оценивается только по времени после последнего приёма пищи (игровая сытость, не качество рациона). Ручное значение питания имеет приоритет. Потребность во сне — игровая оценка по фактическому сну и накопленному недосыпу. Подключение Oura доступно ниже.</p><hr class="separator"><div class="card"><h3>Сегодня</h3><div id="todaySummary" class="muted">Нет записей</div></div><details id="needsEditor" class="card needs-editor"><summary>✎ Показатели дня</summary><button type="button" id="needsClose" class="secondary needs-popup-close">× Закрыть</button><div class="heading"><h3>Показатели и состояние</h3><input type="date" id="stateDate" aria-label="Дата записи"></div><p class="hint">Нажми на потребность выше, чтобы открыть нужное поле. Здесь также доступны сон, шаги, вес, лекарства и питание.</p><form id="stateForm"><div class="cols"><label class="field">Фактический сон, часов <input id="sleepHours" type="number" min="0" max="24" step="0.01" placeholder="Не записано"></label><label class="field">Недосып (ручная корректировка, ч) <input id="sleepDebtAdjustment" type="number" min="0" max="500" step="0.01" placeholder="Автоматический расчёт"></label><p class="hint">◆ Ресурс — игровая оценка по имеющимся данным. Физическое состояние автоматически использует Oura Readiness за сегодня (или вчера при отсутствии сегодняшнего); это не медицинская оценка. Ручное значение физического состояния используется только при отсутствии Oura.</p><label class="field">Настроение: <output id="moodValue">—</output>% <input id="mood" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="moodUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Физическое состояние: <output id="conditionValue">—</output>% <input id="condition" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="conditionUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Гигиена: <output id="hygieneValue">—</output>% <input id="hygiene" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="hygieneUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Питание: <output id="nutritionValue">—</output>% <input id="nutrition" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="nutritionUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Шаги <input id="steps" type="number" min="0" max="100000" step="1" placeholder="Не записано"></label><label class="field">Общий расход, ккал <input id="totalCalories" type="number" min="0" max="20000" step="1" placeholder="Не записано"></label><label class="field">Вес, кг <input id="weight" type="number" min="20" max="350" step="0.1" placeholder="Не записано"></label><label class="field">Талия, см <input id="waist" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label><label class="field">Бёдра, см <input id="hips" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label><label class="field">Грудь, см <input id="chest" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label></div><label class="field">Лекарства <button class="secondary" type="button" id="medsYesterday">Как вчера</button><textarea id="meds" placeholder="Только реально принятые лекарства"></textarea></label><label class="field">Питание <button class="secondary" type="button" id="foodYesterday">Как вчера</button><textarea id="foodLegacy" placeholder="Прежняя текстовая запись еды"></textarea></label><label class="field">Цикл <input id="cycle" maxlength="200" placeholder="Заметка о цикле"></label><button class="primary" type="submit">Сохранить запись за дату</button></form><div class="notice" id="sleepDebtNote">Долг сна рассчитывается по записанным дням.</div>
-<div class="card"><h3>🌀 Энтропия в комнате</h3><label class="field">Уровень игрового беспорядка: <output id="entropyValue">—</output><input id="entropyRange" class="color-slider" type="range" min="0" max="100" step="5"></label><p class="hint">Ползунок корректирует игровую оценку. Уборка уменьшает энтропию, время постепенно повышает. Это не измерение реального дома.</p></div></details><div id="ouraMount" class="oura-mount"></div></section><div id="lifeModalMask" class="life-modal-mask" hidden></div>
+<div class="card"><h3>🌀 Энтропия в комнате</h3><label class="field">Уровень игрового беспорядка: <output id="entropyValue">—</output><input id="entropyRange" class="color-slider" type="range" min="0" max="100" step="5"></label><p class="hint">Ползунок корректирует игровую оценку. Уборка уменьшает энтропию, время постепенно повышает. Это не измерение реального дома.</p></div></details></section><div id="lifeModalMask" class="life-modal-mask" hidden></div>
 
 
 <section class="section food-popup" id="food" aria-label="Журнал питания" role="dialog" aria-modal="true">
@@ -1754,7 +1770,6 @@ function openSingleMetric(field,date=today()){
 function showNeedsEditor(field='',date=today()){
  if(field){openSingleMetric(field,date);return}
  closeOtherMetricPopups();
- openTab('needs',false);
  fillState(date);let modal=$('needsNativeModal');
  if(!modal){
   modal=document.createElement('dialog');modal.id='needsNativeModal';
@@ -2046,8 +2061,8 @@ function renderNeeds(){
   origin.textContent=freshnessLabel(usedDate)+(balance==null?' · неполные данные':'');
   calories.append(origin);
  }
- const pair=document.createElement('div');pair.className='needs-energy-pair';
- pair.append(calories);g.insertBefore(pair,g.children[2]||null);
+ const pair=$('needsEnergyTop');pair.replaceChildren();
+ pair.append(calories);
  // Explicitly render the hunger meter beside calories even when no meal was logged.
  metric(pair,'🍽 Голод',hunger.value,'%',hunger.value==null?'Нет данных':hunger.value+'% сытости',
   'hunger',hunger.date,hunger.date?'спад за 16 ч':'Нажми, чтобы записать вручную');
@@ -3999,7 +4014,7 @@ panel.innerHTML=[
 '<p class="hint">Ручные записи не заменяются данными Oura. Авторизация сохраняется только для текущего сеанса браузера: после закрытия приложения или истечения токена может понадобиться повторный вход. При закрытом LifeSims фоновая синхронизация не выполняется.</p>',
 '<p class="hint"><a href="./privacy.html" target="_blank" rel="noopener">Privacy Policy</a> · <a href="./terms.html" target="_blank" rel="noopener">Terms of Service</a></p>'
 ].join('');
-root.append(panel);
+root.replaceChildren(panel);
 el('ouraRedirect').value=REDIRECT;
 const setting=(k)=>{try{return localStorage.getItem(k)}catch(_){return null}};
 const saveSetting=(k,v)=>{try{localStorage.setItem(k,v)}catch(_){}};
