@@ -967,7 +967,9 @@ const defs=[
 {id:'sim_diary',object:'sim',name:'Записать в дневник',xp:0,repeat:'daily',open:'diary'},
 {id:'sofa_rest',object:'sofa',name:'Отдохнуть',xp:5,repeat:'daily',skill:'Здоровье'}];
 const labels={window:'🪟 Окно · мероприятия',bed:'🛏 Кровать',books:'📚 Книжная полка',desk:'💻 Компьютер',phone:'📱 Телефон',tableBook:'📖 Книга на столике',fridge:'🧊 Холодильник',coffee:'☕ Кофе',clutter:'🧹 Уборка',sink:'🚰 Раковина',sim:'👤 Персонаж',sofa:'🛋 Диван',shower:'🚿 Ванная',toilet:'🚽 Туалет',catLitter:'🐈 Туалет котиков'};
-const base=()=>({schema:VERSION,createdAt:new Date().toISOString(),days:{},activities:defs.filter(a=>a.xp>0).map(a=>({...a,kind:'habit',completions:[]})),events:[],schedule:[],googleHidden:[],foodMeals:[],foodTemplates:[],financeChecks:[],room:{work:null,lastShowerDateReported:'2026-11-18',antiperspirantInitialized:true},legacySkills:{},legacyCopy:null});
+const base=()=>({schema:VERSION,createdAt:new Date().toISOString(),days:{},activities:defs.filter(a=>a.xp>0).map(a=>({...a,kind:'habit',completions:[]})),events:[],schedule:[],googleHidden:[],foodMeals:[],foodTemplates:[],financeChecks:[],room:{work:null,lastShowerDateReported:'2026-11-18',antiperspirantInitialized:true},legacySkills:{},legacyCopy:null,
+ taskProjects:[],taskTags:[{id:'tp-family',name:'Семья'},{id:'tp-work',name:'Работа'}],
+ focusSettings:{focus:25,short:5,long:15},focusTimer:{mode:'focus',running:false,remainingSec:1500,elapsedSec:0,endAt:null,startAt:null,taskId:''}});
 let state,storageOK=true,storageBlocked=false,activeDay=today(),historyView='month',selectedTab='needs';
 function normalize(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.schema!==VERSION||!raw.days||typeof raw.days!=='object'||Array.isArray(raw.days)||!Array.isArray(raw.activities)||!Array.isArray(raw.events))throw Error('Неизвестный или повреждённый формат');const safe=base();const normalized={...safe,...raw,foodMeals:Array.isArray(raw.foodMeals)?raw.foodMeals.filter(x=>x&&typeof x==='object'&&typeof x.id==='string'&&typeof x.date==='string'):[],foodTemplates:Array.isArray(raw.foodTemplates)?raw.foodTemplates.filter(x=>x&&typeof x==='object'&&typeof x.title==='string'&&x.title.trim().length>0):[],googleHidden:Array.isArray(raw.googleHidden)?raw.googleHidden.filter(x=>x&&typeof x.calendarId==='string'&&typeof x.id==='string').map(x=>({calendarId:x.calendarId,id:x.id,title:typeof x.title==='string'?x.title:'',hiddenAt:typeof x.hiddenAt==='string'?x.hiddenAt:''})):[],schedule:Array.isArray(raw.schedule)?raw.schedule:(Array.isArray(raw.legacyCopy?.events)?raw.legacyCopy.events.map((e,i)=>({id:'legacy-schedule-'+i,title:e.title||'Мероприятие',startsAt:e.startsAt,endsAt:e.endsAt,repeat:e.repeat==='weekly'?'weekly':'none',weekdays:e.repeat==='weekly'&&e.startsAt?[((new Date(e.startsAt.slice(0,10)+'T12:00:00').getDay()+6)%7)+1]:[]})):[]),room:(raw.room&&typeof raw.room==='object'&&!Array.isArray(raw.room))?{...safe.room,...raw.room}:safe.room};
  if(!raw.room?.antiperspirantInitialized){
@@ -977,6 +979,10 @@ function normalize(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.
   }
   normalized.room.antiperspirantInitialized=true;
  }
+ normalized.taskProjects=Array.isArray(raw.taskProjects)?raw.taskProjects.filter(x=>x&&typeof x.id==='string'&&typeof x.name==='string'):safe.taskProjects;
+ normalized.taskTags=Array.isArray(raw.taskTags)?raw.taskTags.filter(x=>x&&typeof x.id==='string'&&typeof x.name==='string'):safe.taskTags;
+ normalized.focusSettings=raw.focusSettings&&typeof raw.focusSettings==='object'?{...safe.focusSettings,...raw.focusSettings}:safe.focusSettings;
+ normalized.focusTimer=raw.focusTimer&&typeof raw.focusTimer==='object'?{...safe.focusTimer,...raw.focusTimer}:safe.focusTimer;
  return normalized;
 }
 function migrate(old){const s=base();s.legacyCopy=old;s.legacySkills=(old.skills&&typeof old.skills==='object'&&!Array.isArray(old.skills))?old.skills:{};
