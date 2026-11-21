@@ -97,7 +97,18 @@
    const star=create('button','',isFavorite(m.title)?'★':'☆');star.type='button';
    star.title='В избранное';star.setAttribute('aria-label',isFavorite(m.title)?'Убрать из избранного':'Добавить в избранное');
    star.onclick=()=>toggleFavorite(m.title);
-   buttons.append(edit,detail,star);reply.append(buttons);wrapper.append(reply);thread.append(wrapper);
+   const del=create('button','','Удалить');del.type='button';del.className='meal-chat-delete';
+   del.setAttribute('aria-label','Удалить запись о еде: '+m.title);
+   del.onclick=()=>{
+    if(!confirm('Удалить «'+m.title+'» за '+m.date+'?'))return;
+    try{
+     bridge.remove(m.id);
+     if(editingId===m.id){editingId=null;$('mealChatInput').value='';resetPhoto()}
+     renderContent();legacy.render?.();
+     status('✓ Запись о еде удалена. Калории и сытость пересчитаны.');
+    }catch(error){status('⚠ Не удалось удалить: '+error.message)}
+   };
+   buttons.append(edit,detail,star,del);reply.append(buttons);wrapper.append(reply);thread.append(wrapper);
   }
   root.append(thread);root.scrollTop=root.scrollHeight;
  }
