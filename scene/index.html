@@ -63,7 +63,7 @@
 .needs-editor .heading{margin:10px 0}
 .needs-editor #stateForm{margin-top:12px}
 </style><link rel="stylesheet" href="./calendar-style.css">
-<link rel="stylesheet" href="./task-premium.css?v=65">
+<link rel="stylesheet" href="./task-premium.css?v=69">
 <link rel="stylesheet" href="./oura-style.css">
 <style>
 
@@ -2188,7 +2188,7 @@ function refreshSkillSuggestions(){
  const list=$('skillSuggestions');if(!list)return;list.replaceChildren();
  for(const v of skillScores()){const option=document.createElement('option');option.value=v.name;list.append(option)}
 }
-window.LifeSimsSkillBridge={scores:()=>skillScores(),read:()=>({activities:state.activities||[],events:state.events||[],legacySkills:state.legacySkills||{}}),edit:id=>openActivityEditor(id),create:kind=>openNewCalendarTask(kind)};
+window.LifeSimsSkillBridge={today, scores:()=>skillScores(),read:()=>({activities:state.activities||[],events:state.events||[],legacySkills:state.legacySkills||{}}),edit:id=>openActivityEditor(id),create:kind=>openNewCalendarTask(kind)};
 function renderSkills(){
  const list=$('skillsList');if(!list)return;list.replaceChildren();
  const f=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:1});
@@ -2209,6 +2209,7 @@ function renderSkills(){
   if(skill.loss>=0.05){const loss=document.createElement('small');loss.className='skill-loss';loss.textContent='Снижение от отсутствия практики: −'+f.format(skill.loss)+' XP';card.append(loss)}
   list.append(card);
  }
+ window.LifeSimsSkillDetail?.refresh?.();
  refreshSkillSuggestions();
 }
 function xpTotal(){const origin=Object.values(state.legacySkills||{}).reduce((sum,x)=>sum+(Number.isFinite(+x)?+x:0),0);const earned=state.events.reduce((sum,e)=>sum+(e.kind==='complete'&&Number.isFinite(+e.xp)?+e.xp:0),0);return Math.max(0,Math.round(origin+earned))}
