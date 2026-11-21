@@ -1038,6 +1038,7 @@ function due(a,d){
  if(a.legacyDone)return false;
  const origin=a.createdDate||'0000-00-00';
  if(d<origin)return false;
+ if(a.repeat==='inbox')return false;
  if(a.repeat==='once')return d===(a.createdDate||d);
  if(a.repeat==='daily')return true;
  if(a.repeat==='weekly'){
@@ -1056,8 +1057,8 @@ function due(a,d){
  }
  return false;
 }
-function done(a,d){if(a.legacyDone)return true;const cm=Array.isArray(a.completions)?a.completions:[];if(a.repeat==='once')return cm.length>0;if(a.repeat==='weekly')return cm.some(c=>Array.isArray(a.weekdays)&&a.weekdays.length>1?c.date===d:weekKey(c.date)===weekKey(d));return cm.some(c=>c.date===d)}
-function complete(a,date){if(a.kind!=='habit'&&done(a,date))return toast('Уже выполнено — XP второй раз не начисляются');if(!due(a,date))return toast('Дело ещё не запланировано');const xp=Number.isFinite(a.xp)?a.xp:0;const stamp=new Date().toISOString();if(transact(()=>{a.completions??=[];a.completions.push({date,at:stamp,xp});
+function done(a,d){if(a.legacyDone)return true;const cm=Array.isArray(a.completions)?a.completions:[];if(a.repeat==='once'||a.repeat==='inbox')return cm.length>0;if(a.repeat==='weekly')return cm.some(c=>Array.isArray(a.weekdays)&&a.weekdays.length>1?c.date===d:weekKey(c.date)===weekKey(d));return cm.some(c=>c.date===d)}
+function complete(a,date){if(a.kind!=='habit'&&done(a,date))return toast('Уже выполнено — XP второй раз не начисляются');if(a.repeat!=='inbox'&&!due(a,date))return toast('Дело ещё не запланировано');const xp=Number.isFinite(a.xp)?a.xp:0;const stamp=new Date().toISOString();if(transact(()=>{a.completions??=[];a.completions.push({date,at:stamp,xp});
  if(a.id==='bed_make'){state.room??={};state.room.bedMadeOn=date}
  if(a.id==='hygiene_antiperspirant'){state.room??={};state.room.lastAntiperspirantAt=stamp}
  if(a.object==='shower'&&/принят.*душ|принять душ|помытьс|приняла душ/i.test(a.name)){state.room??={};state.room.lastShowerAt=stamp}
@@ -1084,7 +1085,7 @@ function makeActivityItem(a,date){
  const weekdays=Array.isArray(a.weekdays)&&a.weekdays.length
   ?a.weekdays.map(n=>['','Пн','Вт','Ср','Чт','Пт','Сб','Вс'][Number(n)]).filter(Boolean).join(', ')
   :'раз в неделю';
- description.textContent=(a.repeat==='daily'?'Ежедневно':a.repeat==='weekly'?weekdays:'Однократно')+
+ description.textContent=(a.repeat==='daily'?'Ежедневно':a.repeat==='weekly'?weekdays:a.repeat==='inbox'?'Без срока':'Однократно')+
   ' · '+((Number(a.xp)||0)>0?'+':'')+(Number(a.xp)||0)+' XP'+(repeatable?' · за дату: '+count+' раз':'');
  text.append(title,description);el.append(mark,text);
  if(a.object){const badge=document.createElement('span');badge.className='pill';badge.textContent='Комната';el.append(badge)}
@@ -1146,12 +1147,12 @@ function clearActivityEditor(){
  $('taskEditorHeading').textContent='Добавить дело или привычку';$('taskSave').textContent='Сохранить';
 }
 function openActivityEditor(id){
- openTab('history');
  const a=state.activities.find(x=>x.id===id);
  if(!a)return toast('Дело не найдено');
- clearActivityEditor();$('taskEditId').value=id;
+ openNewCalendarTask(a.kind==='habit'?'habit':'task',a.object||null);
+ $('taskEditId').value=id;
  $('taskTitle').value=a.name||'';$('taskKind').value=a.kind==='habit'?'habit':'task';
- $('taskRepeat').value=['once','daily','weekly'].includes(a.repeat)?a.repeat:'once';
+ $('taskRepeat').value=['inbox','once','daily','weekly'].includes(a.repeat)?a.repeat:'once';
  $('taskStartDate').value=a.createdDate||today();
  $('taskXP').value=String(Number.isFinite(a.xp)?a.xp:0);
  if(!$('taskXP').value)$('taskXP').value='0';
@@ -1159,7 +1160,8 @@ function openActivityEditor(id){
  $('taskWeekdays').hidden=a.repeat!=='weekly';
  document.querySelectorAll('[name=taskWeekday]').forEach(x=>x.checked=Array.isArray(a.weekdays)?a.weekdays.includes(Number(x.value)):false);
  $('taskDelete').hidden=false;$('taskEditorHeading').textContent='Изменить дело или привычку';
- $('calendarTaskEditor').open=true;$('calendarTaskEditor').scrollIntoView({block:'center',behavior:'smooth'});
+ $('calendarTaskEditor').open=true;
+ window.LifeSimsTaskPremium?.fillForm?.(a,a.kind);
 }
 function addActivity(e){
  e.preventDefault();
@@ -1170,7 +1172,8 @@ function addActivity(e){
  const id=$('taskEditId').value;
  const old=state.activities.find(x=>x.id===id);
  if(id&&!old)return toast('Дело больше не найдено');
- const act={...(old||{}),id:old?.id||uid(),name,repeat,weekdays:repeat==='weekly'?weekdays:[],createdDate:$('taskStartDate').value||today(),kind:$('taskKind').value==='habit'?'habit':'task',xp:Number($('taskXP').value),object:$('taskObject').value||null,completions:old?.completions||[]};
+ const meta=window.LifeSimsTaskPremium?.readForm?.()||{};
+ const act={...(old||{}),...meta,id:old?.id||uid(),name,repeat,weekdays:repeat==='weekly'?weekdays:[],createdDate:$('taskStartDate').value||today(),kind:$('taskKind').value==='habit'?'habit':'task',xp:Number($('taskXP').value),object:$('taskObject').value||null,completions:old?.completions||[]};
  if(!transact(()=>{const i=state.activities.findIndex(x=>x.id===act.id);if(i<0)state.activities.push(act);else state.activities[i]=act;}))return toast('Не удалось сохранить');
  clearActivityEditor();$('calendarTaskEditor').open=false;
  if($('calendarTaskPopup')?.open)$('calendarTaskPopup').close();
@@ -2913,7 +2916,8 @@ function openNewCalendarTask(kind='task',object=null){
  $('taskKind').value=kind==='habit'?'habit':'task';
  $('taskStartDate').value=today();
  if(object&&[...$('taskObject').options].some(x=>x.value===object))$('taskObject').value=object;
- $('taskRepeat').value=kind==='habit'?'daily':'once';$('taskWeekdays').hidden=true;
+ $('taskRepeat').value=kind==='habit'?'daily':'inbox';$('taskWeekdays').hidden=true;
+ window.LifeSimsTaskPremium?.fillForm?.(null,kind);
  $('taskEditorHeading').textContent=kind==='habit'?'Добавить привычку':'Добавить дело';
  if(!popup.open)popup.showModal();$('taskTitle').focus({preventScroll:true});
 }
