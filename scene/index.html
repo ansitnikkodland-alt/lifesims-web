@@ -2387,6 +2387,28 @@ function syncCompletionHistory(oldEntry,newEntry,remove=false){
  else activity.completions[index]={...activity.completions[index],date:newEntry.date,
   xp:newEntry.xp,at:oldEntry.at||activity.completions[index].at};
 }
+function syncHistoricalHygieneAction(oldEvent,nextEvent=null){
+ if(oldEvent.kind!=='hair_wash'&&oldEvent.kind!=='shower')return;
+ const relevant=state.events.filter(e=>e.kind===oldEvent.kind&&typeof e.at==='string'&&Number.isFinite(Date.parse(e.at)))
+  .sort((a,b)=>Date.parse(b.at)-Date.parse(a.at));
+ const newest=relevant[0];
+ state.room??={};
+ if(oldEvent.kind==='hair_wash')state.room.lastHairWashAt=newest?.at||null;
+ if(oldEvent.kind==='shower'){
+  state.room.lastShowerAt=newest?.at||null;
+  if(newest)state.room.lastShowerDateReported=newest.date;
+ }
+}
+function deleteDayAction(index){
+ const entry=state.events[index];if(!entry)return toast('Запись не найдена');
+ if(!confirm('Удалить действие «'+(entry.name||'Событие')+'» за '+entry.date+'?'))return;
+ if(!transact(()=>{
+  syncCompletionHistory(entry,null,true);
+  state.events.splice(index,1);
+  syncHistoricalHygieneAction(entry);
+ }))return toast('Не удалось удалить действие');
+ $('historyLogDialog').close();renderAll();toast('Действие удалено за '+entry.date);
+}
 function saveHistoryLog(e){
  e.preventDefault();
  const index=Number($('historyLogIndex').value),old=state.events[index];
@@ -2398,23 +2420,18 @@ function saveHistoryLog(e){
   xp=Number($('historyLogXp').value);
   if(!Number.isInteger(xp)||xp<-40||xp>40)return toast('XP должны быть целым числом от −40 до +40');
  }
- const next={...old,name,date,xp,updatedAt:new Date().toISOString()};
+ const oldTime=typeof old.at==='string'&&/T\d{2}:\d{2}/.test(old.at)?old.at.slice(11,16):'12:00';
+ const adjustedAt=(old.kind==='hair_wash'||old.kind==='shower')&&date!==old.date?
+  new Date(date+'T'+oldTime+':00').toISOString():old.at;
+ const next={...old,name,date,xp,at:adjustedAt,updatedAt:new Date().toISOString()};
  if(!transact(()=>{
   syncCompletionHistory(old,next);
   state.events[index]=next;
+  syncHistoricalHygieneAction(old,next);
  }))return toast('Не удалось сохранить историческую запись');
  $('historyLogDialog').close();renderAll();toast('Старая запись изменена');
 }
-function deleteHistoryLog(){
- const index=Number($('historyLogIndex').value),old=state.events[index];
- if(!old)return toast('Запись уже отсутствует');
- if(!confirm('Удалить запись «'+(old.name||'Событие')+'» за '+old.date+'? Отмена недоступна.'))return;
- if(!transact(()=>{
-  syncCompletionHistory(old,null,true);
-  state.events.splice(index,1);
- }))return toast('Не удалось удалить запись');
- $('historyLogDialog').close();renderAll();toast('Историческая запись удалена');
-}
+function deleteHistoryLog(){deleteDayAction(Number($('historyLogIndex').value))}
 
 function editIndicatorForDay(date,field){
  closeDayAgenda();
@@ -2576,7 +2593,10 @@ function renderDayAgenda(){
       const edit=document.createElement('button');edit.type='button';edit.className='agenda-edit';
       edit.textContent='✎';edit.setAttribute('aria-label','Редактировать запись: '+(e.name||'Событие'));
       edit.onclick=()=>openHistoryLogEditor(state.events.indexOf(e));
-      line.append(icon,info,edit);body.append(line);
+      const remove=document.createElement('button');remove.type='button';remove.className='agenda-delete';
+      remove.textContent='🗑';remove.setAttribute('aria-label','Удалить действие: '+(e.name||'Событие'));
+      remove.onclick=()=>deleteDayAction(state.events.indexOf(e));
+      line.append(icon,info,edit,remove);body.append(line);
     }
   }
   const meals=(state.foodMeals||[]).filter(m=>m.date===date).sort((a,b)=>a.time.localeCompare(b.time));
