@@ -748,7 +748,7 @@ body{background:#091428}
 #calorieCardHost>.calorie-balance-card>small.metric-origin{font-size:11px;color:#b7d2e2}
 #mealRollingNote{white-space:pre-wrap;line-height:1.5}
 </style></head>
-<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v57</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
+<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v58</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
 <img id="sceneRugColor" class="rug-color-layer" alt="" aria-hidden="true">
 <span id="sceneCrystalTint" aria-hidden="true"></span>
@@ -1137,7 +1137,11 @@ function makeActivityItem(a,date){
   ?a.weekdays.map(n=>['','Пн','Вт','Ср','Чт','Пт','Сб','Вс'][Number(n)]).filter(Boolean).join(', ')
   :'раз в неделю';
  description.textContent=(a.repeat==='daily'?'Ежедневно':a.repeat==='weekly'?weekdays:a.repeat==='inbox'?'Без срока':'Однократно')+
-  ' · '+((Number(a.xp)||0)>0?'+':'')+(Number(a.xp)||0)+' XP'+(repeatable?' · за дату: '+count+' раз':'');
+  ' · '+((Number(a.xp)||0)>0?'+':'')+(Number(a.xp)||0)+' XP'+(repeatable?' · за дату: '+count+' раз':'')+
+  (validatedResourceEffect(a.resourceEffect)?' · ⚡ '+({
+   mood:'Настроение',condition:'Физическое состояние',hygiene:'Гигиена',nutrition:'Питание',
+   hunger:'Сытость',sleepNeed:'Потребность во сне',entropy:'Энтропия',activity:'Активность',resource:'Ресурс'
+  }[a.resourceEffect.target]||'Показатель')+' '+(a.resourceEffect.mode==='set'?'→ '+a.resourceEffect.amount+'%':(a.resourceEffect.amount>=0?'+':'')+a.resourceEffect.amount+' п. п.'):'');
  text.append(title,description);el.append(mark,text);
  if(a.object){const badge=document.createElement('span');badge.className='pill';badge.textContent='Комната';el.append(badge)}
  const edit=document.createElement('button');edit.className='secondary task-edit';
@@ -1226,6 +1230,8 @@ function addActivity(e){
  const old=state.activities.find(x=>x.id===id);
  if(id&&!old)return toast('Дело больше не найдено');
  const meta=window.LifeSimsTaskPremium?.readForm?.()||{};
+ if(meta.resourceEffect&&!validatedResourceEffect(meta.resourceEffect))return toast('Проверь настройки влияния на показатель: значение должно быть от −100 до +100, а срок — допустимым.');
+ if(meta.resourceEffect)meta.resourceEffect=validatedResourceEffect(meta.resourceEffect);
  const act={...(old||{}),...meta,id:old?.id||uid(),name,repeat,weekdays:repeat==='weekly'?weekdays:[],createdDate:$('taskStartDate').value||today(),kind:$('taskKind').value==='habit'?'habit':'task',xp:Number($('taskXP').value),object:$('taskObject').value||null,completions:old?.completions||[]};
  if(!transact(()=>{const i=state.activities.findIndex(x=>x.id===act.id);if(i<0)state.activities.push(act);else state.activities[i]=act;}))return toast('Не удалось сохранить');
  clearActivityEditor();$('calendarTaskEditor').open=false;
