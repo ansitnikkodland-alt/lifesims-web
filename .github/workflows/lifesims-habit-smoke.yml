@@ -65,6 +65,47 @@ jobs:
             if(await page.locator('#calendarTaskPopup').isVisible())
               throw Error('Habit editor did not close');
             console.log('EDITOR CLOSE: PASS');
+            // Coffee is an editable stored habit; legacy espresso entries must remain intact.
+            const coffee=page.locator('.tp-habit-table tbody tr').filter({has:page.locator('button.tp-habit-edit-name',{hasText:'Кофе'})}).first();
+            if(await coffee.count()!==1)throw Error('Missing coffee habit row');
+            await coffee.locator('button.tp-habit-edit-name').click();
+            await page.locator('#calendarTaskPopup').waitFor({state:'visible'});
+            if(await page.locator('#taskEditId').inputValue()!=='coffee_habit')throw Error('Coffee did not open its persisted editor');
+            await page.locator('#tpHabitGoalType').selectOption('max');
+            await page.locator('#tpHabitGoalValue').fill('2');
+            await page.locator('#tpHabitUnit').fill('чаш.');
+            await page.locator('#tpHabitQuestion').fill('Сколько чашек кофе сегодня?');
+            await page.locator('#taskSave').click();
+            await page.waitForFunction(()=>!document.querySelector('#calendarTaskPopup')?.open);
+            const coffeeAfter=await page.evaluate(()=>{
+              const a=window.LifeSimsTaskBridge.read().activities.find(x=>x.id==='coffee_habit');
+              return a&&{type:a.habitGoal?.type,target:a.habitGoal?.value,unit:a.habitUnit,question:a.habitQuestion};
+            });
+            if(coffeeAfter?.type!=='max'||coffeeAfter?.target!==2||coffeeAfter?.unit!=='чаш.')throw Error('Coffee norm did not persist: '+JSON.stringify(coffeeAfter));
+            await page.evaluate(()=>{
+              const api=window.LifeSimsTaskBridge,d=api.today();
+              api.coffeeAdd(d);api.coffeeAdd(d);api.coffeeAdd(d);
+            });
+            const coffeeCell=()=>page.locator('.tp-habit-table tbody tr').filter({has:page.locator('button.tp-habit-edit-name',{hasText:'Кофе'})}).first().locator('.tp-habit-day').first();
+            if(!await coffeeCell().evaluate(el=>el.classList.contains('is-negative')))throw Error('Upper bound 2 not exceeded by 3 coffees');
+            if(!await page.evaluate(()=>window.LifeSimsTaskBridge.read().events.filter(e=>e.kind==='espresso').length===3))throw Error('Coffee events were not saved');
+            await page.evaluate(()=>window.LifeSimsTaskBridge.coffeeUndo(window.LifeSimsTaskBridge.today()));
+            if(await coffeeCell().evaluate(el=>el.classList.contains('is-negative')))throw Error('Upper bound at 2 coffees incorrectly negative');
+            await page.evaluate(()=>window.LifeSimsTaskBridge.setHabitAmount('coffee_habit',window.LifeSimsTaskBridge.today(),3.5));
+            if(!await coffeeCell().evaluate(el=>el.classList.contains('is-negative')))throw Error('Manual quantity 3.5 must exceed maximum');
+            await page.evaluate(()=>window.LifeSimsTaskBridge.setHabitAmount('coffee_habit',window.LifeSimsTaskBridge.today(),1.5));
+            if(await coffeeCell().evaluate(el=>el.classList.contains('is-negative')))throw Error('Manual quantity 1.5 must be within maximum');
+            await page.evaluate(()=>{
+              const api=window.LifeSimsTaskBridge,d=api.today();
+              api.read().activities.push({id:'__smoke_min',name:'Движение',kind:'habit',repeat:'daily',createdDate:d,
+                xp:0,habitGoal:{type:'min',value:2},habitUnit:'км',completions:[{date:d,at:new Date().toISOString()}]});
+              window.LifeSimsHabitGrid.render();
+            });
+            const lowerCell=()=>page.locator('.tp-habit-table tbody tr').filter({has:page.locator('button.tp-habit-edit-name',{hasText:'Движение'})}).first().locator('.tp-habit-day').first();
+            if(!await lowerCell().evaluate(el=>el.classList.contains('is-negative')))throw Error('Lower bound not flagged');
+            await page.evaluate(()=>window.LifeSimsTaskBridge.setHabitAmount('__smoke_min',window.LifeSimsTaskBridge.today(),3));
+            if(await lowerCell().evaluate(el=>el.classList.contains('is-negative')))throw Error('Lower bound met, should not be negative');
+            console.log('COFFEE EDITOR + BOTH NORM TYPES + MANUAL QUANTITIES: PASS');
             if(errors.length)console.warn('OTHER BROWSER CONSOLE ERRORS:',errors.slice(0,8).join(' | '));
             await browser.close();
           })().catch(e=>{console.error(e);process.exit(1)});
