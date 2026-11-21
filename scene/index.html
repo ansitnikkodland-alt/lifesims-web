@@ -1018,7 +1018,7 @@ const defs=[
 {id:'sim_diary',object:'sim',name:'Записать в дневник',xp:0,repeat:'daily',open:'diary'},
 {id:'sofa_rest',object:'sofa',name:'Отдохнуть',xp:5,repeat:'daily',skill:'Здоровье'}];
 const labels={window:'🪟 Окно · мероприятия',bed:'🛏 Кровать',books:'📚 Книжная полка',desk:'💻 Компьютер',phone:'📱 Телефон',tableBook:'📖 Книга на столике',fridge:'🧊 Холодильник',coffee:'☕ Кофе',clutter:'🧹 Уборка',sink:'🚰 Раковина',sim:'👤 Персонаж',sofa:'🛋 Диван',shower:'🚿 Ванная',toilet:'🚽 Туалет',catLitter:'🐈 Туалет котиков'};
-const base=()=>({schema:VERSION,createdAt:new Date().toISOString(),days:{},activities:defs.filter(a=>a.xp>0).map(a=>({...a,kind:'habit',completions:[]})),events:[],schedule:[],googleHidden:[],foodMeals:[],foodTemplates:[],financeChecks:[],room:{work:null,lastShowerDateReported:'2026-11-18',antiperspirantInitialized:true},legacySkills:{},legacyCopy:null,skillDecaySince:today(),
+const base=()=>({schema:VERSION,createdAt:new Date().toISOString(),days:{},activities:defs.filter(a=>a.xp>0).map(a=>({...a,kind:'habit',difficulty:3,completions:[]})),events:[],schedule:[],googleHidden:[],foodMeals:[],foodTemplates:[],financeChecks:[],room:{work:null,lastShowerDateReported:'2026-11-18',antiperspirantInitialized:true},legacySkills:{},legacyCopy:null,skillDecaySince:today(),
  taskProjects:[],taskTags:[{id:'tp-family',name:'Семья'},{id:'tp-work',name:'Работа'}],
  focusSettings:{focus:25,short:5,long:15},focusTimer:{mode:'focus',running:false,remainingSec:1500,elapsedSec:0,endAt:null,startAt:null,taskId:''}});
 let state,storageOK=true,storageBlocked=false,activeDay=today(),historyView='month',selectedTab='needs';
@@ -1035,12 +1035,13 @@ function normalize(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.
  normalized.focusSettings=raw.focusSettings&&typeof raw.focusSettings==='object'?{...safe.focusSettings,...raw.focusSettings}:safe.focusSettings;
  normalized.focusTimer=raw.focusTimer&&typeof raw.focusTimer==='object'?{...safe.focusTimer,...raw.focusTimer}:safe.focusTimer;
  normalized.skillDecaySince=typeof raw.skillDecaySince==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(raw.skillDecaySince)?raw.skillDecaySince:today();
+ normalized.activities=normalized.activities.map(a=>a&&typeof a==='object'?{...a,difficulty:(Number.isInteger(Number(a.difficulty))&&Number(a.difficulty)>=1&&Number(a.difficulty)<=5?Number(a.difficulty):3)}:a);
  const skillMap=new Map([...defs,...normalized.activities].filter(a=>a?.id).map(a=>[a.id,a.skill||null]));
  normalized.events=normalized.events.map(e=>e?.kind==='complete'&&!Object.prototype.hasOwnProperty.call(e,'skill')?{...e,skill:skillMap.get(e.activityId)||null}:e);
  return normalized;
 }
 function migrate(old){const s=base();s.legacyCopy=old;s.legacySkills=(old.skills&&typeof old.skills==='object'&&!Array.isArray(old.skills))?old.skills:{};
-if(Array.isArray(old.tasks))for(const t of old.tasks){if(!t||typeof t.name!=='string')continue;const a={id:uid(),name:t.name,kind:'task',xp:Number.isFinite(+t.xp)?Math.max(0,Math.min(40,+t.xp)):10,repeat:'once',createdDate:today(),completions:[],legacyDone:!!t.done};s.activities.push(a)}
+if(Array.isArray(old.tasks))for(const t of old.tasks){if(!t||typeof t.name!=='string')continue;const a={id:uid(),name:t.name,kind:'task',difficulty:3,xp:Number.isFinite(+t.xp)?Math.max(0,Math.min(40,+t.xp)):10,repeat:'once',createdDate:today(),completions:[],legacyDone:!!t.done};s.activities.push(a)}
 if(Array.isArray(old.log))for(const l of old.log){if(!l||typeof l.at!=='string'||!/^\d{4}-\d\d-\d\dT/.test(l.at))continue;s.events.push({id:uid(),kind:'legacy',name:String(l.text||'Действие'),date:l.at.slice(0,10),at:l.at,xp:0,legacyXP:Number(l.xp)||0})}
 // Legacy resource is a stored value without a verified observation date: do not invent a dated history record.
 return s}
@@ -1232,12 +1233,14 @@ function due(a,d){
  return false;
 }
 function done(a,d){if(a.legacyDone)return true;const cm=Array.isArray(a.completions)?a.completions:[];if(a.repeat==='once'||a.repeat==='inbox')return cm.length>0;if(a.repeat==='weekly')return cm.some(c=>Array.isArray(a.weekdays)&&a.weekdays.length>1?c.date===d:weekKey(c.date)===weekKey(d));return cm.some(c=>c.date===d)}
-function complete(a,date){if(a.kind!=='habit'&&done(a,date))return toast('Уже выполнено — XP второй раз не начисляются');if(a.repeat!=='inbox'&&!due(a,date))return toast('Дело ещё не запланировано');const xp=Number.isFinite(a.xp)?a.xp:0;const stamp=new Date().toISOString();if(transact(()=>{a.completions??=[];a.completions.push({date,at:stamp,xp});
+function difficultyOf(a){const n=Number(a?.difficulty);return Number.isInteger(n)&&n>=1&&n<=5?n:3}
+function skillExperience(a){const points=Number(a?.xp);return a?.skill&&Number.isFinite(points)&&points>0?Math.round(points*difficultyOf(a)/3):0}
+function complete(a,date){if(a.kind!=='habit'&&done(a,date))return toast('Уже выполнено — XP второй раз не начисляются');if(a.repeat!=='inbox'&&!due(a,date))return toast('Дело ещё не запланировано');const xp=Number.isFinite(a.xp)?a.xp:0,skillXp=skillExperience(a),difficulty=difficultyOf(a);const stamp=new Date().toISOString();if(transact(()=>{a.completions??=[];a.completions.push({date,at:stamp,xp,skillXp,difficulty});
  if(a.id==='bed_make'){state.room??={};state.room.bedMadeOn=date}
  if(a.id==='hygiene_antiperspirant'){state.room??={};state.room.lastAntiperspirantAt=stamp}
  if(a.object==='shower'&&/принят.*душ|принять душ|помытьс|приняла душ/i.test(a.name)){state.room??={};state.room.lastShowerAt=stamp}
  if(/уборк|помыть|убрать|постират|мыть посуд|разобрать|пропылесос/i.test(a.name)){state.room??={};state.room.lastCleanAt=stamp;state.room.entropyOffset=Math.min(0,(state.room.entropyOffset||0)-4)}
- state.events.push({id:uid(),kind:'complete',activityId:a.id,name:a.name,date,at:stamp,xp,skill:a.skill||null,resourceEffect:effectSnapshot(a)})})){toast(`✓ ${a.name}${xp?' · '+(xp>0?'+':'')+xp+' XP':''}`);$('sceneStatus').textContent='✓ '+a.name;renderAll()}}
+ state.events.push({id:uid(),kind:'complete',activityId:a.id,name:a.name,date,at:stamp,xp,skillXp,difficulty,skill:a.skill||null,resourceEffect:effectSnapshot(a)})})){toast(`✓ ${a.name}${xp?' · '+(xp>0?'+':'')+xp+' XP':''}`);$('sceneStatus').textContent='✓ '+a.name;renderAll()}}
 let activeQuickKind='task';
 function relevantActivities(date,kind){
  return state.activities.filter(a=>{
@@ -2132,11 +2135,13 @@ function skillScores(day=today()){
  for(const n of [...DEFAULT_SKILLS,...defs.map(x=>x.skill),...state.activities.map(x=>x.skill),...Object.keys(state.legacySkills||{})])get(n);
  const activities=new Map(state.activities.map(a=>[a.id,a]));
  const original=new Map(defs.map(a=>[a.id,a]));
- for(const e of state.events.filter(e=>e?.kind==='complete'&&/^\d{4}-\d{2}-\d{2}$/.test(e.date||'')&&e.date<=day&&Number(e.xp)>0).slice().sort((a,b)=>a.date.localeCompare(b.date))){
+ for(const e of state.events.filter(e=>e?.kind==='complete'&&/^\d{4}-\d{2}-\d{2}$/.test(e.date||'')&&e.date<=day&&(Object.prototype.hasOwnProperty.call(e,'skillXp')?Number(e.skillXp):Number(e.xp))>0).slice().sort((a,b)=>a.date.localeCompare(b.date))){
   const skill=Object.prototype.hasOwnProperty.call(e,'skill')?e.skill:(activities.get(e.activityId)?.skill||original.get(e.activityId)?.skill);
   const item=get(skill);if(!item)continue;
   if(e.date>since){item.score=fadeSkill(item.score,item.anchor,e.date);item.anchor=e.date;}
-  item.score+=Number(e.xp);item.earned+=Number(e.xp);item.last=e.date;
+  const skillPoints=Object.prototype.hasOwnProperty.call(e,'skillXp')?Number(e.skillXp):Number(e.xp);
+  if(!Number.isFinite(skillPoints)||skillPoints<=0)continue;
+  item.score+=skillPoints;item.earned+=skillPoints;item.last=e.date;
  }
  return [...skills.values()].map(x=>{const score=fadeSkill(x.score,x.anchor,day);return {...x,score,loss:Math.max(0,x.earned-score),days:x.last?skillDayDiff(x.last,day):null}}).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name,'ru'));
 }
@@ -3543,12 +3548,12 @@ window.LifeSimsTaskBridge={
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||dayStr(asDay(date))!==date||date>today())
    return toast('Выбери прошедшую дату');
   if(due(a,date)){complete(a,date);return true}
-  const stamp=new Date().toISOString(),xp=Number.isFinite(a.xp)?a.xp:0;
+  const stamp=new Date().toISOString(),xp=Number.isFinite(a.xp)?a.xp:0,skillXp=skillExperience(a),difficulty=difficultyOf(a);
   if(!transact(()=>{
    a.completions??=[];
-   a.completions.push({date,at:stamp,xp,recordedAt:stamp,performedAt:null});
+   a.completions.push({date,at:stamp,xp,skillXp,difficulty,recordedAt:stamp,performedAt:null});
    state.events.push({id:uid(),kind:'complete',activityId:a.id,name:a.name,date,at:stamp,
-    recordedAt:stamp,performedAt:null,xp,skill:a.skill||null,resourceEffect:effectSnapshot(a)});
+    recordedAt:stamp,performedAt:null,xp,skillXp,difficulty,skill:a.skill||null,resourceEffect:effectSnapshot(a)});
   }))return false;
   renderAll();return true;
  },
@@ -3902,8 +3907,8 @@ window.LifeSimsFoodBridge={
 };
 })();
 </script>
-<script src="./task-premium.js?v=65"></script>
-<script src="./habit-grid.js?v=65"></script>
+<script src="./task-premium.js?v=66"></script>
+<script src="./habit-grid.js?v=66"></script>
 <script src="./focus-timer.js?v=65"></script>
 <script>
 /* LifeSims Google Calendar sync. OAuth tokens remain in memory; no background writes. */
