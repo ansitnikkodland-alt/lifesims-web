@@ -1018,9 +1018,9 @@ const defs=[
 {id:'sim_diary',object:'sim',name:'Записать в дневник',xp:0,repeat:'daily',open:'diary'},
 {id:'sofa_rest',object:'sofa',name:'Отдохнуть',xp:5,repeat:'daily',skill:'Здоровье'}];
 const labels={window:'🪟 Окно · мероприятия',bed:'🛏 Кровать',books:'📚 Книжная полка',desk:'💻 Компьютер',phone:'📱 Телефон',tableBook:'📖 Книга на столике',fridge:'🧊 Холодильник',coffee:'☕ Кофе',clutter:'🧹 Уборка',sink:'🚰 Раковина',sim:'👤 Персонаж',sofa:'🛋 Диван',shower:'🚿 Ванная',toilet:'🚽 Туалет',catLitter:'🐈 Туалет котиков'};
-const base=()=>({schema:VERSION,createdAt:new Date().toISOString(),days:{},activities:defs.filter(a=>a.xp>0).map(a=>({...a,kind:'habit',difficulty:3,completions:[]})),events:[],schedule:[],googleHidden:[],foodMeals:[],foodTemplates:[],financeChecks:[],room:{work:null,lastShowerDateReported:'2026-11-18',antiperspirantInitialized:true},legacySkills:{},legacyCopy:null,skillDecaySince:today(),
+const base=()=>({schema:VERSION,createdAt:new Date().toISOString(),days:{},activities:[...defs.filter(a=>a.xp>0).map(a=>({...a,kind:'habit',difficulty:3,completions:[]})),{id:'coffee_habit',kind:'habit',name:'Кофе',xp:0,skill:null,repeat:'daily',difficulty:3,habitUnit:'чаш.',completions:[]}],events:[],schedule:[],googleHidden:[],foodMeals:[],foodTemplates:[],financeChecks:[],room:{work:null,lastShowerDateReported:'2026-11-18',antiperspirantInitialized:true},legacySkills:{},legacyCopy:null,skillDecaySince:today(),
  taskProjects:[],taskTags:[{id:'tp-family',name:'Семья'},{id:'tp-work',name:'Работа'}],
- focusSettings:{focus:25,short:5,long:15},focusTimer:{mode:'focus',running:false,remainingSec:1500,elapsedSec:0,endAt:null,startAt:null,taskId:''}});
+ habitMeasurements:{},focusSettings:{focus:25,short:5,long:15},focusTimer:{mode:'focus',running:false,remainingSec:1500,elapsedSec:0,endAt:null,startAt:null,taskId:''}});
 let state,storageOK=true,storageBlocked=false,activeDay=today(),historyView='month',selectedTab='needs';
 function normalize(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.schema!==VERSION||!raw.days||typeof raw.days!=='object'||Array.isArray(raw.days)||!Array.isArray(raw.activities)||!Array.isArray(raw.events))throw Error('Неизвестный или повреждённый формат');const safe=base();const normalized={...safe,...raw,foodMeals:Array.isArray(raw.foodMeals)?raw.foodMeals.filter(x=>x&&typeof x==='object'&&typeof x.id==='string'&&typeof x.date==='string'):[],foodTemplates:Array.isArray(raw.foodTemplates)?raw.foodTemplates.filter(x=>x&&typeof x==='object'&&typeof x.title==='string'&&x.title.trim().length>0):[],googleHidden:Array.isArray(raw.googleHidden)?raw.googleHidden.filter(x=>x&&typeof x.calendarId==='string'&&typeof x.id==='string').map(x=>({calendarId:x.calendarId,id:x.id,title:typeof x.title==='string'?x.title:'',hiddenAt:typeof x.hiddenAt==='string'?x.hiddenAt:''})):[],schedule:Array.isArray(raw.schedule)?raw.schedule:(Array.isArray(raw.legacyCopy?.events)?raw.legacyCopy.events.map((e,i)=>({id:'legacy-schedule-'+i,title:e.title||'Мероприятие',startsAt:e.startsAt,endsAt:e.endsAt,repeat:e.repeat==='weekly'?'weekly':'none',weekdays:e.repeat==='weekly'&&e.startsAt?[((new Date(e.startsAt.slice(0,10)+'T12:00:00').getDay()+6)%7)+1]:[]})):[]),room:(raw.room&&typeof raw.room==='object'&&!Array.isArray(raw.room))?{...safe.room,...raw.room}:safe.room};
  if(!raw.room?.antiperspirantInitialized){
@@ -1036,6 +1036,8 @@ function normalize(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.
  normalized.focusTimer=raw.focusTimer&&typeof raw.focusTimer==='object'?{...safe.focusTimer,...raw.focusTimer}:safe.focusTimer;
  normalized.skillDecaySince=typeof raw.skillDecaySince==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(raw.skillDecaySince)?raw.skillDecaySince:today();
  normalized.activities=normalized.activities.map(a=>a&&typeof a==='object'?{...a,difficulty:(Number.isInteger(Number(a.difficulty))&&Number(a.difficulty)>=1&&Number(a.difficulty)<=5?Number(a.difficulty):3)}:a);
+ if(!normalized.activities.some(a=>a?.id==='coffee_habit'))normalized.activities.push({...safe.activities.find(a=>a.id==='coffee_habit'),createdDate:(raw.createdAt||'').slice(0,10)||today()});
+ normalized.habitMeasurements=(raw.habitMeasurements&&typeof raw.habitMeasurements==='object'&&!Array.isArray(raw.habitMeasurements))?raw.habitMeasurements:{};
  const skillMap=new Map([...defs,...normalized.activities].filter(a=>a?.id).map(a=>[a.id,a.skill||null]));
  normalized.events=normalized.events.map(e=>e?.kind==='complete'&&!Object.prototype.hasOwnProperty.call(e,'skill')?{...e,skill:skillMap.get(e.activityId)||null}:e);
  return normalized;
@@ -1235,7 +1237,7 @@ function due(a,d){
 function done(a,d){if(a.legacyDone)return true;const cm=Array.isArray(a.completions)?a.completions:[];if(a.repeat==='once'||a.repeat==='inbox')return cm.length>0;if(a.repeat==='weekly')return cm.some(c=>Array.isArray(a.weekdays)&&a.weekdays.length>1?c.date===d:weekKey(c.date)===weekKey(d));return cm.some(c=>c.date===d)}
 function difficultyOf(a){const n=Number(a?.difficulty);return Number.isInteger(n)&&n>=1&&n<=5?n:3}
 function skillExperience(a){const points=Number(a?.xp);return a?.skill&&Number.isFinite(points)&&points>0?Math.round(points*difficultyOf(a)/3):0}
-function complete(a,date){if(a.kind!=='habit'&&done(a,date))return toast('Уже выполнено — XP второй раз не начисляются');if(a.repeat!=='inbox'&&!due(a,date))return toast('Дело ещё не запланировано');const xp=Number.isFinite(a.xp)?a.xp:0,skillXp=skillExperience(a),difficulty=difficultyOf(a);const stamp=new Date().toISOString();if(transact(()=>{a.completions??=[];a.completions.push({date,at:stamp,xp,skillXp,difficulty});
+function complete(a,date){if(a.id==='coffee_habit')return recordEspresso(date);if(a.kind!=='habit'&&done(a,date))return toast('Уже выполнено — XP второй раз не начисляются');if(a.repeat!=='inbox'&&!due(a,date))return toast('Дело ещё не запланировано');const xp=Number.isFinite(a.xp)?a.xp:0,skillXp=skillExperience(a),difficulty=difficultyOf(a);const stamp=new Date().toISOString();if(transact(()=>{a.completions??=[];a.completions.push({date,at:stamp,xp,skillXp,difficulty});adjustHabitMeasurement(a.id,date,1);
  if(a.id==='bed_make'){state.room??={};state.room.bedMadeOn=date}
  if(a.id==='hygiene_antiperspirant'){state.room??={};state.room.lastAntiperspirantAt=stamp}
  if(a.object==='shower'&&/принят.*душ|принять душ|помытьс|приняла душ/i.test(a.name)){state.room??={};state.room.lastShowerAt=stamp}
@@ -1244,7 +1246,7 @@ function complete(a,date){if(a.kind!=='habit'&&done(a,date))return toast('Уже
 let activeQuickKind='task';
 function relevantActivities(date,kind){
  return state.activities.filter(a=>{
-  if(!a||a.legacyDone||(a.kind==='habit'?'habit':'task')!==kind)return false;
+  if(!a||a.id==='coffee_habit'||a.legacyDone||(a.kind==='habit'?'habit':'task')!==kind)return false;
   if(a.kind==='habit'&&!a.createdDate&&date<(state.createdAt||'').slice(0,10)&&!(a.completions||[]).some(c=>c.date===date))return false;
   return due(a,date);
  });
@@ -1281,10 +1283,11 @@ function makeActivityItem(a,date){
  return el;
 }
 function makeCoffeeHabitItem(date){
- const count=espressoCount(date),el=document.createElement('div');el.className='item coffee-habit';
+ const coffee=state.activities.find(a=>a.id==='coffee_habit');const count=habitAmount('coffee_habit',date),el=document.createElement('div');el.className='item coffee-habit';
+ const goal=coffee?.habitGoal;const breached=habitNormBreached(coffee,date);if(breached)el.classList.add('negative-habit-day');
  const info=document.createElement('div');info.className='itemtext';
- const title=document.createElement('strong');title.textContent='☕ Кофе';
- const desc=document.createElement('small');desc.textContent=count+' эспрессо · '+date;
+ const title=document.createElement('strong');title.textContent='☕ '+(coffee?.name||'Кофе');
+ const desc=document.createElement('small');desc.textContent=count+' '+(coffee?.habitUnit||'чаш.')+' · '+date+(goal?' · '+(goal.type==='max'?'не больше ':'не меньше ')+goal.value+(breached?' · превышение/недобор':''):'');
  info.append(title,desc);
  const add=document.createElement('button');add.className='secondary';add.type='button';
  add.textContent='+1 эспрессо';add.setAttribute('aria-label','Добавить эспрессо за '+date);
@@ -1293,7 +1296,8 @@ function makeCoffeeHabitItem(date){
  undo.textContent='−1';undo.disabled=count===0;
  undo.setAttribute('aria-label','Убрать один эспрессо за '+date);
  undo.onclick=()=>undoEspresso(date);
- el.append(info,add,undo);return el;
+ const edit=document.createElement('button');edit.className='secondary task-edit';edit.type='button';edit.textContent='✎';edit.setAttribute('aria-label','Редактировать привычку кофе');edit.onclick=()=>openActivityEditor('coffee_habit');
+ el.append(info,add,undo,edit);return el;
 }
 function renderActivities(){
  const d=$('taskDate').value||today();
@@ -1358,6 +1362,7 @@ function addActivity(e){
  const old=state.activities.find(x=>x.id===id);
  if(id&&!old)return toast('Дело больше не найдено');
  const meta=window.LifeSimsTaskPremium?.readForm?.()||{};
+ if(meta.habitGoal&&(!['min','max'].includes(meta.habitGoal.type)||!Number.isFinite(meta.habitGoal.value)||meta.habitGoal.value<0||meta.habitGoal.value>100000))return toast('Для нормы укажи неотрицательное число не больше 100000.');
  if(meta.resourceEffect&&!validatedResourceEffect(meta.resourceEffect))return toast('Проверь настройки влияния на показатель: значение должно быть от −100 до +100, а срок — допустимым.');
  if(meta.resourceEffect)meta.resourceEffect=validatedResourceEffect(meta.resourceEffect);
  const act={...(old||{}),...meta,id:old?.id||uid(),name,repeat,weekdays:repeat==='weekly'?weekdays:[],createdDate:$('taskStartDate').value||today(),kind:$('taskKind').value==='habit'?'habit':'task',xp:Number($('taskXP').value),skill:$('taskSkill').value.trim().slice(0,70)||null,object:$('taskObject').value||null,completions:old?.completions||[]};
@@ -1368,6 +1373,7 @@ function addActivity(e){
 }
 function deleteActivity(id){
  const a=state.activities.find(x=>x.id===id);
+ if(id==='coffee_habit')return toast('Кофе — встроенный счётчик. Его настройки можно изменить.');
  if(!a||!confirm('Удалить «'+a.name+'» из будущих дел? История выполнений и XP сохранятся.'))return;
  if(!transact(()=>{state.activities=state.activities.filter(x=>x.id!==id)}))return toast('Не удалось удалить');
  clearActivityEditor();$('calendarTaskEditor').open=false;renderAll();toast('Дело удалено');
@@ -1424,17 +1430,46 @@ function startWork(name){if(state.room?.work)return toast('Анюта уже н�
 function finishWork(){if(!state.room?.work)return;const work=state.room.work,stamp=new Date().toISOString();if(transact(()=>{state.room={...(state.room||{}),work:null};state.events.push({id:uid(),kind:'work_end',sessionId:work.id,name:'Возвращение с работы: '+work.name,date:today(),at:stamp,xp:0})})){renderWork();renderAll();toast('Анюта вернулась домой')}}
 // A cup is a dated event, so multiple espressos can be counted and corrected.
 function espressoCount(date){return (state.events||[]).filter(e=>e.kind==='espresso'&&e.date===date).length}
+function rawHabitCount(id,date){
+ if(id==='coffee_habit')return espressoCount(date);
+ const a=state.activities.find(x=>x.id===id);return (a?.completions||[]).filter(x=>x.date===date).length;
+}
+function manualHabitAmount(id,date){
+ const day=state.habitMeasurements?.[id];
+ if(!day||!Object.prototype.hasOwnProperty.call(day,date))return null;
+ const n=Number(day[date]);return Number.isFinite(n)&&n>=0?n:null;
+}
+function habitAmount(id,date){const manual=manualHabitAmount(id,date);return manual===null?rawHabitCount(id,date):manual}
+function habitHasAmount(id,date){return manualHabitAmount(id,date)!==null||rawHabitCount(id,date)>0}
+function adjustHabitMeasurement(id,date,delta){
+ const day=state.habitMeasurements?.[id];
+ if(day&&Object.prototype.hasOwnProperty.call(day,date)&&Number.isFinite(Number(day[date])))
+  day[date]=Math.max(0,Math.round((Number(day[date])+delta)*100)/100);
+}
+function habitNormBreached(a,date){
+ const g=a?.habitGoal;if(!g||!['min','max'].includes(g.type)||!habitHasAmount(a.id,date))return false;
+ const value=habitAmount(a.id,date),target=Number(g.value);
+ return Number.isFinite(target)&&(g.type==='max'?value>target:value<target);
+}
+function setHabitAmount(id,date,value){
+ const a=state.activities.find(x=>x.id===id&&x.kind==='habit'),amount=Number(value);
+ if(!a)return false;
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||dayStr(asDay(date))!==date||date>today())return toast('Нельзя записывать будущие даты');
+ if(!Number.isFinite(amount)||amount<0||amount>100000||Math.round(amount*100)!==amount*100)return toast('Введите число от 0 до 100000 (до двух знаков после запятой)');
+ if(!transact(()=>{state.habitMeasurements??={};state.habitMeasurements[id]??={};state.habitMeasurements[id][date]=amount;}))return false;
+ renderAll();return true;
+}
 function recordEspresso(date=today()){
  if(date>today())return toast('Нельзя записать будущий кофе');
  const stamp=new Date().toISOString();
- if(!transact(()=>state.events.push({id:uid(),kind:'espresso',name:'☕ Эспрессо',date,at:stamp,xp:0})))
+ if(!transact(()=>{state.events.push({id:uid(),kind:'espresso',name:'☕ Эспрессо',date,at:stamp,xp:0});adjustHabitMeasurement('coffee_habit',date,1)}))
   return toast('Не удалось сохранить эспрессо');
  renderAll();toast('☕ Эспрессо записан · '+espressoCount(date)+' за '+(date===today()?'сегодня':date));
 }
 function undoEspresso(date){
  const index=state.events.findLastIndex(e=>e.kind==='espresso'&&e.date===date);
  if(index<0)return;
- if(!transact(()=>state.events.splice(index,1)))return toast('Не удалось исправить счётчик');
+ if(!transact(()=>{state.events.splice(index,1);adjustHabitMeasurement('coffee_habit',date,-1)}))return toast('Не удалось исправить счётчик');
  renderAll();toast('☕ Исправлено · '+espressoCount(date)+' за '+date);
 }
 function cleanFridge(kind){
@@ -3487,7 +3522,7 @@ window.LifeSimsTaskBridge={
  today,
  dateAdd:plusDays,
  read:()=>({
-  activities:state.activities||[],events:state.events||[],days:state.days||{},foodMeals:state.foodMeals||[],
+  activities:state.activities||[],events:state.events||[],days:state.days||{},foodMeals:state.foodMeals||[],habitMeasurements:state.habitMeasurements||{},
   taskProjects:state.taskProjects||[],taskTags:state.taskTags||[],
   focusSettings:state.focusSettings||{focus:25,short:5,long:15},
   focusTimer:state.focusTimer||{mode:'focus',remainingSec:1500,running:false}
@@ -3539,12 +3574,17 @@ window.LifeSimsTaskBridge={
   }))return false;
   renderAll();return true;
  },
+ habitAmount:(id,date)=>habitAmount(id,date),
+ habitHasAmount:(id,date)=>habitHasAmount(id,date),
+ habitHistoryCount:(id,date)=>rawHabitCount(id,date),
+ setHabitAmount:(id,date,value)=>setHabitAmount(id,date,value),
  coffeeCount:date=>espressoCount(date),
  coffeeAdd:date=>recordEspresso(date),
  coffeeUndo:date=>undoEspresso(date),
  recordHabit:(id,date)=>{
   const a=state.activities.find(x=>x.id===id&&x.kind==='habit');
   if(!a)return toast('Привычка не найдена');
+  if(a.id==='coffee_habit')return recordEspresso(date);
   if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||dayStr(asDay(date))!==date||date>today())
    return toast('Выбери прошедшую дату');
   if(due(a,date)){complete(a,date);return true}
@@ -3552,6 +3592,7 @@ window.LifeSimsTaskBridge={
   if(!transact(()=>{
    a.completions??=[];
    a.completions.push({date,at:stamp,xp,skillXp,difficulty,recordedAt:stamp,performedAt:null});
+   adjustHabitMeasurement(a.id,date,1);
    state.events.push({id:uid(),kind:'complete',activityId:a.id,name:a.name,date,at:stamp,
     recordedAt:stamp,performedAt:null,xp,skillXp,difficulty,skill:a.skill||null,resourceEffect:effectSnapshot(a)});
   }))return false;
@@ -3560,11 +3601,13 @@ window.LifeSimsTaskBridge={
  undoHabit:(id,date)=>{
   const a=state.activities.find(x=>x.id===id&&x.kind==='habit');
   if(!a)return false;
+  if(a.id==='coffee_habit')return undoEspresso(date);
   const arr=a.completions||[],index=arr.findLastIndex(x=>x.date===date);
   if(index<0)return false;
   const entry=arr[index];
   if(!transact(()=>{
    arr.splice(index,1);
+   adjustHabitMeasurement(a.id,date,-1);
    const eventIndex=state.events.findLastIndex(e=>e.kind==='complete'&&e.activityId===a.id&&
     e.date===date&&(e.at===entry.at||!entry.at));
    if(eventIndex>=0)state.events.splice(eventIndex,1);
@@ -3907,8 +3950,8 @@ window.LifeSimsFoodBridge={
 };
 })();
 </script>
-<script src="./task-premium.js?v=66"></script>
-<script src="./habit-grid.js?v=66"></script>
+<script src="./task-premium.js?v=67"></script>
+<script src="./habit-grid.js?v=67"></script>
 <script src="./focus-timer.js?v=65"></script>
 <script>
 /* LifeSims Google Calendar sync. OAuth tokens remain in memory; no background writes. */
