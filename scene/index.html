@@ -1430,9 +1430,9 @@ function renderRoomMess(){
  const gauge=$('entropyRange');if(gauge){gauge.value=value;$('entropyValue').textContent=value+'%';paintSlider(gauge,value,true)}refreshBed();
 }
 function renderWork(){const work=state.room?.work||null;$('scene').classList.toggle('at-work',!!work);$('workIndicator').hidden=!work;$('workName').textContent=work?work.name:'';renderMovie()}
-function openFinanceControl(){
+function openFinanceControl(date=today()){
  closeSheet();closeOtherMetricPopups();
- const dialog=$('financeDialog'),date=today();
+ const dialog=$('financeDialog');
  $('financeDate').value=date;
  const existing=(state.financeChecks||[]).find(x=>x.date===date);
  for(const [field,key] of [['financeBalance','balance'],['financeDebt','debt'],['financeIncome','income'],['financeExpenses','expenses']])
@@ -1774,22 +1774,23 @@ function openSingleMetric(field,date=today()){
   const calc=satietyAssessment(date);
   addNumber('Расчётная сытость',calc.value==null?null:calc.value+'%');
   if(calc.date)note('Последняя запись: '+freshnessLabel(calc.date,date)+'.');
-  addButton('🍽 Поесть — записать еду',()=>{dialog.close();openCalorieBalance(today())});
+  addButton('🍽 Поесть — записать еду',()=>{dialog.close();openCalorieBalance(date)});
    note('Это игровая шкала сытости: чем больше заполнение, тем выше сытость. Условно 600 ккал дают 100% сразу после еды. Значение плавно уменьшается до нуля за 16 часов. Это не медицинская оценка и не рекомендация по питанию.');
-  if(date!==today()){
-   note('Ручная корректировка доступна за сегодняшний день. Прошлые приёмы пищи можно редактировать в календаре.');
-  }else{
+  if(date>today())note('Нельзя редактировать сытость за будущую дату.');
+  else{
    const input=document.createElement('input');input.type='range';input.min='0';input.max='100';
    input.step='1';input.id='hungerManualSlider';input.className='color-slider';
    input.value=Number.isFinite(calc.value)?calc.value:50;paintSlider(input,input.value);
    const output=document.createElement('output');output.textContent=input.value+'% сытости';
    input.oninput=()=>{output.textContent=input.value+'% сытости';paintSlider(input,input.value)};
    root.append(input,output);
+   if(date!==today())note('Изменение прошлой даты задаёт сытость на конец выбранного дня (23:59).');
    addButton('Сохранить вручную',()=>{
     const value=Number(input.value);
     if(!Number.isFinite(value)||value<0||value>100)return message.textContent='Выбери значение от 0 до 100%.';
-    const updated={...currentRecord(date),hunger:value,hungerSetAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
-    if(setDay(date,updated)){renderAll();dialog.close();toast('Сытость изменена вручную')}
+    const marker=date===today()?new Date().toISOString():new Date(date+'T23:59:59').toISOString();
+    const updated={...currentRecord(date),hunger:value,hungerSetAt:marker,updatedAt:new Date().toISOString()};
+    if(setDay(date,updated)){renderAll();dialog.close();toast('Сытость изменена за '+date)}
     else message.textContent='Не удалось сохранить значение.';
    });
    addButton('Сбросить ручную корректировку',()=>{
@@ -2418,7 +2419,7 @@ function deleteHistoryLog(){
 function editIndicatorForDay(date,field){
  closeDayAgenda();
  if(field==='diary'){openDiary(date);return}
- if(field==='foodMeals'||field==='nutrition'){openCalorieBalance(date);return}
+ if(field==='foodMeals'){openCalorieBalance(date);return}
  if(field==='finance'){openFinanceControl(date);return}
  if(field==='hunger'||field==='resource'||field==='sleepHours'||field==='mood'||
    field==='condition'||field==='hygiene'||field==='steps'||field==='totalCalories'){
