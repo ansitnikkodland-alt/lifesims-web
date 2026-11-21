@@ -1,5 +1,5 @@
-const CACHE='lifesims-scene-v68';
-const FILES=['./','./index.html','./room-illustrated-v42.jpg','./calendar-style.css','./task-premium.css?v=65','./task-premium.js?v=67','./habit-grid.js?v=67','./focus-timer.js?v=65','./oura-style.css','./food-log.css','./food-log.js','./meal-chat.css','./meal-photo.js','./meal-chat.js','./oura-sync.js','./privacy.html','./terms.html','./manifest.webmanifest','../icon.svg'];
+const CACHE='lifesims-scene-v69';
+const FILES=['./','./index.html','./room-illustrated-v42.jpg','./calendar-style.css','./task-premium.css?v=69','./task-premium.js?v=67','./habit-grid.js?v=69','./skill-detail.js?v=69','./focus-timer.js?v=65','./oura-style.css','./food-log.css','./food-log.js','./meal-chat.css','./meal-photo.js','./meal-chat.js','./oura-sync.js','./privacy.html','./terms.html','./manifest.webmanifest','../icon.svg'];
 self.addEventListener('install',event=>{
  event.waitUntil(caches.open(CACHE)
   .then(cache=>cache.addAll(FILES.map(path=>new Request(path,{cache:'reload'}))))
