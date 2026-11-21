@@ -25,6 +25,7 @@
  const shade=text=>{let n=0;for(const c of text)n=(n*33+c.charCodeAt(0))|0;return shades[Math.abs(n)%shades.length]};
  // Existing negative-XP habits and the legacy “Алкоголь” entry are treated
  // as negative unless the user explicitly changes their classification.
+ const difficultyValue=a=>Number.isInteger(Number(a?.difficulty))&&Number(a.difficulty)>=1&&Number(a.difficulty)<=5?Number(a.difficulty):3;
  const negative=habit=>habit.negative===true||
   (habit.negative!==false&&(Number(habit.xp)<0||String(habit.name||'').trim().toLocaleLowerCase('ru')==='алкоголь'));
  const openHabitEditor=habit=>{
@@ -69,6 +70,7 @@
    titleButton.setAttribute('aria-label','Редактировать привычку '+habit.name);
    if(bad)titleButton.classList.add('negative');
    title.append(dot,titleButton);
+   if(habit.id!=='__coffee')title.append(el('small','tp-habit-resource','Сложность '+difficultyValue(habit)+'/5'));
    if(habit.resourceEffect?.target){
     const related=el('small','tp-habit-resource','⚡ '+({
      mood:'Настроение',condition:'Физическое состояние',hygiene:'Гигиена',resource:'Ресурс',
@@ -84,7 +86,7 @@
     cell.append(b);row.append(cell);
    }
    tbody.append(row);
-   const line=el('div','tp-task'+(bad?' tp-negative-habit':'')),info=el('div','tp-info'),name=el('strong','',habit.name),note=el('small','',days.reduce((sum,d)=>sum+count(habit,d),0)+' раз за неделю');
+   const line=el('div','tp-task'+(bad?' tp-negative-habit':'')),info=el('div','tp-info'),name=el('strong','',habit.name),note=el('small','',days.reduce((sum,d)=>sum+count(habit,d),0)+' раз за неделю'+(habit.id==='__coffee'?'':' · сложность '+difficultyValue(habit)+'/5'));
    info.append(name,note);line.append(info);
    line.append(button('＋',()=>openDay(habit,anchor)));
    if(habit.id!=='__coffee')line.append(button('✎',()=>api.edit(habit.id)));
