@@ -63,7 +63,7 @@
 .needs-editor .heading{margin:10px 0}
 .needs-editor #stateForm{margin-top:12px}
 </style><link rel="stylesheet" href="./calendar-style.css">
-<link rel="stylesheet" href="./task-premium.css?v=62">
+<link rel="stylesheet" href="./task-premium.css?v=63">
 <link rel="stylesheet" href="./oura-style.css">
 <style>
 
@@ -786,7 +786,7 @@ body{background:#091428}
 }
 .nav [data-tab]:focus-visible{outline-offset:-3px}
 </style></head>
-<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v62</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
+<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v63</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
 <img id="sceneRugColor" class="rug-color-layer" alt="" aria-hidden="true">
 <span id="sceneCrystalTint" aria-hidden="true"></span>
@@ -3321,6 +3321,8 @@ $('exportData').onclick=backup;$('downloadHTML').onclick=downloadHTML;$('importD
 $('taskRepeat').onchange=()=>{$('taskWeekdays').hidden=$('taskRepeat').value!=='weekly'};
 $('taskCancel').onclick=()=>{clearActivityEditor();$('calendarTaskEditor').open=false;if($('calendarTaskPopup')?.open)$('calendarTaskPopup').close()};
 $('taskDelete').onclick=()=>deleteActivity($('taskEditId').value);
+// State must be loaded before editors or skill widgets read state.days/activities/events.
+load();
 clearActivityEditor();
 $('eventRepeat').onchange=()=>{$('eventWeekdays').hidden=$('eventRepeat').value!=='weekly'};$('eventForm').onsubmit=saveEvent;
 $('eventCancel').onclick=()=>{clearEventForm();$('calendarEventEditor').open=false};
@@ -3491,7 +3493,6 @@ window.LifeSimsTaskBridge={
   return true;
  }
 };
-load();
 try{fillState(activeDay);fillDiary(activeDay);renderAll()}
 catch(error){console.error('LifeSims initial render:',error);
  const info=$('storageStatus');info.textContent='⚠ Ошибка отображения: '+String(error?.message||error)+'. Данные не удалены.';info.classList.add('error');}
@@ -3603,7 +3604,7 @@ window.LifeSims3DBridge={
 };
 window.addEventListener('resize',()=>{if(currentSheetAnchor)placeSheet(currentSheetAnchor)},{passive:true});
 window.addEventListener('scroll',()=>{if(currentSheetAnchor)placeSheet(currentSheetAnchor)},{passive:true});
-if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=62',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
+if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=63',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 window.LifeSimsCalendarBridge={
   getSchedule:()=>JSON.parse(JSON.stringify(state.schedule||[])),
   getHidden:()=>JSON.parse(JSON.stringify(state.googleHidden||[])),
@@ -3793,9 +3794,9 @@ window.LifeSimsFoodBridge={
 };
 })();
 </script>
-<script src="./task-premium.js?v=62"></script>
-<script src="./habit-grid.js?v=62"></script>
-<script src="./focus-timer.js?v=62"></script>
+<script src="./task-premium.js?v=63"></script>
+<script src="./habit-grid.js?v=63"></script>
+<script src="./focus-timer.js?v=63"></script>
 <script>
 /* LifeSims Google Calendar sync. OAuth tokens remain in memory; no background writes. */
 (function () {
