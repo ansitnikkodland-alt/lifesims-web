@@ -1064,7 +1064,7 @@ function makeActivityItem(a,date){
   ?a.weekdays.map(n=>['','Пн','Вт','Ср','Чт','Пт','Сб','Вс'][Number(n)]).filter(Boolean).join(', ')
   :'раз в неделю';
  description.textContent=(a.repeat==='daily'?'Ежедневно':a.repeat==='weekly'?weekdays:'Однократно')+
-  ' · '+((Number(a.xp)||0)>0?'+':'')+(Number(a.xp)||0)+' XP'+(repeatable?' · сегодня: '+count+' раз':'');
+  ' · '+((Number(a.xp)||0)>0?'+':'')+(Number(a.xp)||0)+' XP'+(repeatable?' · за дату: '+count+' раз':'');
  text.append(title,description);el.append(mark,text);
  if(a.object){const badge=document.createElement('span');badge.className='pill';badge.textContent='Комната';el.append(badge)}
  const edit=document.createElement('button');edit.className='secondary task-edit';
@@ -1252,7 +1252,8 @@ function recordAntiperspirant(){
 function performedHabitTimestamp(date,time,approximate=false){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||dayStr(asDay(date))!==date||date>today())throw Error('Укажи дату не позднее сегодняшней.');
  if(time&&!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time))throw Error('Проверь время.');
- const effective=time||(approximate?'12:00':null);
+ const now=new Date(),currentTime=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+ const effective=time||(approximate?(date===today()?currentTime:'12:00'):null);
  if(!effective)return null;
  const dt=new Date(date+'T'+effective+':00');
  if(!Number.isFinite(dt.getTime())||dayStr(dt)!==date||dt.getHours()!==Number(effective.slice(0,2))||dt.getMinutes()!==Number(effective.slice(3))||dt.getTime()>Date.now())throw Error('Выбрано несуществующее или будущее время.');
@@ -1274,7 +1275,7 @@ function openHabitBackdateDialog(key='__hair_wash',preferredDate=today()){
  $('habitBackdateError').textContent='';
  const help=()=>{
   $('habitBackdateHelp').textContent=select.value==='__hair_wash'?
-   'Выбери дату последнего мытья головы. Предыдущая запись последнего мытья будет исправлена. Без времени для игрового расчёта используется условное 12:00; душ учитывается отдельно.':
+   'Выбери дату последнего мытья головы. Предыдущая запись последнего мытья будет исправлена. Если время неизвестно, для прошлых дней используется условное 12:00, для сегодня — текущее время. Душ учитывается отдельно.':
    'Можно записать выполнение за любой прошедший день, даже раньше создания привычки. Если время неизвестно, оставь поле пустым.';
  };
  select.onchange=help;help();
@@ -1861,7 +1862,7 @@ function openSingleMetric(field,date=today()){
   addButton('Сохранить гигиену',()=>commitValue(['hygiene']));
   if(date===today()){
    addButton('🚿 Приняла душ',()=>{logShowerAction('take');dialog.close()});
-   addButton('🧴 Вымыла голову',()=>{dialog.close();recordHairWash()});
+   addButton('🧴 Вымыла голову · выбрать дату',()=>{dialog.close();recordHairWash()});
    addButton('🧴 Нанести антиперспирант',()=>{recordAntiperspirant();dialog.close()});
   }
  }else{
@@ -2444,13 +2445,13 @@ function renderDayAgenda(){
      for(const task of group){
       const row=document.createElement('div');row.className='agenda-entry';
       const check=document.createElement('button');check.type='button';check.className='agenda-check';
-      const finished=done(task,date);check.textContent=finished?'✓':'○';check.disabled=finished;
+      const finished=done(task,date),repeatable=task.kind==='habit';check.textContent=repeatable?'+1':finished?'✓':'○';check.disabled=finished&&!repeatable;
       check.setAttribute('aria-label',finished?'Выполнено':'Отметить выполнение: '+task.name);
       check.onclick=()=>complete(task,date);
       const main=document.createElement('div');main.className='agenda-event-main';
       const name=document.createElement('div');name.className='agenda-event-title';name.textContent=task.name;
       const meta=document.createElement('div');meta.className='agenda-event-meta';
-      meta.textContent=(task.kind==='habit'?'Привычка':'Дело')+' · '+(finished?'выполнено':'запланировано');
+      meta.textContent=repeatable?'Привычка · за дату: '+(task.completions||[]).filter(c=>c.date===date).length+' раз':'Дело · '+(finished?'выполнено':'запланировано');
       main.append(name,meta);row.append(check,main);
       const edit=document.createElement('button');edit.className='agenda-edit';edit.type='button';edit.textContent='✎';
       edit.setAttribute('aria-label','Изменить дело '+task.name);
