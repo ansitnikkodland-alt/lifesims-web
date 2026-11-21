@@ -712,7 +712,7 @@ body{background:#091428}
 #ouraMount{scroll-margin-top:92px;margin:12px 0}
 #ouraMount .oura-panel{border-color:#6ca3ce}
 </style></head>
-<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v51</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
+<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v52</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
 <img id="sceneRugColor" class="rug-color-layer" alt="" aria-hidden="true">
 <span id="sceneCrystalTint" aria-hidden="true"></span>
@@ -2767,7 +2767,10 @@ document.addEventListener('click',event=>{
  const ids=['closeSheet','needsClose','foodDismiss','diaryClose','singleMetricClose','financeClose','historyLogClose','agendaClose'];
  if(ids.includes(button.id))closeAllLifeOverlays();
 },true);
-document.addEventListener('pointerdown',e=>{if($('sheetWrap').classList.contains('open')&&!e.target.closest('.sheet')&&!e.target.closest('.hot')&&!e.target.closest('#scenePhone,#sceneFridge,#sceneToilet,#sceneCatLitter,#showerCabin'))closeSheet()});document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSheet();closeDayAgenda()}});for(const b of document.querySelectorAll('[data-tab]'))b.onclick=()=>openTab(b.dataset.tab,true);$('openNeedsEditor').onclick=()=>showNeedsEditor('',today());$('stateForm').onsubmit=saveFieldState;$('taskForm').onsubmit=addActivity;$('saveDiary').onclick=saveDiary;for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>{historyView=b.dataset.view;renderHistory()};$('historyDate').onchange=renderHistory;$('prevPeriod').onclick=()=>changePeriod(-1);$('nextPeriod').onclick=()=>changePeriod(1);$('todayPeriod').onclick=()=>{$('historyDate').value=today();renderHistory()};$('editSelectedDay').onclick=()=>{activeDay=$('historyDate').value;showNeedsEditor('',activeDay)};$('stateDate').onchange=()=>fillState($('stateDate').value);$('addCalendarEvent').onclick=openNewCalendarEvent;$('addCalendarTask').onclick=()=>openNewCalendarTask('task');
+document.addEventListener('pointerdown',e=>{if($('sheetWrap').classList.contains('open')&&!e.target.closest('.sheet')&&!e.target.closest('.hot')&&!e.target.closest('#scenePhone,#sceneFridge,#sceneToilet,#sceneCatLitter,#showerCabin'))closeSheet()});document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSheet();closeDayAgenda()}});for(const b of document.querySelectorAll('[data-tab]'))b.onclick=()=>openTab(b.dataset.tab,true);$('openNeedsEditor').onclick=()=>{
+ try{showNeedsEditor('',today())}
+ catch(error){console.error('Open all metrics:',error);toast('Не удалось открыть показатели: '+String(error?.message||error))}
+};$('stateForm').onsubmit=saveFieldState;$('taskForm').onsubmit=addActivity;$('saveDiary').onclick=saveDiary;for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>{historyView=b.dataset.view;renderHistory()};$('historyDate').onchange=renderHistory;$('prevPeriod').onclick=()=>changePeriod(-1);$('nextPeriod').onclick=()=>changePeriod(1);$('todayPeriod').onclick=()=>{$('historyDate').value=today();renderHistory()};$('editSelectedDay').onclick=()=>{activeDay=$('historyDate').value;showNeedsEditor('',activeDay)};$('stateDate').onchange=()=>fillState($('stateDate').value);$('addCalendarEvent').onclick=openNewCalendarEvent;$('addCalendarTask').onclick=()=>openNewCalendarTask('task');
 $('addCalendarHabit').onclick=()=>openNewCalendarTask('habit');
 for(const id of ['topTasksDate','topHabitsDate'])$(id).addEventListener('change',renderTopActivities);
 $('topTasksAdd').onclick=()=>{$('historyDate').value=$('topTasksDate').value||today();openNewCalendarTask('task')};
@@ -2792,7 +2795,35 @@ $('eventAllDay').onchange=toggleEventDates;
 
 $('eventDeleteLocal').onclick=()=>deleteEventLocal($('eventEditId').value);
 $('eventDeleteGoogle').onclick=()=>deleteEventInGoogle($('eventEditId').value);
-$('eventDuplicate').onclick=()=>duplicateCalendarEvent($('eventEditId').value);for(const k of sliderFields){$(k).addEventListener('input',()=>{$(k+'Unknown').checked=false;updateSlider(k)});$(k+'Unknown').addEventListener('change',()=>updateSlider(k))}for(const [k,button] of [['meds','medsYesterday'],['food','foodYesterday']])$(button).onclick=()=>{const d=$('stateDate').value||today(),y=currentRecord(plusDays(d,-1))[k];if(!y)return toast('За вчера нет записи');$(k).value=y;toast('Скопировано из предыдущего дня — проверь перед сохранением')};for(const id of ['stateDate','taskDate','diaryDate','historyDate','topTasksDate','topHabitsDate'])$(id).value=activeDay;load();fillState(activeDay);fillDiary(activeDay);renderAll();
+$('eventDuplicate').onclick=()=>duplicateCalendarEvent($('eventEditId').value);for(const k of sliderFields){$(k).addEventListener('input',()=>{$(k+'Unknown').checked=false;updateSlider(k)});$(k+'Unknown').addEventListener('change',()=>updateSlider(k))}for(const [k,button] of [['meds','medsYesterday'],['food','foodYesterday']])$(button).onclick=()=>{const d=$('stateDate').value||today(),y=currentRecord(plusDays(d,-1))[k];if(!y)return toast('За вчера нет записи');$(k).value=y;toast('Скопировано из предыдущего дня — проверь перед сохранением')};for(const id of ['stateDate','taskDate','diaryDate','historyDate','topTasksDate','topHabitsDate'])$(id).value=activeDay;
+
+// Bind critical modal actions before the first render: a failed render must not
+// leave visible buttons without click handlers.
+function bindCriticalActions(){
+ $('objectLinkSave').onclick=linkExistingActivity;
+ $('objectLinkNewTask').onclick=()=>{
+  const target=$('objectLinkTarget').value;
+  $('objectLinkDialog').close();
+  try{openNewCalendarTask('task',target)}catch(error){console.error('New task popup',error);toast('Не удалось открыть новое дело')}
+ };
+ $('objectLinkNewHabit').onclick=()=>{
+  const target=$('objectLinkTarget').value;
+  $('objectLinkDialog').close();
+  try{openNewCalendarTask('habit',target)}catch(error){console.error('New habit popup',error);toast('Не удалось открыть новую привычку')}
+ };
+ $('objectLinkClose').onclick=()=>$('objectLinkDialog').close();
+ $('objectLinkCancel').onclick=()=>$('objectLinkDialog').close();
+ $('needsClose').onclick=()=>{
+  const modal=$('needsNativeModal');if(modal?.open)modal.close();
+  $('needsEditor').open=false;syncLifeModalMask();
+ };
+}
+bindCriticalActions();
+
+load();
+try{fillState(activeDay);fillDiary(activeDay);renderAll()}
+catch(error){console.error('LifeSims initial render:',error);
+ const info=$('storageStatus');info.textContent='⚠ Ошибка отображения: '+String(error?.message||error)+'. Данные не удалены.';info.classList.add('error');}
 $('historyLogClose').onclick=()=>$('historyLogDialog').close();
 for(const id of ['financeDialog','historyLogDialog','singleMetricDialog','objectLinkDialog']){
  const dialog=$(id);
@@ -2813,11 +2844,7 @@ document.addEventListener('keydown',e=>{
 });
 $('backToTop').onclick=()=>window.scrollTo({top:0,behavior:'smooth'});
 window.addEventListener('scroll',()=>{$('backToTop').classList.toggle('visible',window.scrollY>420)},{passive:true});
-$('objectLinkSave').onclick=linkExistingActivity;
-$('objectLinkNewTask').onclick=()=>{const target=$('objectLinkTarget').value;$('objectLinkDialog').close();openNewCalendarTask('task',target)};
-$('objectLinkNewHabit').onclick=()=>{const target=$('objectLinkTarget').value;$('objectLinkDialog').close();openNewCalendarTask('habit',target)};
-$('objectLinkClose').onclick=()=>$('objectLinkDialog').close();
-$('objectLinkCancel').onclick=()=>$('objectLinkDialog').close();
+// Object-link buttons were bound before initial state rendering.
 $('showerCabin').onclick=()=>openObject('shower',$('showerCabin'));
 $('scenePhone').onclick=()=>openObject('phone',$('scenePhone'));
 $('sceneFridge').onclick=()=>openObject('fridge',$('sceneFridge'));
@@ -3993,7 +4020,7 @@ const EXTRA_COLLECTIONS=[
 const el=id=>document.getElementById(id);
 const panel=document.createElement('div');panel.className='card oura-panel';
 panel.innerHTML=[
-'<h3>💍 Oura Ring · v50</h3>',
+'<h3>💍 Oura Ring · v52</h3>',
 '<div id="ouraToday" class="oura-today" role="status">Оценки Oura за сегодня пока не загружены.</div>',
 '<div id="ouraYesterday" class="oura-today" role="status">Шаги за вчера: ожидаются данные Oura.</div>',
 '<p id="ouraSyncFreshness" class="hint" role="status">Синхронизация пока не выполнена.</p>',
