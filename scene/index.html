@@ -665,7 +665,7 @@ body{background:#091428}
 #objectLinkDialog button{min-height:44px;min-width:44px}
 #objectLinkDialog .row{display:flex;flex-wrap:wrap;gap:9px}
 </style></head>
-<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v44</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
+<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v45</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
 <img id="sceneRugColor" class="rug-color-layer" alt="" aria-hidden="true">
 <span id="sceneCrystalTint" aria-hidden="true"></span>
@@ -753,7 +753,7 @@ body{background:#091428}
 <div class="heading"><h2>Календарь жизни</h2><input type="date" id="historyDate" aria-label="Выбранная дата"></div>
 <div class="history-controls"><button data-view="day">День</button><button data-view="week">Неделя</button><button data-view="month">Месяц</button><button type="button" id="todayPeriod">Сегодня</button><button id="prevPeriod" aria-label="Предыдущий период">◀</button><button id="nextPeriod" aria-label="Следующий период">▶</button></div>
 <div id="historyRange" class="hint"></div><div id="calendar"></div>
-<div class="calendar-dayhead"><h3 id="calendarDayTitle">Выбранная дата</h3><div class="row"><button type="button" class="primary" id="addCalendarEvent">+ Мероприятие</button><button type="button" class="secondary" id="addCalendarDiary">✎ Дневник</button><button type="button" class="secondary" id="addCalendarTask">+ Дело</button><button type="button" class="secondary" id="addCalendarHabit">+ Привычка</button><button type="button" class="secondary" id="openCalendarGoogle">🔄 Google</button></div></div>
+<div class="calendar-dayhead"><h3 id="calendarDayTitle">Выбранная дата</h3><div class="row"><button type="button" class="primary" id="addCalendarEvent">+ Мероприятие</button><button type="button" class="secondary" id="addCalendarDiary">✎ Дневник</button><button type="button" class="secondary" id="addCalendarMeal">🍽 Питание</button><button type="button" class="secondary" id="addCalendarTask">+ Дело</button><button type="button" class="secondary" id="addCalendarHabit">+ Привычка</button><button type="button" class="secondary" id="openCalendarGoogle">🔄 Google</button></div></div>
 <div class="card"><h3>📅 События и записи выбранного дня</h3><div id="historyDetails"></div><p class="hint">Запланированное мероприятие не считается выполненным автоматически. Исторические записи не изменяются при синхронизации Google.</p></div>
 <input type="hidden" id="taskDate">
 <div class="card"><h3>☑ Дела на дату</h3><div id="taskList"></div></div>
@@ -784,7 +784,7 @@ body{background:#091428}
 <label class="field">Повтор <select id="taskRepeat"><option value="once">Однократно</option><option value="daily">Ежедневно</option><option value="weekly">По дням недели</option></select></label></div>
 <fieldset id="taskWeekdays" hidden><legend>Конкретные дни недели</legend><div class="row"><label><input type="checkbox" name="taskWeekday" value="1"> Пн</label><label><input type="checkbox" name="taskWeekday" value="2"> Вт</label><label><input type="checkbox" name="taskWeekday" value="3"> Ср</label><label><input type="checkbox" name="taskWeekday" value="4"> Чт</label><label><input type="checkbox" name="taskWeekday" value="5"> Пт</label><label><input type="checkbox" name="taskWeekday" value="6"> Сб</label><label><input type="checkbox" name="taskWeekday" value="7"> Вс</label></div></fieldset>
 <div class="cols"><label class="field">Начало <input id="taskStartDate" type="date" required></label><label class="field">Влияние на ресурс <select id="taskXP"><option value="-40">−40 XP · сильное снижение</option><option value="-20">−20 XP</option><option value="-15">−15 XP</option><option value="-10">−10 XP</option><option value="-5">−5 XP</option><option value="0">0 XP · без влияния</option><option value="5">+5 XP</option><option value="10" selected>+10 XP</option><option value="15">+15 XP</option><option value="20">+20 XP</option><option value="40">+40 XP</option></select></label></div>
-<label class="field">Связать с предметом в комнате <select id="taskObject"><option value="">Без связи</option><option value="bed">🛏 Кровать</option><option value="books">📚 Книжный шкаф</option><option value="tableBook">📖 Книга на журнальном столике</option><option value="phone">📱 Телефон</option><option value="desk">💻 Рабочий стол</option><option value="sink">🚰 Раковина</option><option value="shower">🚿 Душевая кабина</option><option value="fridge">🧊 Холодильник</option><option value="toilet">🚽 Туалет</option><option value="catLitter">🐈 Туалет котиков</option><option value="sofa">🛋 Диван</option><option value="sim">👤 Персонаж</option><option value="window">🪟 Окно</option></select></label>
+<label class="field">Связать с предметом в комнате <select id="taskObject"><option value="">Без связи</option><option value="bed">🛏 Кровать</option><option value="books">📚 Книжный шкаф</option><option value="tableBook">📖 Книга на журнальном столике</option><option value="phone">📱 Телефон</option><option value="coffee">☕ Чашка кофе</option><option value="clutter">🧹 Вещи для уборки</option><option value="desk">💻 Рабочий стол</option><option value="sink">🚰 Раковина</option><option value="shower">🚿 Душевая кабина</option><option value="fridge">🧊 Холодильник</option><option value="toilet">🚽 Туалет</option><option value="catLitter">🐈 Туалет котиков</option><option value="sofa">🛋 Диван</option><option value="sim">👤 Персонаж</option><option value="window">🪟 Окно</option></select></label>
 <div class="row"><button class="primary" type="submit" id="taskSave">Сохранить дело/привычку</button><button class="secondary" type="button" id="taskCancel">Отмена</button><button class="secondary" type="button" id="taskDelete" hidden>Удалить</button></div>
 <p class="hint">Изменение или удаление дела не удаляет записи о его прежнем выполнении и уже полученный XP.</p>
 </form></details>
@@ -796,7 +796,7 @@ body{background:#091428}
 <div class="agenda-top"><div><div class="agenda-eyebrow">РАСПИСАНИЕ ДНЯ</div><h3 id="agendaTitle"></h3><p id="agendaSubtitle"></p></div>
 <button type="button" id="agendaClose" class="agenda-close" aria-label="Закрыть расписание">×</button></div>
 <div id="agendaBody" class="agenda-body"></div>
-<div class="agenda-actions"><button type="button" id="agendaAddEvent" class="primary">+ Мероприятие</button><button type="button" id="agendaAddTask" class="secondary">+ Дело</button></div>
+<div class="agenda-actions"><button type="button" id="agendaAddEvent" class="primary">+ Мероприятие</button><button type="button" id="agendaAddTask" class="secondary">+ Дело</button><button type="button" id="agendaAddMeal" class="secondary">+ Питание</button></div>
 </div></div>
 <section class="section" id="data"><div class="heading"><h2>Резервная копия</h2></div><div class="card"><h3>Локальное сохранение</h3><p>Записи хранятся в браузере этого устройства и этого адреса. При очистке данных браузера они могут исчезнуть. Перед обновлением сохрани JSON.</p><div class="row" style="margin-top:13px"><button class="primary" id="exportData">⬇ Скачать JSON</button><button class="secondary" id="downloadHTML" type="button">⬇ Скачать HTML</button></div><p class="hint">HTML содержит оформление и функции, но сохраняет прогресс отдельно от веб-сайта. Переноси данные через JSON.</p></div><div class="card"><h3>Восстановить данные</h3><label class="field">Файл резервной копии<input type="file" accept=".json,application/json" id="importFile"></label><button class="secondary" id="importData" type="button">Проверить файл JSON</button><p id="importStatus" role="status">Выбери резервную копию JSON. Данные не заменяются до подтверждения.</p><div id="importConfirmPanel" hidden><p id="importPreview" role="status"></p><button class="primary" id="confirmImport" type="button">Подтвердить импорт</button><button class="secondary" id="cancelImport" type="button">Отмена</button></div><p class="hint">Перед импортом скачай текущую резервную копию JSON. Если файл LifeSims открыт через content://, хранилище браузера может быть недоступно — импортируй через HTTPS-сайт.</p></div><div class="card"><h3>Совместимость</h3><p>При первом открытии на опубликованном сайте приложение пытается скопировать данные старого LifeSims без изменения оригинала. При открытии скачанного HTML-файла эти данные автоматически не доступны — используй экспорт/импорт.</p></div><p class="hint">Oura доступна в «Потребностях»: подключение требует регистрации OAuth-приложения и разрешения владельца аккаунта. Health Connect, ZenMoney, системные уведомления и автоматическое изменение тела персонажа ещё не реализованы. Google Calendar работает только после настройки OAuth и разрешения доступа.</p></section>
 </div><footer class="bottom-tools"><button class="secondary" id="footerData" data-tab="data" type="button">▤ Данные и резервная копия</button></footer></main>
@@ -833,7 +833,10 @@ body{background:#091428}
  <input id="objectLinkTarget" type="hidden">
  <label class="field">Выбери существующее дело или привычку<select id="objectLinkActivity" aria-label="Дело или привычка для привязки"></select></label>
  <p class="hint" id="objectLinkHint">У дела или привычки может быть только один предмет. История выполнений сохраняется.</p>
- <div class="row"><button id="objectLinkSave" type="button" class="primary">Привязать</button><button id="objectLinkCancel" type="button" class="secondary">Отмена</button></div>
+ <div class="row"><button id="objectLinkSave" type="button" class="primary">Привязать</button>
+<button id="objectLinkNewTask" type="button" class="secondary">＋ Новое дело</button>
+<button id="objectLinkNewHabit" type="button" class="secondary">＋ Новая привычка</button>
+<button id="objectLinkCancel" type="button" class="secondary">Отмена</button></div>
 </dialog>
 <button type="button" id="backToTop" title="Наверх" aria-label="Вернуться наверх">↑</button>
 <script>
@@ -1287,7 +1290,7 @@ function renderSeasonalWindow(){
 }
 // Attach an existing activity without resetting completions, dates or other fields.
 function openObjectLinkDialog(object){
- if(!['phone','tableBook'].includes(object))return;
+ if(!Object.prototype.hasOwnProperty.call(labels,object))return;
  closeSheet();closeOtherMetricPopups();
  const dialog=$('objectLinkDialog'),choice=$('objectLinkActivity');
  $('objectLinkTarget').value=object;
@@ -1309,7 +1312,7 @@ function openObjectLinkDialog(object){
 }
 function linkExistingActivity(){
  const object=$('objectLinkTarget').value,id=$('objectLinkActivity').value;
- if(!['phone','tableBook'].includes(object))return;
+ if(!Object.prototype.hasOwnProperty.call(labels,object))return;
  const activity=state.activities.find(a=>a.id===id);
  if(!activity)return toast('Выбери дело или привычку');
  if(!transact(()=>{activity.object=object}))return toast('Не удалось сохранить привязку');
@@ -1317,16 +1320,11 @@ function linkExistingActivity(){
  toast('✓ '+activity.name+' · привязано к '+(labels[object]||'предмету'));
 }
 function addObjectLinkActions(object){
- if(!['phone','tableBook'].includes(object))return;
- const actions=[
-  ['＋ Привязать новое дело',()=>{closeSheet();openNewCalendarTask('task',object)}],
-  ['＋ Привязать новую привычку',()=>{closeSheet();openNewCalendarTask('habit',object)}],
-  ['🔗 Выбрать существующее',()=>openObjectLinkDialog(object)]
- ];
- for(const [name,handler] of actions){
-  const button=document.createElement('button');button.type='button';
-  button.textContent=name;button.onclick=handler;$('sheetActions').append(button);
- }
+ if(!Object.prototype.hasOwnProperty.call(labels,object))return;
+ const button=document.createElement('button');button.type='button';
+ button.textContent='🔗 Привязать дело / привычку';
+ button.onclick=()=>openObjectLinkDialog(object);
+ $('sheetActions').append(button);
 }
 function openObject(object,anchor){
 $('sheetTitle').textContent=labels[object]||'Действия';$('sheetActions').replaceChildren();
@@ -1716,10 +1714,9 @@ function sleepAssessment(date){const dates=Object.keys(state.days).filter(d=>d<=
  if(gaps)return {need:Math.max(0,Math.min(100,Math.round(100-Math.max(0,7.5-last)*12))),debt:null,last,partial:true};
  return {need:Math.max(0,Math.min(100,Math.round(100-Math.max(0,7.5-last)*12-Math.min(debt,20)*4))),debt,last}}
 window.LifeSimsOpenCalories=(date)=>openSingleMetric('totalCalories',date);
-function openCalorieBalance(day=today()){
- closeOtherMetricPopups();
- window.LifeSimsFood?.open?.();
- if($('mealDay')){$('mealDay').value=day;window.LifeSimsFood?.render?.()}
+function openCalorieBalance(day=today(),mealId=null){
+ closeDayAgenda();closeOtherMetricPopups();
+ window.LifeSimsFood?.open?.(day,mealId);
 }
 function renderNeeds(){
  renderCrystal();const d=today(),r=currentRecord(d),g=$('needsGrid');g.replaceChildren();
@@ -2034,14 +2031,20 @@ function renderDayAgenda(){
     }
   }
   const meals=(state.foodMeals||[]).filter(m=>m.date===date).sort((a,b)=>a.time.localeCompare(b.time));
-  if(meals.length){
-    title('🍽 Питание · съедено ≈'+Math.round(meals.reduce((s,m)=>s+(Number(m.kcal)||0),0))+' ккал');
-    for(const meal of meals){const line=document.createElement('div');line.className='agenda-entry';
-      const tm=document.createElement('span');tm.className='agenda-time';tm.textContent=meal.time;
-      const info=document.createElement('div');info.className='agenda-event-main';info.textContent=meal.title+(meal.kcal!=null?' · ≈'+meal.kcal+' ккал':'');
-      line.append(tm,info);body.append(line);
-    }
+  title('🍽 Питание'+(meals.length?' · съедено ≈'+Math.round(meals.reduce((s,m)=>s+(Number(m.kcal)||0),0))+' ккал':' · нет записей'));
+  for(const meal of meals){
+    const line=document.createElement('div');line.className='agenda-entry';
+    const tm=document.createElement('span');tm.className='agenda-time';tm.textContent=meal.time;
+    const info=document.createElement('div');info.className='agenda-event-main';
+    info.textContent=meal.title+(meal.kcal!=null?' · ≈'+meal.kcal+' ккал':'');
+    const edit=document.createElement('button');edit.type='button';edit.className='agenda-edit';
+    edit.textContent='✎';edit.setAttribute('aria-label','Изменить питание: '+meal.title);
+    edit.onclick=()=>openCalorieBalance(date,meal.id);
+    line.append(tm,info,edit);body.append(line);
   }
+  const addMeal=document.createElement('button');addMeal.type='button';
+  addMeal.className='secondary';addMeal.textContent='＋ Записать приём пищи за '+date;
+  addMeal.onclick=()=>openCalorieBalance(date);body.append(addMeal);
   const rec=state.days[date];
   if(rec && Object.keys(rec).some(k=>rec[k]!=null&&k!=='updatedAt')){
     title('Записи состояния');
@@ -2148,7 +2151,12 @@ function renderHistory(){
     if(vals.length){addHistoryLine(panel,chosen,'📝 '+vals.join(' · '));count++}
   }
   for(const meal of (state.foodMeals||[]).filter(m=>m.date===chosen).sort((a,b)=>a.time.localeCompare(b.time))){
-    addHistoryLine(panel,chosen,'🍽 '+meal.time+' · '+meal.title+(meal.kcal!=null?' · ≈'+meal.kcal+' ккал':''));count++;
+    const row=document.createElement('div');row.className='history-activity-line';
+    const text=document.createElement('div');
+    text.textContent='🍽 '+meal.time+' · '+meal.title+(meal.kcal!=null?' · ≈'+meal.kcal+' ккал':'');
+    const edit=document.createElement('button');edit.type='button';edit.className='secondary';
+    edit.textContent='Изменить';edit.onclick=()=>openCalorieBalance(chosen,meal.id);
+    row.append(text,edit);panel.append(row);count++;
   }
   for(const ev of state.events.filter(x=>x.date===chosen)){
     const text=ev.kind==='legacy'?'↩ '+ev.name+' · '+ev.legacyXP+' XP (старая версия)':
@@ -2426,9 +2434,11 @@ $('topTasksAdd').onclick=()=>{$('historyDate').value=$('topTasksDate').value||to
 $('topHabitsAdd').onclick=()=>{$('historyDate').value=$('topHabitsDate').value||today();openNewCalendarTask('habit')};$('agendaClose').onclick=closeDayAgenda;
 $('dayAgendaOverlay').addEventListener('click',e=>{if(e.target===$('dayAgendaOverlay'))closeDayAgenda()});
 $('agendaAddEvent').onclick=()=>{closeDayAgenda();openNewCalendarEvent()};
-$('agendaAddTask').onclick=()=>{closeDayAgenda();openNewCalendarTask()};$('openCalendarGoogle').onclick=()=>{$('calendarGoogleEditor').open=true;$('calendarGoogleEditor').scrollIntoView({behavior:'smooth',block:'start'})};$('diaryDate').onchange=()=>fillDiary($('diaryDate').value);
+$('agendaAddTask').onclick=()=>{closeDayAgenda();openNewCalendarTask()};
+$('agendaAddMeal').onclick=()=>openCalorieBalance($('historyDate').value||today());$('openCalendarGoogle').onclick=()=>{$('calendarGoogleEditor').open=true;$('calendarGoogleEditor').scrollIntoView({behavior:'smooth',block:'start'})};$('diaryDate').onchange=()=>fillDiary($('diaryDate').value);
 $('diaryClose').onclick=closeDiary;
 $('addCalendarDiary').onclick=()=>openDiary($('historyDate').value||today());
+$('addCalendarMeal').onclick=()=>openCalorieBalance($('historyDate').value||today());
 $('diaryText').addEventListener('input',()=>{diaryTagTouched=false;diaryPaint()});
 $('diaryAddTag').onclick=()=>{const name=$('diaryCustomTag').value.trim().toLowerCase();if(!name)return;diaryTagTouched=true;diaryChosenTags.add(name);$('diaryCustomTag').value='';diaryTagsRender(diaryAnalyze($('diaryText').value).tags)};
 $('exportData').onclick=backup;$('downloadHTML').onclick=downloadHTML;$('importData').onclick=restore;$('confirmImport').onclick=confirmImport;$('cancelImport').onclick=()=>{pendingImport=null;$('importConfirmPanel').hidden=true;importMessage('Импорт отменён. Текущий прогресс не изменён.')};$('importFile').onchange=()=>{pendingImport=null;$('importConfirmPanel').hidden=true;importMessage('Файл выбран. Нажми «Проверить файл JSON».')};
@@ -2464,6 +2474,8 @@ document.addEventListener('keydown',e=>{
 $('backToTop').onclick=()=>window.scrollTo({top:0,behavior:'smooth'});
 window.addEventListener('scroll',()=>{$('backToTop').classList.toggle('visible',window.scrollY>420)},{passive:true});
 $('objectLinkSave').onclick=linkExistingActivity;
+$('objectLinkNewTask').onclick=()=>{const target=$('objectLinkTarget').value;$('objectLinkDialog').close();openNewCalendarTask('task',target)};
+$('objectLinkNewHabit').onclick=()=>{const target=$('objectLinkTarget').value;$('objectLinkDialog').close();openNewCalendarTask('habit',target)};
 $('objectLinkClose').onclick=()=>$('objectLinkDialog').close();
 $('objectLinkCancel').onclick=()=>$('objectLinkDialog').close();
 $('showerCabin').onclick=()=>openObject('shower',$('showerCabin'));
@@ -2678,13 +2690,13 @@ window.LifeSimsFoodBridge={
    if(index<0)state.foodMeals.push(record);else state.foodMeals[index]=record;
   });
   if(!success)throw Error('Не удалось сохранить еду; проверь свободное место и резервную копию.');
-  renderNeeds();
+  renderNeeds();renderHistory();
   return JSON.parse(JSON.stringify(record));
  },
  remove(id){
   if(!(state.foodMeals||[]).some(x=>x.id===id))throw Error('Запись уже отсутствует.');
   if(!transact(()=>{state.foodMeals=state.foodMeals.filter(x=>x.id!==id)}))throw Error('Не удалось удалить запись.');
-  renderNeeds();
+  renderNeeds();renderHistory();
  },
 };
 })();
@@ -3533,9 +3545,17 @@ function showFromHistory(q){
  }
 }
 $('mealDescription').addEventListener('input',()=>showFromHistory($('mealDescription').value.trim()));
-function openNutrition(){
- const panel=$('food');panel.classList.add('open');$('lifeModalMask').hidden=false;
- $('mealDay').value=bridge.today();render();$('mealDescription').focus({preventScroll:true});
+function openNutrition(date=bridge.today(),mealId=null){
+ const selected=typeof date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(date)?date:bridge.today();
+ const panel=$('food');reset();$('mealDay').value=selected;
+ panel.classList.add('open');$('lifeModalMask').hidden=false;
+ render();
+ if(mealId){
+  const entry=entries().find(m=>m.id===mealId);
+  if(entry){edit(entry);return}
+  setStatus('⚠ Запись о питании не найдена.');
+ }
+ $('mealDescription').focus({preventScroll:true});
 }
 function closeNutrition(){
  $('food').classList.remove('open');
