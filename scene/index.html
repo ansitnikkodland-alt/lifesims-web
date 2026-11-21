@@ -794,7 +794,7 @@ body{background:#091428}
 #localDataReport .recovery-result small{display:block;color:#bed3e4;font-size:12px}
 #localDataReport button{min-height:44px}
 </style></head>
-<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v65</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
+<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v68</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
 <img id="sceneRugColor" class="rug-color-layer" alt="" aria-hidden="true">
 <span id="sceneCrystalTint" aria-hidden="true"></span>
@@ -1879,7 +1879,11 @@ const b=document.createElement('button'),span=document.createElement('span'),sm=
 const a=state.activities.find(x=>x.id===c.id);sm.textContent=c.open?'Открыть':a&&done(a,today())?'✓ Готово':`+${c.xp} XP`;
 b.append(span,sm);b.onclick=()=>{closeSheet();if(c.open){if(c.id==='bed_sleep')openSingleMetric('sleepHours',today());else if(c.open==='state')showNeedsEditor('',today());else openTab(c.open,true);return}if(!a){toast('Действие не найдено');return}complete(a,today())};$('sheetActions').append(b)
 }
-for(const a of state.activities.filter(a=>a.object===object&&due(a,today())&&a.id!=='hygiene_antiperspirant'&&!(object==='bed'&&a.id==='bed_make'))){
+// The phone already has a dedicated financial-control editor.
+ // Keep a linked "Финансовый контроль" activity in the planner and its history,
+ // but do not repeat its action in the phone's contextual menu.
+for(const a of state.activities.filter(a=>a.object===object&&due(a,today())&&a.id!=='hygiene_antiperspirant'&&!(object==='bed'&&a.id==='bed_make')&&
+ !(object==='phone'&&a.kind==='task'&&String(a.name||'').trim().toLocaleLowerCase('ru')==='финансовый контроль'))){
  const btn=document.createElement('button'),span=document.createElement('span'),small=document.createElement('small');
  span.textContent=a.name;small.textContent=a.kind==='habit'?'Ещё +1 · '+((a.completions||[]).filter(c=>c.date===today()).length)+' раз':done(a,today())?'✓ Уже сделано':'+ '+(a.xp||0)+' XP';
  btn.append(span,small);btn.onclick=()=>{closeSheet();complete(a,today())};$('sheetActions').append(btn);
@@ -3760,7 +3764,7 @@ window.LifeSims3DBridge={
 };
 window.addEventListener('resize',()=>{if(currentSheetAnchor)placeSheet(currentSheetAnchor)},{passive:true});
 window.addEventListener('scroll',()=>{if(currentSheetAnchor)placeSheet(currentSheetAnchor)},{passive:true});
-if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=65',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
+if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=68',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 window.LifeSimsCalendarBridge={
   getSchedule:()=>JSON.parse(JSON.stringify(state.schedule||[])),
   getHidden:()=>JSON.parse(JSON.stringify(state.googleHidden||[])),
