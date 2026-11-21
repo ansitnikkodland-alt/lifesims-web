@@ -95,30 +95,34 @@ async function loadOCR(){
 function extractNutrition(text){
  const full=String(text||'').replace(/\u00a0/g,' ').replace(/ё/g,'е');
  const lines=full.split(/[\n\r]+/).map(x=>x.trim()).filter(Boolean);
- let per100=null;
- function readAfter(label,pattern){
-  for(let i=0;i<lines.length;i++){
-   const line=lines[i].toLowerCase();
+ const isPer100=/(?:на|в|per|\/)\s*100\s*(?:г|гр|g|мл|ml)\b/i.test(full)||
+  /(?:100\s*(?:г|гр|g|мл|ml))\s*[:\/\-]/i.test(full);
+ function item(pattern){
+  for(const raw of lines){
+   const line=raw.toLowerCase();
    if(!pattern.test(line))continue;
-   const local=line.split(/[:\-–]/).slice(1).join(' ').match(/(\d{1,5}(?:[.,]\d{1,2})?)\s*(?:ккал|г\b|гр\b|g\b)?/i);
-   if(local)return number(local[1].replace(',','.'));
-   const match=line.match(/(\d{1,5}(?:[.,]\d{1,2})?)/);
+   let match;
+   if(/ккал|kcal/.test(pattern.source)){
+    match=line.match(/(\d{1,5}(?:[.,]\d{1,2})?)\s*(?:ккал|kcal)/i);
+   }else{
+    match=line.match(new RegExp('(?:'+pattern.source+')\\s*[:–-]?\\s*(\\d{1,5}(?:[.,]\\d{1,2})?)\\s*(?:г|гр|g)?','i'));
+   }
    if(match)return number(match[1].replace(',','.'));
   }
   return null;
  }
- const kcal=readAfter('kcal',/(?:ккал|kcal)/i);
- const protein=readAfter('protein',/(?:белки|белков|protein)/i);
- const fat=readAfter('fat',/(?:жиры|жиров|fat\b)/i);
- const carbs=readAfter('carbs',/(?:углеводы|углеводов|carbohydrates)/i);
- if([kcal,protein,fat,carbs].some(v=>v!==null))per100={kcal,protein,fat,carbs};
+ const kcal=item(/(?:ккал|kcal)/i);
+ const protein=item(/(?:белки|белков|protein)/i);
+ const fat=item(/(?:жиры|жиров|fat\b)/i);
+ const carbs=item(/(?:углеводы|углеводов|carbohydrates)/i);
+ const per100=isPer100&&[kcal,protein,fat,carbs].some(v=>v!==null)?{kcal,protein,fat,carbs}:null;
  let title='';
  const skip=/^(?:состав|ingredients|хранить|изготовлено|энергетическая|пищевая|nutrition|белки|жиры|углеводы|ккал|изготовитель|в\s*100|100\s*г|производитель)/i;
  for(const line of lines.slice(0,14)){
   if(line.length<5||line.length>64||skip.test(line)||/^\d/.test(line)||/\d{4,}/.test(line))continue;
   if(/[А-Яа-яA-Za-z]{3,}/.test(line)){title=line;break}
  }
- return {title,per100,lines};
+ return {title,per100,lines,per100Confirmed:isPer100};
 }
 async function analyzePackage(file,onStatus){
  report(onStatus,'Ищу штрихкод на фотографии…');
@@ -133,11 +137,11 @@ async function analyzePackage(file,onStatus){
  let data;
  try{data=await T.recognize(file,'rus+eng')}catch(error){throw Error('Не удалось прочитать этикетку: '+error.message)}
  const raw=String(data?.data?.text||''),found=extractNutrition(raw);
- if(!found.title&&!found.per100)throw Error('Не удалось уверенно прочитать название и калории. Сфотографируй таблицу пищевой ценности без бликов или введи данные вручную.');
+ if(!found.title&&!found.per100)throw Error('Не удалось уверенно прочитать название и калории на 100 г. Сфотографируй таблицу пищевой ценности без бликов или введи данные вручную.');
  return {kind:'package',source:'OCR этикетки',barcode:barcode||null,
   title:found.title,ingredients:'',per100:found.per100,
   labelText:raw.slice(0,2400),
-  confidence:'Текст распознан автоматически; проверь цифры и единицы измерения'};
+  confidence:found.per100Confirmed?'Текст распознан автоматически; проверь цифры и единицы измерения':'Не найдено подтверждение, что данные относятся к 100 г. Числа не применены автоматически'};
 }
 async function foodModel(onStatus){
  if(foodPredictor)return foodPredictor;
