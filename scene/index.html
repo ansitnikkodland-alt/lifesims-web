@@ -2107,7 +2107,16 @@ function resourceSnapshot(ref=today()){
  for(const e of state.events||[])if(e.date<=ref&&e.kind==='complete')dates.add(e.date);
  const shower=showerReference();if(shower&&shower.day<=ref)dates.add(shower.day);
  const date=[...dates].sort().pop()||null;
- return date?{value:derivedResource(currentRecord(date),date),date}:{value:null,date:null};
+ if(!date)return {value:null,date:null};
+ // Re-evaluate expiring activity effects at the requested time, even when the
+ // last daily measurement or recorded action was yesterday.
+ const current=derivedResource(currentRecord(ref),ref);
+ if(current!=null)return {value:current,date};
+ const data=state.days?.[date],observed=data&&
+  ['sleepHours','mood','condition','hygiene','nutrition','steps','totalCalories'].some(k=>Number.isFinite(data[k]));
+ const hasMeal=(state.foodMeals||[]).some(m=>m.date===date);
+ if(!observed&&!hasMeal)return {value:null,date:null};
+ return {value:derivedResource(currentRecord(date),date),date};
 }
 
 function estimatedFoodNeed(d){
