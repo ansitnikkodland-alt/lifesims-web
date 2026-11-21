@@ -104,3 +104,19 @@
 .tp-habit-subheading th{background:#232b34!important;color:#f2c783!important;text-align:left!important;padding:12px 10px!important;font-size:12px;font-weight:740;letter-spacing:.3px}
 .tp-habit-readonly{display:block;font-variant-numeric:tabular-nums;text-align:center;font-size:12px;line-height:1.3;color:#c9d6e5;overflow-wrap:anywhere}
 .tp-habit-readonly.unknown{color:#657083;font-size:20px;font-weight:730}
+
+/* Tasks and habits may modify a selected virtual need for a limited time. */
+#tpResourceEditor{border-color:#477d89;background:#1e2d34;margin:11px 0}
+#tpResourceEditor>label{display:flex;flex-direction:column;gap:7px;color:#e6f4f4;font-size:13px}
+#tpResourceEditor select,#tpResourceEditor input[type=number]{
+ width:100%;min-width:0;box-sizing:border-box;background:#202a38!important;
+ color:#fff!important;border:1px solid #68889a;border-radius:9px;
+ font-size:14px;padding:10px;min-height:44px
+}
+#tpResourceEditor .tp-editor-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:12px}
+#tpResourceEditor #tpEffectFields[hidden]{display:none!important}
+#tpResourceEditor .tp-note{line-height:1.5}
+#calendarTaskPopup{max-height:min(90dvh,880px);overflow-y:auto}
+#calendarTaskPopup #tpResourceEditor{scroll-margin-top:20px}
+.tp-habit-resource{display:block;font-size:10px;font-weight:480;color:#92ced5;margin:4px 0 0 17px}
+@media(max-width:370px){#tpResourceEditor .tp-editor-grid{grid-template-columns:minmax(0,1fr)}}
