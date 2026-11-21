@@ -7,6 +7,7 @@
  const shell=el('div','life-premium');shell.id='premiumTaskUI';
  shell.innerHTML=`
  <div class="tp-head"><div><strong>Планировщик</strong><small>Входящие · проекты · приоритеты</small></div><button class="tp-minor" id="tpManage" type="button">⚙ Проекты и теги</button></div>
+ <p id="tpWorkload" class="tp-note" aria-live="polite"></p>
  <div class="tp-tabs" role="tablist"><button type="button" data-tp-tab="list" class="active">☷ Дела</button><button type="button" data-tp-tab="matrix">⊞ Матрица Эйзенхауэра</button><button type="button" data-tp-tab="focus">◉ Помодоро</button></div>
  <section id="tpListView"><div class="tp-filters">
  <label>Показать<select id="tpScope"><option value="open">Активные</option><option value="inbox">Без срока</option><option value="today">Сегодня</option><option value="week">7 дней</option><option value="completed">Выполненные</option><option value="all">Все дела</option></select></label>
@@ -25,6 +26,7 @@
  <p class="tp-note">Удаление проекта или тега не удаляет сами дела и историю.</p>`;
  document.body.append(manager);
  let view='list',kind='project';
+ const difficultyValue=a=>Number.isInteger(Number(a?.difficulty))&&Number(a.difficulty)>=1&&Number(a.difficulty)<=5?Number(a.difficulty):3;
  const resourceNames={resource:'◆ Ресурс',mood:'☺ Настроение',condition:'♥ Физическое состояние',hygiene:'♨ Гигиена',nutrition:'🍎 Питание',hunger:'🍽 Сытость',sleepNeed:'💤 Потребность во сне',entropy:'🌀 Энтропия',activity:'🚶 Активность'};
  const quadrants=[
   ['I','Срочно и важно','#fa6473'],
@@ -52,7 +54,7 @@
   const tags=(a.tags||[]).map(id=>data.taskTags.find(x=>x.id===id)?.name).filter(Boolean).map(x=>'#'+x);
   const effect=a.resourceEffect,description=effect&&resourceNames[effect.target]?
    resourceNames[effect.target]+' '+(effect.mode==='set'?'→ '+effect.amount+'%':(effect.amount>=0?'+':'')+effect.amount+' п. п.'):'';
-  const details=[label(a),project,...tags,Number(a.priority)?'Приоритет '+a.priority:'',description].filter(Boolean);
+  const details=[label(a),project,...tags,'Сложность '+difficultyValue(a)+'/5',Number(a.priority)?'Приоритет '+a.priority:'',description].filter(Boolean);
   info.append(el('small','',details.join(' · ')));row.append(check,info);
   if(mat){
    const select=el('select','tp-quadrant-switch');select.setAttribute('aria-label','Переместить '+a.name);
@@ -124,6 +126,9 @@
   <div id="tpEditorTags" class="tp-tag-picks"></div>
   <p class="tp-note">Дела «Без срока» всегда остаются во входящих до выполнения. Дата начала не является сроком.</p>`;
   form.insertBefore(panel,before);
+  const effort=el('fieldset','tp-editor tp-difficulty-editor');effort.id='tpDifficultyEditor';
+  effort.innerHTML=`<legend>Сложность</legend><label>Уровень усилий<select id="tpDifficulty" aria-label="Сложность дела или привычки"><option value="1">1 · Очень легко</option><option value="2">2 · Легко</option><option value="3" selected>3 · Средне</option><option value="4">4 · Сложно</option><option value="5">5 · Очень сложно</option></select></label><p class="tp-note">Опыт связанного навыка = базовый XP × сложность / 3. Без привязанного навыка опыт не начисляется. Ресурс и потребности не меняются из-за сложности.</p>`;
+  form.insertBefore(effort,before);
   const nature=el('fieldset','tp-editor tp-habit-nature');nature.id='tpHabitNature';
   nature.innerHTML='<legend>Тип привычки</legend><label class="tp-checkbox tp-negative-toggle">'+
    '<input type="checkbox" id="tpNegativeHabit"> Отрицательная привычка (отмечать красным)</label>'+
@@ -155,6 +160,7 @@
   for(const x of data.taskProjects){const opt=el('option','',x.name);opt.value=x.id;project.append(opt)}
   project.value=a?.projectId||'';
   $('tpEditorPriority').value=String(a?.priority||0);
+  $('tpDifficulty').value=String(difficultyValue(a));
   $('tpEditorUrgent').checked=!!a?.urgent;
   $('tpEditorImportant').checked=!!a?.important;
   const choices=$('tpEditorTags');choices.replaceChildren();
@@ -178,15 +184,24 @@
    target:$('tpEffectTarget').value,mode:$('tpEffectMode').value,
    amount:Number($('tpEffectAmount').value),hours:Number($('tpEffectHours').value)
   }:null;
-  if($('taskKind').value==='habit')return {resourceEffect,negative:!!$('tpNegativeHabit').checked};
-  if(!$('tpEditor')||$('tpEditor').hidden)return {resourceEffect};
-  return {resourceEffect,projectId:$('tpEditorProject').value||null,
+  const difficulty=difficultyValue({difficulty:$('tpDifficulty')?.value});
+  if($('taskKind').value==='habit')return {resourceEffect,difficulty,negative:!!$('tpNegativeHabit').checked};
+  if(!$('tpEditor')||$('tpEditor').hidden)return {resourceEffect,difficulty};
+  return {resourceEffect,difficulty,projectId:$('tpEditorProject').value||null,
    priority:Number($('tpEditorPriority').value)||0,
    urgent:$('tpEditorUrgent').checked,important:$('tpEditorImportant').checked,
    tags:[...document.querySelectorAll('[name="tpTagChoice"]:checked')].map(x=>x.value)};
  }
+ function renderEffort(data){
+  const date=api.today();
+  const dueToday=data.activities.filter(a=>a&&!a.legacyDone&&a.repeat!=='inbox'&&api.due(a.id,date));
+  const planned=dueToday.reduce((sum,a)=>sum+difficultyValue(a),0);
+  const done=dueToday.filter(a=>(a.completions||[]).some(c=>c?.date===date)).reduce((sum,a)=>sum+difficultyValue(a),0);
+  $('tpWorkload').textContent='Сегодня: '+done+' из '+planned+' баллов сложности выполнено (запланированные дела и привычки).';
+ }
  function render(){
   const data=api.read();
+  renderEffort(data);
   collection('tpProjectFilter',data.taskProjects,'Все проекты');
   collection('tpTagFilter',data.taskTags,'Все теги');
   renderList(data);renderMatrix(data);
