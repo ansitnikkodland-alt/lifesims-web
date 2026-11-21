@@ -53,7 +53,16 @@
   const list=$('tpHabitRows');list.replaceChildren();
   for(const habit of habits){
    const row=el('tr'),title=el('th','tp-habit-name');
-   const dot=el('span','tp-habit-dot');dot.style.background=shade(habit.name);title.append(dot,document.createTextNode(habit.name));row.append(title);
+   const dot=el('span','tp-habit-dot');dot.style.background=shade(habit.name);
+   title.append(dot,document.createTextNode(habit.name));
+   if(habit.resourceEffect?.target){
+    const related=el('small','tp-habit-resource','⚡ '+({
+     mood:'Настроение',condition:'Физическое состояние',hygiene:'Гигиена',resource:'Ресурс',
+     nutrition:'Питание',hunger:'Сытость',sleepNeed:'Сон',entropy:'Энтропия',activity:'Активность'
+    }[habit.resourceEffect.target]||habit.resourceEffect.target));
+    title.append(related);
+   }
+   row.append(title);
    for(const date of days){
     const n=count(habit,date),cell=el('td'),b=button(n>1?n+'×':n?'✓':'?',()=>openDay(habit,date),'tp-habit-day'+(n?' was-done':''));
     b.setAttribute('aria-label',habit.name+' · '+date+' · '+n+' выполнений');
