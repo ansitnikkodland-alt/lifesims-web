@@ -63,7 +63,7 @@
 .needs-editor .heading{margin:10px 0}
 .needs-editor #stateForm{margin-top:12px}
 </style><link rel="stylesheet" href="./calendar-style.css">
-<link rel="stylesheet" href="./task-premium.css?v=60">
+<link rel="stylesheet" href="./task-premium.css?v=62">
 <link rel="stylesheet" href="./oura-style.css">
 <style>
 
@@ -755,8 +755,38 @@ body{background:#091428}
 #calorieCardHost>.calorie-balance-card>small{overflow-wrap:anywhere;white-space:normal;line-height:1.35;color:#d7e8f2}
 #calorieCardHost>.calorie-balance-card>small.metric-origin{font-size:11px;color:#b7d2e2}
 #mealRollingNote{white-space:pre-wrap;line-height:1.5}
+</style><style id="lifesims-v62-horizontal-section-nav">
+/* Keep all five primary sections on one swipeable row at every viewport width. */
+.nav{
+  display:flex!important;
+  grid-template-columns:none!important;
+  flex-flow:row nowrap!important;
+  gap:6px!important;
+  padding:8px 10px!important;
+  max-width:100%;
+  min-width:0;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  -webkit-overflow-scrolling:touch;
+  overscroll-behavior-x:contain;
+  scrollbar-width:thin;
+  scroll-snap-type:x proximity;
+  touch-action:pan-x pan-y;
+}
+.nav [data-tab]{
+  flex:0 0 auto!important;
+  width:auto!important;
+  min-width:108px!important;
+  max-width:none!important;
+  white-space:nowrap!important;
+  padding:11px 13px!important;
+  line-height:1.2!important;
+  font-size:clamp(12px,3vw,14px)!important;
+  scroll-snap-align:start;
+}
+.nav [data-tab]:focus-visible{outline-offset:-3px}
 </style></head>
-<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v61</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
+<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v62</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
 <img id="sceneRugColor" class="rug-color-layer" alt="" aria-hidden="true">
 <span id="sceneCrystalTint" aria-hidden="true"></span>
@@ -1004,7 +1034,19 @@ if(Array.isArray(old.log))for(const l of old.log){if(!l||typeof l.at!=='string'|
 return s}
 function save(){if(storageBlocked){storageOK=false;setStorage('⚠ Сохранение заблокировано: исходные данные не удалось прочитать. Экспортируй JSON и восстанови данные через подтверждённый импорт.');toast('Сохранение заблокировано для защиты прежних данных');return false}try{localStorage.setItem(STORE,JSON.stringify(state));storageOK=true;setStorage();return true}catch(e){storageOK=false;setStorage();toast('Данные не записались в браузер. Экспортируй резервную копию.');return false}}
 function setStorage(message){$('storageStatus').textContent=message|| (storageOK?'✓ Локальное сохранение доступно. Перед обновлением экспортируй JSON.':'⚠ Локальное сохранение недоступно. Не закрывай страницу без экспорта.');$('storageStatus').classList.toggle('error',!storageOK)}
-function load(){try{const x=localStorage.getItem(STORE);if(x){const parsed=JSON.parse(x);state=normalize(parsed);storageOK=true;if(!parsed.skillDecaySince)save();else setStorage();return}const v1=localStorage.getItem(OLD);if(v1){const raw=JSON.parse(v1);if(raw&&Array.isArray(raw.tasks)&&raw.skills){state=migrate(raw);save();setStorage('✓ Найдены старые данные: создана отдельная копия. Старое хранилище не изменено.');return}}state=base();save();setStorage()}catch(e){state=base();storageOK=false;storageBlocked=true;setStorage('⚠ Исходное хранилище не удалось прочитать. Автоматическая запись заблокирована для защиты данных. Не очищай данные браузера; восстанови проверенную копию JSON.')}}
+function load(){try{const x=localStorage.getItem(STORE);if(x){
+ const parsed=JSON.parse(x);
+ // Never rewrite the primary saved progress just because the app was upgraded.
+ if(!parsed.skillDecaySince){
+  const anchor=localStorage.getItem('lifesims-skill-anchor-v1');
+  if(/^\d{4}-\d{2}-\d{2}$/.test(anchor||''))parsed.skillDecaySince=anchor;
+ }
+ state=normalize(parsed);storageOK=true;setStorage();
+ if(!parsed.skillDecaySince){
+  try{localStorage.setItem('lifesims-skill-anchor-v1',state.skillDecaySince)}catch(_){}
+ }
+ return
+}const v1=localStorage.getItem(OLD);if(v1){const raw=JSON.parse(v1);if(raw&&Array.isArray(raw.tasks)&&raw.skills){state=migrate(raw);save();setStorage('✓ Найдены старые данные: создана отдельная копия. Старое хранилище не изменено.');return}}state=base();save();setStorage('ℹ На этом устройстве и в этом браузере прежнее сохранение не найдено. Если записи были в другой версии или браузере, открой их там либо импортируй резервную копию JSON.')}catch(e){state=base();storageOK=false;storageBlocked=true;setStorage('⚠ Исходное хранилище не удалось прочитать. Автоматическая запись заблокирована для защиты данных. Не очищай данные браузера; восстанови проверенную копию JSON.')}}
 let toastTimeout;function toast(msg){const t=$('toast');t.textContent=msg;t.classList.add('show');clearTimeout(toastTimeout);toastTimeout=setTimeout(()=>t.classList.remove('show'),3300)}
 function currentRecord(d){const x=state.days[d];return x&&typeof x==='object'?x:{}};
 function transact(fn){const before=JSON.stringify(state);fn();if(save())return true;state=JSON.parse(before);return false}
@@ -3561,7 +3603,7 @@ window.LifeSims3DBridge={
 };
 window.addEventListener('resize',()=>{if(currentSheetAnchor)placeSheet(currentSheetAnchor)},{passive:true});
 window.addEventListener('scroll',()=>{if(currentSheetAnchor)placeSheet(currentSheetAnchor)},{passive:true});
-if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=60',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
+if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=62',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 window.LifeSimsCalendarBridge={
   getSchedule:()=>JSON.parse(JSON.stringify(state.schedule||[])),
   getHidden:()=>JSON.parse(JSON.stringify(state.googleHidden||[])),
@@ -3751,9 +3793,9 @@ window.LifeSimsFoodBridge={
 };
 })();
 </script>
-<script src="./task-premium.js?v=60"></script>
-<script src="./habit-grid.js?v=60"></script>
-<script src="./focus-timer.js?v=60"></script>
+<script src="./task-premium.js?v=62"></script>
+<script src="./habit-grid.js?v=62"></script>
+<script src="./focus-timer.js?v=62"></script>
 <script>
 /* LifeSims Google Calendar sync. OAuth tokens remain in memory; no background writes. */
 (function () {
