@@ -975,7 +975,7 @@ function due(a,d){
  return false;
 }
 function done(a,d){if(a.legacyDone)return true;const cm=Array.isArray(a.completions)?a.completions:[];if(a.repeat==='once')return cm.length>0;if(a.repeat==='weekly')return cm.some(c=>Array.isArray(a.weekdays)&&a.weekdays.length>1?c.date===d:weekKey(c.date)===weekKey(d));return cm.some(c=>c.date===d)}
-function complete(a,date){if(done(a,date))return toast('Уже выполнено — XP второй раз не начисляются');if(!due(a,date))return toast('Дело ещё не запланировано');const xp=Number.isFinite(a.xp)?a.xp:0;const stamp=new Date().toISOString();if(transact(()=>{a.completions??=[];a.completions.push({date,at:stamp,xp});
+function complete(a,date){if(a.kind!=='habit'&&done(a,date))return toast('Уже выполнено — XP второй раз не начисляются');if(!due(a,date))return toast('Дело ещё не запланировано');const xp=Number.isFinite(a.xp)?a.xp:0;const stamp=new Date().toISOString();if(transact(()=>{a.completions??=[];a.completions.push({date,at:stamp,xp});
  if(a.id==='bed_make'){state.room??={};state.room.bedMadeOn=date}
  if(a.id==='hygiene_antiperspirant'){state.room??={};state.room.lastAntiperspirantAt=stamp}
  if(a.object==='shower'&&/принят.*душ|принять душ|помытьс|приняла душ/i.test(a.name)){state.room??={};state.room.lastShowerAt=stamp}
@@ -990,11 +990,11 @@ function relevantActivities(date,kind){
  });
 }
 function makeActivityItem(a,date){
- const finished=done(a,date),el=document.createElement('div');
- el.className='item'+(finished?' done':'');
+ const finished=done(a,date),repeatable=a.kind==='habit',count=(a.completions||[]).filter(c=>c.date===date).length,el=document.createElement('div');
+ el.className='item'+(finished&&!repeatable?' done':'');
  const mark=document.createElement('button');mark.className='check';mark.type='button';
- mark.textContent=finished?'✓':'○';mark.disabled=finished;
- mark.setAttribute('aria-label',finished?'Выполнено: '+a.name:'Выполнить: '+a.name);
+ mark.textContent=repeatable?'+1':finished?'✓':'○';mark.disabled=finished&&!repeatable;
+ mark.setAttribute('aria-label',repeatable?'Записать ещё: '+a.name:finished?'Выполнено: '+a.name:'Выполнить: '+a.name);
  mark.onclick=()=>complete(a,date);
  const text=document.createElement('div');text.className='itemtext';
  const title=document.createElement('strong');title.textContent=a.name;
@@ -1003,7 +1003,7 @@ function makeActivityItem(a,date){
   ?a.weekdays.map(n=>['','Пн','Вт','Ср','Чт','Пт','Сб','Вс'][Number(n)]).filter(Boolean).join(', ')
   :'раз в неделю';
  description.textContent=(a.repeat==='daily'?'Ежедневно':a.repeat==='weekly'?weekdays:'Однократно')+
-  ' · '+((Number(a.xp)||0)>0?'+':'')+(Number(a.xp)||0)+' XP';
+  ' · '+((Number(a.xp)||0)>0?'+':'')+(Number(a.xp)||0)+' XP'+(repeatable?' · сегодня: '+count+' раз':'');
  text.append(title,description);el.append(mark,text);
  if(a.object){const badge=document.createElement('span');badge.className='pill';badge.textContent='Комната';el.append(badge)}
  const edit=document.createElement('button');edit.className='secondary task-edit';
@@ -1175,13 +1175,33 @@ function cleanFridge(kind){
 function recordAntiperspirant(){
  const activity=state.activities.find(a=>a?.id==='hygiene_antiperspirant');
  if(activity){
-  if(done(activity,today()))return toast('Антиперспирант уже записан сегодня');
   return complete(activity,today());
  }
  const stamp=new Date().toISOString();
  if(transact(()=>{state.room??={};state.room.lastAntiperspirantAt=stamp;
   state.events.push({id:uid(),kind:'antiperspirant',date:today(),at:stamp,name:'Нанесла антиперспирант',xp:0});
  })){renderAll();toast('Антиперспирант записан')}
+}
+function hairHygieneValue(date=today()){
+ const at=Date.parse(state.room?.lastHairWashAt||'');
+ if(!Number.isFinite(at))return null;
+ const end=date===today()?Date.now():asDay(plusDays(date,1)).getTime();
+ if(end<at)return null;
+ return Math.max(0,Math.round(100*(1-(end-at)/(72*3600000))));
+}
+function recordHairWash(){
+ const stamp=new Date().toISOString();
+ if(!transact(()=>{state.room??={};state.room.lastHairWashAt=stamp;
+  state.events.push({id:uid(),kind:'hair_wash',name:'Вымыла голову',date:today(),at:stamp,xp:0});
+ }))return toast('Не удалось записать мытьё головы');
+ renderAll();toast('✓ Мытьё головы записано');
+}
+function recordSex(){
+ const stamp=new Date().toISOString(),date=today();
+ if(!transact(()=>{state.days[date]={...currentRecord(date),mood:100,moodSource:'sex',updatedAt:stamp};
+  state.events.push({id:uid(),kind:'sex',name:'Секс ❤️',date,at:stamp,xp:0});
+ }))return toast('Не удалось сохранить запись');
+ renderAll();toast('❤️ Секс записан · настроение 100%');
 }
 function logShowerAction(action){
  const now=new Date().toISOString();
@@ -1385,6 +1405,7 @@ function addObjectLinkActions(object){
 function openObject(object,anchor){
 $('sheetTitle').textContent=labels[object]||'Действия';$('sheetActions').replaceChildren();
 if(object==='bed'){
+ const sex=document.createElement('button');sex.type='button';sex.textContent='❤️ Секс';sex.onclick=()=>{closeSheet();recordSex()};$('sheetActions').append(sex);
  if(isBedMade()){
   const status=document.createElement('p');status.className='hint';
   status.textContent='✓ Кровать заправлена';$('sheetActions').append(status);
@@ -1405,7 +1426,8 @@ if(object==='shower'){
  const wash=document.createElement('button');wash.type='button';wash.textContent='🧽 Вымыть ванную';wash.onclick=()=>{closeSheet();logShowerAction('wash')};
  const ant=document.createElement('button');ant.type='button';ant.textContent='🧴 Антиперспирант';
  ant.onclick=()=>{closeSheet();recordAntiperspirant()};
- $('sheetActions').append(shower,wash,ant);
+ const hair=document.createElement('button');hair.type='button';hair.textContent='🧴 Вымыть голову';hair.onclick=()=>{closeSheet();recordHairWash()};
+ $('sheetActions').append(shower,hair,wash,ant);
 }
 if(object==='toilet'){
  const wash=document.createElement('button');wash.type='button';wash.textContent='🧽 Помыть туалет';
@@ -1483,7 +1505,7 @@ b.append(span,sm);b.onclick=()=>{closeSheet();if(c.open){if(c.id==='bed_sleep')o
 }
 for(const a of state.activities.filter(a=>a.object===object&&due(a,today())&&a.id!=='hygiene_antiperspirant'&&!(object==='bed'&&a.id==='bed_make'))){
  const btn=document.createElement('button'),span=document.createElement('span'),small=document.createElement('small');
- span.textContent=a.name;small.textContent=done(a,today())?'✓ Уже сделано':'+ '+(a.xp||0)+' XP';
+ span.textContent=a.name;small.textContent=a.kind==='habit'?'Ещё +1 · '+((a.completions||[]).filter(c=>c.date===today()).length)+' раз':done(a,today())?'✓ Уже сделано':'+ '+(a.xp||0)+' XP';
  btn.append(span,small);btn.onclick=()=>{closeSheet();complete(a,today())};$('sheetActions').append(btn);
 }
 $('sheetWrap').classList.add('open');$('sheetWrap').setAttribute('aria-hidden','false');
@@ -1594,7 +1616,7 @@ function openSingleMetric(field,date=today()){
  if(field==='resource'){
   addNumber('Расчётный ресурс',derivedResource(r,date)==null?null:derivedResource(r,date)+'%');const impact=resourceActivityImpact(date);addNumber('Влияние выполненных дел и привычек', (impact>0?'+':'')+impact+' XP');
   const data=[
-   ['Сон',sleepAssessment(date).need],
+   ['Обеспеченность сном',sleepAssessment(date).need==null?null:100-sleepAssessment(date).need],
    ['Настроение',r.mood],
    ['Физическое состояние (Oura)',physicalCondition(r,date)],
    ['Гигиена',hygieneCondition(r,date)],
@@ -1750,7 +1772,7 @@ function metric(el,name,value,suffix='%',displayValue=null,field='',sourceDate=n
  s.append(l,v);
  const bar=document.createElement('div');bar.className='bar';
  if(value==null){const n=document.createElement('div');n.className='empty';bar.append(n)}
- else{const n=document.createElement('b');n.style.setProperty('--val',Math.max(0,Math.min(100,Number(value)))+'%');n.style.setProperty('--meter-color',meterColor(value,field==='entropy'));bar.append(n)}
+ else{const n=document.createElement('b');n.style.setProperty('--val',Math.max(0,Math.min(100,Number(value)))+'%');n.style.setProperty('--meter-color',meterColor(value,field==='entropy'||field==='sleepHours'));bar.append(n)}
  root.append(s,bar);
  if(sourceDate||detail){const foot=document.createElement('small');foot.className='metric-origin';
   foot.textContent=(sourceDate?freshnessLabel(sourceDate):'')+(detail?(sourceDate?' · ':'')+detail:'');
@@ -1922,8 +1944,8 @@ function resourceActivityImpact(date){
    Number(event.xp):0),0);
 }
 function derivedResource(r,d){
- const sleep=sleepAssessment(d).need;
- const vals=[sleep,r.mood,physicalCondition(r,d),hygieneCondition(r,d),r.nutrition==null?satietyAssessment(d).value:r.nutrition];
+ const sleepNeed=sleepAssessment(d).need;
+ const vals=[sleepNeed==null?null:100-sleepNeed,r.mood,physicalCondition(r,d),hygieneCondition(r,d),r.nutrition==null?satietyAssessment(d).value:r.nutrition];
  const available=vals.filter(x=>typeof x==='number'&&Number.isFinite(x));
  const influence=resourceActivityImpact(d);
  if(!available.length&&!influence)return null;
@@ -1931,11 +1953,22 @@ function derivedResource(r,d){
  return Math.max(0,Math.min(100,Math.round(base+influence)));
 }
 function renderCrystal(){const snapshot=resourceSnapshot(today()),v=snapshot.value;const p=v==null?['#c2e9ff','#76c9ef','#2169b6']:v>65?['#c7fff0','#55dfa5','#0e9874']:v>35?['#fff2b1','#edbf53','#a57a15']:['#ffc2cd','#f4778c','#af405b'];const el=$('plumbob');el.style.setProperty('--gem-light',p[0]);el.style.setProperty('--gem-middle',p[1]);el.style.setProperty('--gem-dark',p[2]);const tint=$('sceneCrystalTint');if(tint)tint.style.setProperty('--crystal-hue',v==null?'0deg':v>65?'-55deg':v>35?'-135deg':'-185deg');el.title=v==null?'Ресурс не записан; нажми, чтобы записать':`Ресурс: ${v}% · ${freshnessLabel(snapshot.date)}`}
-function sleepAssessment(date){const dates=Object.keys(state.days).filter(d=>d<=date&&state.days[d]?.sleepHours!=null).sort();if(!dates.length)return {need:null,debt:null,last:null};let debt=0,prev=null,gaps=false;for(const d of dates){const rec=state.days[d],hours=Number(rec.sleepHours);if(prev&&plusDays(prev,1)!==d)gaps=true;debt=Math.max(0,debt+7.5-hours);if(rec.sleepDebtAdjustment!=null)debt=Number(rec.sleepDebtAdjustment);prev=d}const last=Number(state.days[dates[dates.length-1]].sleepHours);if(dates[dates.length-1]!==date)return {need:null,debt:gaps?null:debt,last};
- // Missing days make cumulative debt unknown, but last night's measured sleep
- // still supports a transparent, partial estimate of the sleep need.
- if(gaps)return {need:Math.max(0,Math.min(100,Math.round(100-Math.max(0,7.5-last)*12))),debt:null,last,partial:true};
- return {need:Math.max(0,Math.min(100,Math.round(100-Math.max(0,7.5-last)*12-Math.min(debt,20)*4))),debt,last}}
+function sleepAssessment(date){
+ const dates=Object.keys(state.days).filter(d=>d<=date&&Number.isFinite(state.days[d]?.sleepHours)).sort();
+ if(!dates.length)return {need:null,debt:null,last:null};
+ let debt=0,prev=null,gaps=false;
+ for(const d of dates){
+  const rec=state.days[d],hours=Number(rec.sleepHours);
+  if(prev&&plusDays(prev,1)!==d)gaps=true;
+  debt=Math.max(0,debt+7.5-hours);
+  if(rec.sleepDebtAdjustment!=null)debt=Number(rec.sleepDebtAdjustment);
+  prev=d;
+ }
+ const last=Number(state.days[dates[dates.length-1]].sleepHours);
+ if(dates[dates.length-1]!==date)return {need:null,debt:gaps?null:debt,last};
+ const need=Math.max(0,Math.min(100,Math.round(Math.max(0,7.5-last)*12+(gaps?0:Math.min(debt,20)*4))));
+ return {need,debt:gaps?null:debt,last,partial:gaps};
+}
 window.LifeSimsOpenCalories=(date)=>openSingleMetric('totalCalories',date);
 function openCalorieBalance(day=today(),mealId=null){
  closeDayAgenda();closeOtherMetricPopups();
