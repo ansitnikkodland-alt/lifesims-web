@@ -1070,6 +1070,11 @@ function makeActivityItem(a,date){
  const edit=document.createElement('button');edit.className='secondary task-edit';
  edit.type='button';edit.textContent='Изменить';edit.onclick=()=>openActivityEditor(a.id);
  el.append(edit);
+ if(repeatable){
+  const hist=document.createElement('button');hist.type='button';hist.className='secondary task-edit habit-backdate';
+  hist.textContent='📅 За дату';hist.setAttribute('aria-label','Записать привычку за прошлую дату: '+a.name);
+  hist.onclick=()=>openHabitBackdateDialog(a.id,date);el.append(hist);
+ }
  return el;
 }
 function makeCoffeeHabitItem(date){
@@ -1243,6 +1248,72 @@ function recordAntiperspirant(){
   state.events.push({id:uid(),kind:'antiperspirant',date:today(),at:stamp,name:'Нанесла антиперспирант',xp:0});
  })){renderAll();toast('Антиперспирант записан')}
 }
+
+function performedHabitTimestamp(date,time,approximate=false){
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||dayStr(asDay(date))!==date||date>today())throw Error('Укажи дату не позднее сегодняшней.');
+ if(time&&!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(time))throw Error('Проверь время.');
+ const effective=time||(approximate?'12:00':null);
+ if(!effective)return null;
+ const dt=new Date(date+'T'+effective+':00');
+ if(!Number.isFinite(dt.getTime())||dayStr(dt)!==date||dt.getHours()!==Number(effective.slice(0,2))||dt.getMinutes()!==Number(effective.slice(3))||dt.getTime()>Date.now())throw Error('Выбрано несуществующее или будущее время.');
+ return dt.toISOString();
+}
+function openHabitBackdateDialog(key='__hair_wash',preferredDate=today()){
+ const dialog=$('habitBackdateDialog'),select=$('habitBackdateActivity');
+ select.replaceChildren();
+ const hair=document.createElement('option');hair.value='__hair_wash';hair.textContent='💆 Вымыть голову (гигиена)';select.append(hair);
+ for(const habit of (state.activities||[]).filter(a=>a&&a.kind==='habit'&&!a.legacyDone)){
+  const option=document.createElement('option');option.value=habit.id;option.textContent=habit.name;select.append(option);
+ }
+ select.value=[...select.options].some(x=>x.value===key)?key:'__hair_wash';
+ $('habitBackdateDate').max=today();
+ $('habitBackdateDate').value=typeof preferredDate==='string'&&preferredDate<=today()?preferredDate:today();
+ const now=new Date();
+ $('habitBackdateTime').value=$('habitBackdateDate').value===today()?
+  String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0'):'';
+ $('habitBackdateError').textContent='';
+ const help=()=>{
+  $('habitBackdateHelp').textContent=select.value==='__hair_wash'?
+   'Выбери дату последнего мытья головы. Предыдущая запись последнего мытья будет исправлена. Без времени для игрового расчёта используется условное 12:00; душ учитывается отдельно.':
+   'Можно записать выполнение за любой прошедший день, даже раньше создания привычки. Если время неизвестно, оставь поле пустым.';
+ };
+ select.onchange=help;help();
+ if(!dialog.open)dialog.showModal();
+}
+function saveHabitBackdate(e){
+ e.preventDefault();
+ const key=$('habitBackdateActivity').value,date=$('habitBackdateDate').value,time=$('habitBackdateTime').value,err=$('habitBackdateError');
+ err.textContent='';
+ try{
+  const performedAt=performedHabitTimestamp(date,time,key==='__hair_wash');
+  if(key==='__hair_wash'){
+   if(!transact(()=>{
+    state.room??={};
+    const old=state.room.lastHairWashAt,idx=state.events.findIndex(e=>e?.kind==='hair_wash'&&e.at===old);
+    const ev={id:idx>=0?state.events[idx].id:uid(),kind:'hair_wash',name:'Вымыла голову',
+     date,at:performedAt,estimatedTime:!time,recordedAt:new Date().toISOString(),xp:0};
+    if(idx>=0)state.events[idx]=ev;else state.events.push(ev);
+    state.room.lastHairWashAt=performedAt;
+   }))throw Error('Данные не сохранились.');
+  }else{
+   const activity=state.activities.find(a=>a?.id===key&&a.kind==='habit'&&!a.legacyDone);
+   if(!activity)throw Error('Привычка не найдена.');
+   const recordedAt=new Date().toISOString(),at=performedAt||recordedAt,xp=Number.isFinite(activity.xp)?activity.xp:0;
+   if(!transact(()=>{
+    activity.completions??=[];
+    activity.completions.push({date,at,xp,performedAt:performedAt||null,recordedAt});
+    state.events.push({id:uid(),kind:'complete',activityId:activity.id,name:activity.name,
+     date,at,performedAt:performedAt||null,recordedAt,xp});
+    if(activity.id==='hygiene_antiperspirant'&&performedAt){
+     state.room??={};const previous=Date.parse(state.room.lastAntiperspirantAt||'');
+     if(!Number.isFinite(previous)||previous<Date.parse(performedAt))state.room.lastAntiperspirantAt=performedAt;
+    }
+   }))throw Error('Данные не сохранились.');
+  }
+  $('habitBackdateDialog').close();renderAll();
+  toast(key==='__hair_wash'?'💆 Мытьё головы записано за '+date:'✓ Привычка записана за '+date);
+ }catch(error){err.textContent=error?.message||'Ошибка сохранения'}
+}
 function hairHygieneValue(date=today()){
  const at=Date.parse(state.room?.lastHairWashAt||'');
  if(!Number.isFinite(at))return null;
@@ -1250,13 +1321,7 @@ function hairHygieneValue(date=today()){
  if(end<at)return null;
  return Math.max(0,Math.round(100*(1-(end-at)/(72*3600000))));
 }
-function recordHairWash(){
- const stamp=new Date().toISOString();
- if(!transact(()=>{state.room??={};state.room.lastHairWashAt=stamp;
-  state.events.push({id:uid(),kind:'hair_wash',name:'Вымыла голову',date:today(),at:stamp,xp:0});
- }))return toast('Не удалось записать мытьё головы');
- renderAll();toast('✓ Мытьё головы записано');
-}
+function recordHairWash(){openHabitBackdateDialog('__hair_wash',today())}
 function recordSex(){
  const stamp=new Date().toISOString(),date=today();
  if(!transact(()=>{state.days[date]={...currentRecord(date),mood:100,moodSource:'sex',updatedAt:stamp};
@@ -1796,7 +1861,7 @@ function openSingleMetric(field,date=today()){
   addButton('Сохранить гигиену',()=>commitValue(['hygiene']));
   if(date===today()){
    addButton('🚿 Приняла душ',()=>{logShowerAction('take');dialog.close()});
-   addButton('🧴 Вымыла голову',()=>{recordHairWash();dialog.close()});
+   addButton('🧴 Вымыла голову',()=>{dialog.close();recordHairWash()});
    addButton('🧴 Нанести антиперспирант',()=>{recordAntiperspirant();dialog.close()});
   }
  }else{
@@ -2878,6 +2943,12 @@ function bindCriticalActions(){
  };
 }
 bindCriticalActions();
+$('habitBackdateOpen').onclick=()=>openHabitBackdateDialog('__hair_wash',$('topHabitsDate').value||today());
+$('calendarHabitBackdate').onclick=()=>openHabitBackdateDialog('__hair_wash',$('historyDate').value||today());
+$('agendaHabitBackdate').onclick=()=>{const d=$('historyDate').value||today();closeDayAgenda();openHabitBackdateDialog('__hair_wash',d)};
+$('habitBackdateClose').onclick=()=>$('habitBackdateDialog').close();
+$('habitBackdateCancel').onclick=()=>$('habitBackdateDialog').close();
+$('habitBackdateForm').onsubmit=saveHabitBackdate;
 $('hungerMeterCard').onclick=()=>openSingleMetric('hunger',today());
 $('hungerEatButton').onclick=()=>openCalorieBalance(today());
 $('calorieCardFallback').onclick=()=>openCalorieBalance(today());
