@@ -23,6 +23,15 @@
  let view='grid',anchor=api.today(),active=null,activeDate=null;
  const shades=['#84d8c0','#77b5f6','#d1afff','#ffcf76','#ff9ba5'];
  const shade=text=>{let n=0;for(const c of text)n=(n*33+c.charCodeAt(0))|0;return shades[Math.abs(n)%shades.length]};
+ // Existing negative-XP habits and the legacy “Алкоголь” entry are treated
+ // as negative unless the user explicitly changes their classification.
+ const negative=habit=>habit.negative===true||
+  (habit.negative!==false&&(Number(habit.xp)<0||String(habit.name||'').trim().toLocaleLowerCase('ru')==='алкоголь'));
+ const openHabitEditor=habit=>{
+  if(habit.id==='__coffee')return;
+  if(dialog.open)dialog.close();
+  api.edit(habit.id);
+ };
  const weekday=['Вс','Пн','Вт','Ср','Чт','Пт','Сб'];
  const count=(habit,date)=>habit.id==='__coffee'?api.coffeeCount(date):(habit.completions||[]).filter(x=>x.date===date).length;
  const button=(txt,fn,cls='tp-minor')=>{const x=el('button',cls,txt);x.type='button';x.onclick=fn;return x};
@@ -53,8 +62,13 @@
   const list=$('tpHabitRows');list.replaceChildren();
   for(const habit of habits){
    const row=el('tr'),title=el('th','tp-habit-name');
-   const dot=el('span','tp-habit-dot');dot.style.background=shade(habit.name);
-   title.append(dot,document.createTextNode(habit.name));
+   const bad=negative(habit);
+   const dot=el('span','tp-habit-dot');dot.style.background=bad?'#fa6a77':shade(habit.name);
+   const titleButton=button(habit.name,()=>openHabitEditor(habit),'tp-habit-edit-name');
+   titleButton.title='Изменить привычку «'+habit.name+'»';
+   titleButton.setAttribute('aria-label','Редактировать привычку '+habit.name);
+   if(bad)titleButton.classList.add('negative');
+   title.append(dot,titleButton);
    if(habit.resourceEffect?.target){
     const related=el('small','tp-habit-resource','⚡ '+({
      mood:'Настроение',condition:'Физическое состояние',hygiene:'Гигиена',resource:'Ресурс',
@@ -64,13 +78,13 @@
    }
    row.append(title);
    for(const date of days){
-    const n=count(habit,date),cell=el('td'),b=button(n>1?n+'×':n?'✓':'?',()=>openDay(habit,date),'tp-habit-day'+(n?' was-done':''));
+    const n=count(habit,date),cell=el('td'),b=button(n>1?n+'×':n?'✓':'?',()=>openDay(habit,date),'tp-habit-day'+(n?' was-done':'')+(n&&bad?' is-negative':''));
     b.setAttribute('aria-label',habit.name+' · '+date+' · '+n+' выполнений');
-    if(n)b.style.color=shade(habit.name);
+    if(n)b.style.color=bad?'#ff7281':shade(habit.name);
     cell.append(b);row.append(cell);
    }
    tbody.append(row);
-   const line=el('div','tp-task'),info=el('div','tp-info'),name=el('strong','',habit.name),note=el('small','',days.reduce((sum,d)=>sum+count(habit,d),0)+' раз за неделю');
+   const line=el('div','tp-task'+(bad?' tp-negative-habit':'')),info=el('div','tp-info'),name=el('strong','',habit.name),note=el('small','',days.reduce((sum,d)=>sum+count(habit,d),0)+' раз за неделю');
    info.append(name,note);line.append(info);
    line.append(button('＋',()=>openDay(habit,anchor)));
    if(habit.id!=='__coffee')line.append(button('✎',()=>api.edit(habit.id)));
@@ -126,7 +140,7 @@
   if(active.id==='__coffee')api.coffeeUndo(selectedDate());else api.undoHabit(active.id,selectedDate());
   dialog.close();render();
  };
- $('tpHabitDayEdit').onclick=()=>{dialog.close();if(active?.id!=='__coffee')api.edit(active.id)};
+ $('tpHabitDayEdit').onclick=()=>{if(active)openHabitEditor(active)};
  dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close()});
  window.LifeSimsHabitGrid={render};
  render();
