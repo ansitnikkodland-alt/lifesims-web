@@ -80,7 +80,18 @@
   const header=create('div','meal-chat-summary');
   const title=create('strong','',known.length?'≈ '+Math.round(total)+' ккал':'Нет данных о калориях');
   const note=create('span','',entries.length+' '+(entries.length===1?'приём пищи':'приёмов пищи')+' · '+currentDate());
-  header.append(title,note);root.append(header);
+  header.append(title,note);
+  const rolling=bridge.getRollingBalance?.();
+  if(rolling){
+   const balance=rolling.balance==null?'—':(rolling.balance>0?'+':'')+rolling.balance+' ккал';
+   const eaten=rolling.eaten==null?'нет данных':'≈'+rolling.eaten+' ккал';
+   const spent=rolling.spent==null?'нет полного дня Oura':'≈'+rolling.spent+' ккал';
+   const line=create('div','meal-chat-rolling',
+    'Последние 24 ч: баланс '+balance+' · съедено '+eaten+' · расход '+spent+
+    (rolling.estimatedFrom?' (оценка по '+rolling.source+' за '+rolling.estimatedFrom+')':''));
+   header.append(line);
+  }
+  root.append(header);
   const thread=create('div','meal-chat-thread');
   if(!entries.length)thread.append(create('p','meal-chat-empty','Напиши название блюда и состав или выбери уже знакомое из подсказок. После отправки запись сохранится за выбранную дату.'));
   for(const m of entries){
