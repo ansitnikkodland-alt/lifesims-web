@@ -1958,6 +1958,34 @@ function lastCalorieDay(ref=today()){
  for(const m of state.foodMeals||[])if(m.date<=ref&&Number.isFinite(m.kcal))dates.add(m.date);
  return [...dates].sort().pop()||null;
 }
+
+// Rolling 24h food intake uses exact local meal timestamps.
+// Oura imports only daily total_calories. The most recent completed day
+// is a 24h-rate estimate; today's unfinished daily number is NOT treated
+// as a complete 24h expenditure measurement.
+function rolling24CalorieBalance(now=new Date()){
+ const end=now.getTime(),start=end-86400000;
+ const current=dayStr(now),previous=plusDays(current,-1),earliest=plusDays(current,-8);
+ const meals=(state.foodMeals||[]).filter(m=>{
+  if(!m||!/^\d{4}-\d{2}-\d{2}$/.test(m.date||'')||!/^\d{2}:\d{2}$/.test(m.time||''))return false;
+  const instant=new Date(m.date+'T'+m.time+':00').getTime();
+  return Number.isFinite(instant)&&instant>start&&instant<=end;
+ });
+ const known=meals.filter(m=>Number.isFinite(m.kcal)&&m.kcal>=0);
+ const eaten=known.length?Math.round(known.reduce((sum,m)=>sum+m.kcal,0)):null;
+ const unknownMeals=meals.length-known.length;
+ const complete=Object.entries(state.days||{}).filter(([date,r])=>
+  date<=previous&&date>=earliest&&Number.isFinite(r?.totalCalories)&&r.totalCalories>0)
+  .sort((a,b)=>b[0].localeCompare(a[0]));
+ const reference=complete[0]||null;
+ const spent=reference?Math.round(reference[1].totalCalories):null;
+ const balance=eaten!=null&&spent!=null?eaten-spent:null;
+ return {start:new Date(start).toISOString(),end:new Date(end).toISOString(),
+  eaten,spent,balance,mealCount:meals.length,knownMealCount:known.length,
+  unknownMeals,estimatedFrom:reference?.[0]||null,
+  source:reference?.[1]?.ouraFields?.includes('totalCalories')?'Oura':'дневная запись',
+  estimated:true};
+}
 function calorieValues(date){
  const vals=(state.foodMeals||[]).filter(m=>m.date===date&&Number.isFinite(m.kcal));
  return {eaten:vals.length?Math.round(vals.reduce((n,m)=>n+Number(m.kcal),0)):null,
@@ -3320,6 +3348,7 @@ window.LifeSimsFoodBridge={
   }))throw Error('Не удалось изменить избранное.');
  },
  getBurned:(date)=>{const amount=state.days[date]?.totalCalories;return Number.isFinite(amount)?amount:null},
+ getRollingBalance:()=>rolling24CalorieBalance(),
  upsert(meal){
   if(storageBlocked||!storageOK)throw Error('Сохранение недоступно. Сделай резервную копию LifeSims.');
   if(!meal||typeof meal!=='object'||typeof meal.title!=='string'||!meal.title.trim()||meal.title.length>600)throw Error('Укажи название блюда.');
