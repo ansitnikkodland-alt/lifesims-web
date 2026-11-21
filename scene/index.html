@@ -1447,7 +1447,7 @@ const b=document.createElement('button'),span=document.createElement('span'),sm=
 const a=state.activities.find(x=>x.id===c.id);sm.textContent=c.open?'Открыть':a&&done(a,today())?'✓ Готово':`+${c.xp} XP`;
 b.append(span,sm);b.onclick=()=>{closeSheet();if(c.open){if(c.id==='bed_sleep')openSingleMetric('sleepHours',today());else if(c.open==='state')showNeedsEditor('',today());else openTab(c.open,true);return}if(!a){toast('Действие не найдено');return}complete(a,today())};$('sheetActions').append(b)
 }
-for(const a of state.activities.filter(a=>a.object===object&&due(a,today())&&!(object==='bed'&&a.id==='bed_make'))){
+for(const a of state.activities.filter(a=>a.object===object&&due(a,today())&&a.id!=='hygiene_antiperspirant'&&!(object==='bed'&&a.id==='bed_make'))){
  const btn=document.createElement('button'),span=document.createElement('span'),small=document.createElement('small');
  span.textContent=a.name;small.textContent=done(a,today())?'✓ Уже сделано':'+ '+(a.xp||0)+' XP';
  btn.append(span,small);btn.onclick=()=>{closeSheet();complete(a,today())};$('sheetActions').append(btn);
@@ -1526,7 +1526,7 @@ function openSingleMetric(field,date=today()){
  const titles={
   resource:'◆ Ресурс',sleepHours:'💤 Потребность во сне',mood:'☺ Настроение',
   hygiene:'♨ Гигиена',condition:'♥ Физическое состояние',entropy:'🌀 Энтропия',
-  steps:'🚶 Активность',totalCalories:'🔥 Расход калорий'
+  hunger:'🍽 Голод / сытость',steps:'🚶 Активность',totalCalories:'🔥 Расход калорий'
  };
  if(!titles[field])return;
  closeOtherMetricPopups();
@@ -1579,6 +1579,33 @@ function openSingleMetric(field,date=today()){
     renderAll();dialog.close();toast('Энтропия сохранена');
    }else message.textContent='Не удалось сохранить энтропию.';
   });
+ }else if(field==='hunger'){
+  const calc=satietyAssessment(date);
+  addNumber('Расчётная сытость',calc.value==null?null:calc.value+'%');
+  if(calc.date)note('Последняя запись: '+freshnessLabel(calc.date,date)+'.');
+  note('Это игровая шкала голода: чем больше заполнение, тем выше сытость. Условно 600 ккал дают 100% сразу после еды. Значение плавно уменьшается в течение четырёх часов. Это не медицинская оценка и не рекомендация по питанию.');
+  if(date!==today()){
+   note('Ручная корректировка доступна за сегодняшний день. Прошлые приёмы пищи можно редактировать в календаре.');
+  }else{
+   const input=document.createElement('input');input.type='range';input.min='0';input.max='100';
+   input.step='1';input.id='hungerManualSlider';input.className='color-slider';
+   input.value=Number.isFinite(calc.value)?calc.value:50;paintSlider(input,input.value);
+   const output=document.createElement('output');output.textContent=input.value+'% сытости';
+   input.oninput=()=>{output.textContent=input.value+'% сытости';paintSlider(input,input.value)};
+   root.append(input,output);
+   addButton('Сохранить вручную',()=>{
+    const value=Number(input.value);
+    if(!Number.isFinite(value)||value<0||value>100)return message.textContent='Выбери значение от 0 до 100%.';
+    const updated={...currentRecord(date),hunger:value,hungerSetAt:new Date().toISOString(),updatedAt:new Date().toISOString()};
+    if(setDay(date,updated)){renderAll();dialog.close();toast('Голод изменён вручную')}
+    else message.textContent='Не удалось сохранить значение.';
+   });
+   addButton('Сбросить ручную корректировку',()=>{
+    const updated={...currentRecord(date),hunger:null,hungerSetAt:null,updatedAt:new Date().toISOString()};
+    if(setDay(date,updated)){renderAll();dialog.close();toast('Восстановлен автоматический расчёт')}
+    else message.textContent='Не удалось сбросить корректировку.';
+   });
+  }
  }else if(field==='sleepHours'){
   const sleep=sleepAssessment(date);
   addNumber('Потребность во сне',sleep.need==null?null:sleep.need+'%');
@@ -1844,22 +1871,29 @@ function openCalorieBalance(day=today(),mealId=null){
  window.LifeSimsFood?.open?.(day,mealId);
 }
 function renderNeeds(){
- renderCrystal();const d=today(),r=currentRecord(d),g=$('needsGrid');g.replaceChildren();
- const sleep=sleepAssessment(d),resource=derivedResource(r,d),hygiene=hygieneCondition(r,d),physical=physicalCondition(r,d);
- metric(g,'💤 Потребность во сне',sleep.need,'%',null,'sleepHours');
- // Resource is displayed only by the plumbob crystal above the Sim.
- metric(g,'☺ Настроение',r.mood,'%',null,'mood');
- metric(g,'♨ Гигиена',hygiene,'%',null,'hygiene');
- metric(g,'♥ Физическое состояние'+(Number.isFinite(r.ouraScores?.readiness)?' · Oura':Number.isFinite(state.days[plusDays(d,-1)]?.ouraScores?.readiness)?' · вчера':'') ,physical,'%',null,'condition');
- metric(g,'🌀 Энтропия · хаос',gameEntropy(),'%',null,'entropy');
- const steps=Number.isFinite(r.steps)?r.steps:null;
- metric(g,'🚶 Активность · шаги',steps==null?null:Math.min(100,Math.round(steps/10000*100)),'%',steps==null?'—':steps.toLocaleString('ru-RU')+' / 10 000','steps');
- // Comparable sliders use the larger of the two observed amounts, not a fabricated calorie goal.
- const eatenMeals=(state.foodMeals||[]).filter(m=>m.date===d&&Number.isFinite(Number(m.kcal)));
- const eaten=eatenMeals.length?Math.round(eatenMeals.reduce((n,m)=>n+Number(m.kcal),0)):null;
- const spent=Number.isFinite(r.totalCalories)?r.totalCalories:null;
- const balance=eaten==null||spent==null?null:eaten-spent;
- const calories=document.createElement('button');calories.type='button';calories.className='meter need-action calorie-balance-card';
+ renderCrystal();
+ const d=today(),r=currentRecord(d),g=$('needsGrid');
+ g.replaceChildren();
+ const sleep=sleepSnapshot(d),mood=metricSnapshot('mood',d),physical=physicalSnapshot(d);
+ const hygiene=hygieneSnapshot(d),steps=metricSnapshot('steps',d),hunger=satietyAssessment(d);
+ metric(g,'💤 Потребность во сне',sleep.value,'%',null,'sleepHours',sleep.date);
+ // The simulated resource is visible only as the crystal over the Sim.
+ metric(g,'☺ Настроение',mood.value,'%',null,'mood',mood.date);
+ metric(g,'♨ Гигиена',hygiene.value,'%',null,'hygiene',hygiene.date,hygiene.detail||'');
+ metric(g,'♥ Физическое состояние',physical.value,'%',null,'condition',physical.date);
+ const cleaned=state.room?.lastCleanAt||state.createdAt||'';
+ const cleanedDay=/^\d{4}-\d\d-\d\d/.test(cleaned)?cleaned.slice(0,10):null;
+ metric(g,'🌀 Энтропия · хаос',gameEntropy(),'%',null,'entropy',cleanedDay,'расчёт сейчас');
+ metric(g,'🚶 Активность · шаги',steps.value==null?null:Math.min(100,Math.round(steps.value/10000*100)),
+  '%',steps.value==null?'—':steps.value.toLocaleString('ru-RU')+' / 10 000','steps',steps.date);
+ // Today's partial values are displayed as partial; when both are missing use
+ // the most recent day with food or energy expenditure.
+ const current=calorieValues(d);
+ const usedDate=current.eaten!=null||current.spent!=null?d:lastCalorieDay(d);
+ const values=usedDate?calorieValues(usedDate):{eaten:null,spent:null};
+ const balance=values.eaten==null||values.spent==null?null:values.eaten-values.spent;
+ const calories=document.createElement('button');
+ calories.type='button';calories.className='meter need-action calorie-balance-card';
  calories.setAttribute('aria-label','Открыть дефицит или профицит калорий и журнал еды');
  calories.onclick=()=>openCalorieBalance(d);
  const summary=document.createElement('span'),name=document.createElement('strong'),num=document.createElement('b');
@@ -1867,18 +1901,33 @@ function renderNeeds(){
  num.textContent=balance==null?'—':(balance>0?'+':'')+Math.round(balance)+' ккал';
  num.style.color=balance==null?'#ccd7e2':'#95e9df';
  summary.append(name,num);
- const track=document.createElement('div');track.className='bar';const fill=document.createElement('b');
+ const track=document.createElement('div');track.className='bar',fill=document.createElement('b');
  if(balance!=null){
-  fill.style.setProperty('--val',Math.min(100,Math.abs(balance)/Math.max(spent,1)*100)+'%');
+  fill.style.setProperty('--val',Math.min(100,Math.abs(balance)/Math.max(values.spent,1)*100)+'%');
   fill.style.setProperty('--meter-color','#46bed3');track.append(fill);
- }else{const unknown=document.createElement('div');unknown.className='empty';track.append(unknown)}
- const extra=document.createElement('small');extra.textContent='Сожжено: '+(spent==null?'—':spent+' ккал')+' · съедено: '+(eaten==null?'—':'≈'+eaten+' ккал');
- calories.append(summary,track,extra);g.append(calories);
+ }else{track.append(document.createElement('div')).className='empty'}
+ const extra=document.createElement('small');
+ extra.textContent='Сожжено: '+(values.spent==null?'—':values.spent+' ккал')+
+  ' · съедено: '+(values.eaten==null?'—':'≈'+values.eaten+' ккал');
+ calories.append(summary,track,extra);
+ if(usedDate){
+  const origin=document.createElement('small');origin.className='metric-origin';
+  origin.textContent=freshnessLabel(usedDate)+(balance==null?' · неполные данные':'');
+  calories.append(origin);
+ }
+ g.append(calories);
+ // The UI calls this "hunger", but filled pixels represent approximate satiety.
+ metric(g,'🍽 Голод',hunger.value,'%',hunger.value==null?'—':hunger.value+'% сытости',
+  'hunger',hunger.date,'заполнение после еды · спад за 4 ч');
  $('xpTop').textContent=xpTotal()+' XP';
  const completed=state.events.filter(e=>e.date===d&&e.kind==='complete').length;
- const vals=[steps==null?'шаги не записаны':'Шаги: '+steps.toLocaleString('ru-RU'),spent==null?'общий расход не записан':'Общий расход: '+spent+' ккал','Выполнено действий: '+completed];
- if(eaten!=null)vals.push('Съедено: ≈'+eaten+' ккал');
- if(Number.isFinite(r.ouraScores?.readiness))vals.push('Восстановление Oura: '+r.ouraScores.readiness+'/100');
+ const vals=[
+  steps.value==null?'шаги не записаны':'Шаги: '+steps.value.toLocaleString('ru-RU')+' ('+freshnessLabel(steps.date)+')',
+  values.spent==null?'общий расход не записан':'Общий расход: '+values.spent+' ккал ('+freshnessLabel(usedDate)+')',
+  'Выполнено действий сегодня: '+completed
+ ];
+ if(values.eaten!=null)vals.push('Съедено: ≈'+values.eaten+' ккал ('+freshnessLabel(usedDate)+')');
+ if(physical.value!=null)vals.push('Физическое состояние: '+physical.value+'/100 ('+freshnessLabel(physical.date)+')');
  $('todaySummary').textContent=vals.join(' · ');
 }
 const EMOTIONS=[
