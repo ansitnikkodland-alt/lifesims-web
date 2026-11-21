@@ -1036,7 +1036,7 @@ function parseField(k){if(sliderFields.includes(k)&&$(k+'Unknown').checked)retur
 function setResourceManualMarkers(record,old,date,updatedFields){
  const targets={mood:'mood',condition:'condition',hygiene:'hygiene',
   nutrition:'nutrition',sleepHours:'sleepNeed',sleepDebtAdjustment:'sleepNeed',
-  steps:'activity',hunger:'hunger'};
+  steps:'activity',hunger:'hunger',entropy:'entropy'};
  const markers={...(old.manualResourceOverrides||{})},stamp=new Date().toISOString();
  for(const field of updatedFields){
   const target=targets[field];if(!target)continue;
@@ -1504,12 +1504,14 @@ function cleanBathroomItem(kind){
  }))return toast('Не удалось сохранить уборку');
  renderAll();toast('✓ '+description);
 }
-function gameEntropy(){
+function rawGameEntropy(){
  const origin=Date.parse(state.room?.lastCleanAt||state.createdAt||new Date().toISOString());
  const days=Number.isFinite(origin)?Math.max(0,(Date.now()-origin)/86400000):0;
  const offset=Number(state.room?.entropyOffset)||0;
- const raw=Math.max(0,Math.min(100,Math.round(12+days*7+offset)));
- return actionAdjustedNeed('entropy',today(),raw);
+ return Math.max(0,Math.min(100,Math.round(12+days*7+offset)));
+}
+function gameEntropy(){
+ return actionAdjustedNeed('entropy',today(),rawGameEntropy());
 }
 function renderRoomMess(){
  const value=gameEntropy(),layer=$('sceneMess');
@@ -1861,7 +1863,13 @@ function openSingleMetric(field,date=today()){
   root.append(input,output);note('Уборка уменьшает энтропию, а время повышает. Это игровая оценка комнаты.');
   addButton('Сохранить энтропию',()=>{
    const target=Number(input.value);
-   if(transact(()=>{state.room??={};state.room.entropyOffset=(Number(state.room.entropyOffset)||0)+(target-gameEntropy())})){
+   if(transact(()=>{
+    state.room??={};
+    state.room.entropyOffset=(Number(state.room.entropyOffset)||0)+(target-rawGameEntropy());
+    const prior=currentRecord(today()),updated={...prior};
+    setResourceManualMarkers(updated,prior,today(),['entropy']);
+    state.days[today()]=updated;
+   })){
     renderAll();dialog.close();toast('Энтропия сохранена');
    }else message.textContent='Не удалось сохранить энтропию.';
   });
