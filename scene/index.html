@@ -1726,13 +1726,16 @@ function openSingleMetric(field,date=today()){
   }
  }else if(field==='hygiene'){
   addNumber('Текущая гигиена',hygieneCondition(r,date)==null?null:hygieneCondition(r,date)+'%');
+  addNumber('Гигиена головы',hairHygieneValue(date)==null?'нет записи о мытье':hairHygieneValue(date)+'%');
   const reference=showerReference();
   const ant=state.room?.lastAntiperspirantAt,antDay=typeof ant==='string'&&Number.isFinite(Date.parse(ant))?dayStr(new Date(ant)):null;
+  note('Гигиена головы после мытья уменьшается примерно до 0% за 72 часа; при наличии данных об обоих показателях она составляет 25% общей гигиены.');
   note('Последний душ: '+(reference?.source==='logged'?new Date(reference.at).toLocaleString('ru-RU'):reference?.source==='reported'?reference.day+' (время не указано)':'нет записи')+'. Антиперспирант: '+(antDay?freshnessLabel(antDay,date):'нет записи')+'. После душа он продлевает игровую защиту на 12 часов (или на календарный день при неизвестном времени). При большом числе шагов гигиена снижается быстрее: от 6000 шагов множитель растёт до ×1,75 при 15 000. Если шаги за день неизвестны, используется обычная скорость.');
   singleMetricField(date,'hygiene');
   addButton('Сохранить гигиену',()=>commitValue(['hygiene']));
   if(date===today()){
    addButton('🚿 Приняла душ',()=>{logShowerAction('take');dialog.close()});
+   addButton('🧴 Вымыла голову',()=>{recordHairWash();dialog.close()});
    addButton('🧴 Нанести антиперспирант',()=>{recordAntiperspirant();dialog.close()});
   }
  }else{
@@ -1808,11 +1811,12 @@ function sleepSnapshot(ref=today()){
 }
 function hygieneSnapshot(ref=today()){
  const direct=metricSnapshot('hygiene',ref),shower=showerReference();
- if(shower&&shower.day<=ref&&(!direct.date||shower.day>=direct.date)){
-  return {value:hygieneCondition(currentRecord(ref),ref),date:shower.day,
-   detail:hygieneActivityMultiplier(ref)>1?'ускоренный спад · активность':'расчёт на сегодня'};
- }
- return direct;
+ const wash=state.room?.lastHairWashAt;
+ const hairDate=typeof wash==='string'&&Number.isFinite(Date.parse(wash))?dayStr(new Date(wash)):null;
+ const dates=[direct.date,shower?.day,hairDate].filter(d=>d&&d<=ref).sort();
+ const date=dates.pop()||null;
+ return {value:date?hygieneCondition(currentRecord(ref),ref):null,date,
+  detail:date?(hygieneActivityMultiplier(ref)>1?'ускоренный спад · активность':'включая гигиену головы'):''};
 }
 function lastCalorieDay(ref=today()){
  const dates=new Set(Object.keys(state.days||{}).filter(d=>d<=ref&&Number.isFinite(state.days[d]?.totalCalories)));
@@ -1912,29 +1916,32 @@ function hygieneDecayPoints(fromMs,toMs){
  return loss;
 }
 function hygieneCondition(r,date){
- const last=showerReference();
- if(!last||date<last.day)return Number.isFinite(r.hygiene)?r.hygiene:null;
- let automatic;
- const end=date===today()?Date.now():asDay(plusDays(date,1)).getTime();
- const ap=state.room?.lastAntiperspirantAt,apAt=typeof ap==='string'?Date.parse(ap):NaN;
- if(last.source==='reported'){
-  // Shower time unknown: day-based model, with activity-specific daily losses.
-  const elapsedDays=Math.max(0,Math.round((asDay(date)-asDay(last.day))/86400000));
-  const apDay=Number.isFinite(apAt)?dayStr(new Date(apAt)):null;
-  const protectedFirstDay=apDay&&(apDay===last.day||apDay===plusDays(last.day,1))&&apAt<=end;
-  let loss=0;
-  for(let i=1;i<=elapsedDays&&loss<100;i++){
-   if(i===1&&protectedFirstDay)continue; // one extra protected calendar day
-   loss+=32*hygieneActivityMultiplier(plusDays(last.day,i));
+ const last=showerReference(),head=hairHygieneValue(date);
+ let body=null;
+ if(last&&date>=last.day){
+  const end=date===today()?Date.now():asDay(plusDays(date,1)).getTime();
+  const ap=state.room?.lastAntiperspirantAt,apAt=typeof ap==='string'?Date.parse(ap):NaN;
+  if(last.source==='reported'){
+   const elapsedDays=Math.max(0,Math.round((asDay(date)-asDay(last.day))/86400000));
+   const apDay=Number.isFinite(apAt)?dayStr(new Date(apAt)):null;
+   const protectedFirstDay=apDay&&(apDay===last.day||apDay===plusDays(last.day,1))&&apAt<=end;
+   let loss=0;
+   for(let i=1;i<=elapsedDays&&loss<100;i++){
+    if(i===1&&protectedFirstDay)continue;
+    loss+=32*hygieneActivityMultiplier(plusDays(last.day,i));
+   }
+   body=Math.max(0,Math.round(100-loss));
+  }else{
+   const applied=Number.isFinite(apAt)&&apAt>=last.at&&apAt<=end;
+   body=Math.max(0,Math.min(100,Math.round(100-hygieneDecayPoints(last.at+(applied?24:12)*3600000,end))));
   }
-  automatic=Math.max(0,Math.round(100-loss));
- }else{
-  const applied=Number.isFinite(apAt)&&apAt>=last.at&&apAt<=end;
-  const delayHours=applied?24:12; // antiperspirant delays initial decay
-  automatic=Math.max(0,Math.min(100,Math.round(100-hygieneDecayPoints(last.at+delayHours*3600000,end))));
  }
- // An explicitly entered hygiene value remains an upper bound.
- return Number.isFinite(r.hygiene)?Math.min(r.hygiene,automatic):automatic;
+ // Hair cleanliness independently declines over 72 hours and contributes
+ // 25% to the overall hygiene score where the body baseline is known.
+ const combined=body!=null&&head!=null?Math.round(body*0.75+head*0.25):body;
+ const manual=Number.isFinite(r.hygiene)?r.hygiene:null;
+ if(combined==null)return manual;
+ return manual==null?combined:Math.min(manual,combined);
 }
 function resourceActivityImpact(date){
  // Recorded completion XP is a signed, once-per-activity contribution.
@@ -1986,6 +1993,9 @@ function renderNeeds(){
  // The simulated resource is visible only as the crystal over the Sim.
  metric(g,'☺ Настроение',mood.value,'%',null,'mood',mood.date);
  metric(g,'♨ Гигиена',hygiene.value,'%',null,'hygiene',hygiene.date,hygiene.detail||'');
+ const hair=hairHygieneValue(d),washedAt=state.room?.lastHairWashAt;
+ const washedDate=Number.isFinite(Date.parse(washedAt||''))?dayStr(new Date(washedAt)):null;
+ metric(g,'💆 Гигиена головы',hair,'%',null,'hygiene',washedDate,'спад до 0% за 72 ч');
  metric(g,'♥ Физическое состояние',physical.value,'%',null,'condition',physical.date);
  const cleaned=state.room?.lastCleanAt||state.createdAt||'';
  const cleanedDay=/^\d{4}-\d\d-\d\d/.test(cleaned)?cleaned.slice(0,10):null;
