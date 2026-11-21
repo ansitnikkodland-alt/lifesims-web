@@ -163,3 +163,32 @@
 .tp-habit-day.was-done.is-negative{background:#47252e!important;border-color:#cc5264!important;color:#ff8993!important}
 .negative-habit-day .itemtext small{color:#ff8795}
 @media(max-width:400px){.tp-habit-quantity-actions{flex-wrap:wrap}.tp-habit-quantity-actions button{flex:1 1 100%}}
+
+/* v69: linked skill drilldown and latest-meal editing. */
+.skill-clickable{cursor:pointer;min-height:44px;touch-action:manipulation}
+.skill-clickable:hover{border-color:#72dbc8}
+.skill-clickable:focus-visible{outline:3px solid #76ddcd;outline-offset:3px}
+.skill-detail-dialog{width:min(96vw,650px);max-height:90dvh;box-sizing:border-box;overflow-y:auto;background:#1c263d;color:#f2f6ff;border:1px solid #7089ac;border-radius:19px;padding:15px;box-shadow:0 20px 60px #0009}
+.skill-detail-dialog::backdrop{background:#080c19c9}
+.skill-detail-heading{display:flex;align-items:center;justify-content:space-between;gap:10px;position:sticky;top:-15px;background:#1c263d;padding:7px 0 10px;z-index:2;border-bottom:1px solid #40526e}
+.skill-detail-heading h3{font-size:19px;margin:0;overflow-wrap:anywhere}
+#skillDetailClose{min-height:44px;min-width:44px;border:1px solid #7389a3;border-radius:12px;background:#344766;color:#fff;font-size:24px;cursor:pointer}
+.skill-detail-summary{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin:14px 0}
+.skill-detail-stat{background:#293955;border:1px solid #486080;border-radius:11px;padding:10px;min-width:0}
+.skill-detail-stat span{display:block;font-size:11px;color:#bed0e5}
+.skill-detail-stat strong{display:block;margin-top:5px;font-size:16px;overflow-wrap:anywhere}
+.skill-detail-progress{height:10px;background:#13213b;border-radius:12px;overflow:hidden}
+.skill-detail-progress b{display:block;height:100%;background:#62d7c4;border-radius:12px}
+.skill-detail-note{color:#bed0e5;font-size:12px;line-height:1.5;margin:12px 0}
+.skill-detail-dialog h4{font-size:16px;margin:18px 0 10px}
+.skill-detail-action,.skill-detail-history-row{display:flex;align-items:center;justify-content:space-between;gap:9px;border:1px solid #455c79;border-radius:12px;padding:10px;margin-bottom:8px;min-width:0}
+.skill-detail-action-info,.skill-detail-history-row>div{min-width:0;flex:1}
+.skill-detail-action-info strong,.skill-detail-history-row strong{display:block;overflow-wrap:anywhere;font-size:13px}
+.skill-detail-action-info small,.skill-detail-history-row small{display:block;color:#b7c9dd;font-size:11px;line-height:1.4;margin-top:4px}
+.skill-detail-history-row b{white-space:nowrap;font-size:13px;color:#91efdc}
+.skill-detail-edit{flex-shrink:0;min-height:44px;border:1px solid #75a2b6;border-radius:10px;padding:9px 13px;background:#234962;color:#fff;font-size:13px;cursor:pointer}
+.skill-detail-create{display:flex;align-items:center;gap:9px;flex-wrap:wrap;margin-top:10px}
+.tp-habit-table .tp-habit-readonly.tp-habit-meal-edit,.tp-habit-table .tp-habit-metric-link{display:block;min-height:44px;min-width:44px;border:0!important;border-radius:7px;background:transparent!important;color:#a7f4e9!important;font-size:12px;text-decoration:underline;text-underline-offset:3px;cursor:pointer;margin:auto;padding:5px}
+.tp-habit-table .tp-habit-metric-link{color:#eff6fc!important;white-space:normal;text-align:left;overflow-wrap:anywhere;margin:0}
+.tp-habit-table .tp-habit-meal-edit:focus-visible,.tp-habit-table .tp-habit-metric-link:focus-visible{outline:2px solid #fdd98b;outline-offset:2px}
+@media(max-width:370px){.skill-detail-dialog{padding:10px}.skill-detail-summary{gap:6px}.skill-detail-stat strong{font-size:14px}}
