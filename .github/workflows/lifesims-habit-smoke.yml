@@ -1,0 +1,72 @@
+name: LifeSims habit editor smoke
+on:
+  push:
+    paths:
+      - 'scene/index.html'
+      - 'scene/habit-grid.js'
+      - 'scene/task-premium.js'
+      - 'scene/task-premium.css'
+      - '.github/workflows/lifesims-habit-smoke.yml'
+  workflow_dispatch:
+jobs:
+  habit-editor:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright driver
+        run: npm install --no-save playwright-core@1.56.1
+      - name: Start local website
+        run: |
+          python3 -m http.server 8765 > /tmp/lifesims_ui_http.log 2>&1 &
+          sleep 2
+      - name: Test actual mobile habit grid and editor
+        run: |
+          cat > /tmp/lifesims-habit-check.cjs <<'JS'
+          const {chromium}=require(process.cwd()+'/node_modules/playwright-core');
+          (async()=>{
+            const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
+            const page=await browser.newPage({viewport:{width:390,height:844},deviceScaleFactor:2});
+            const errors=[];
+            page.on('pageerror',e=>errors.push(e.message));
+            page.on('console',m=>{if(m.type()==='error')errors.push('console: '+m.text())});
+            await page.goto('http://127.0.0.1:8765/scene/?smoke=habits',{waitUntil:'domcontentloaded'});
+            await page.locator('[data-tab="habits"]').first().click();
+            await page.locator('#premiumHabitsUI').waitFor({state:'visible',timeout:10000});
+            await page.locator('#tpHabitGrid .tp-habit-table').waitFor({state:'visible'});
+            await page.evaluate(()=>{
+              const api=window.LifeSimsTaskBridge;
+              const today=api.today();
+              const habits=api.read().activities;
+              habits.push(
+                {id:'__smoke_alcohol',kind:'habit',name:'Алкоголь',xp:-5,repeat:'daily',createdDate:today,completions:[{date:today,at:new Date().toISOString()}]},
+                {id:'__smoke_reading',kind:'habit',name:'Читать тест',xp:10,negative:false,repeat:'daily',createdDate:today,completions:[{date:today,at:new Date().toISOString()}]}
+              );
+              window.LifeSimsHabitGrid.render();
+            });
+            const alcohol=page.locator('.tp-habit-table tbody tr').filter({has:page.locator('button.tp-habit-edit-name', {hasText:'Алкоголь'})}).first();
+            const reading=page.locator('.tp-habit-table tbody tr').filter({has:page.locator('button.tp-habit-edit-name', {hasText:'Читать тест'})}).first();
+            if(!await alcohol.locator('.tp-habit-day').first().evaluate(el=>el.classList.contains('is-negative')))
+              throw Error('Alcohol completion was not marked as a negative habit');
+            if(await reading.locator('.tp-habit-day').first().evaluate(el=>el.classList.contains('is-negative')))
+              throw Error('Positive habit was incorrectly marked negative');
+            console.log('HABIT CELL COLORS: PASS');
+            await alcohol.locator('button.tp-habit-edit-name').click();
+            await page.locator('#calendarTaskPopup').waitFor({state:'visible',timeout:6000});
+            const input=await page.locator('#taskTitle').inputValue();
+            const isNegative=await page.locator('#tpNegativeHabit').isChecked();
+            if(input!=='Алкоголь'||!isNegative)
+              throw Error('Habit editor mismatch: name='+input+', negative='+isNegative);
+            console.log('HABIT NAME OPENS EDITOR: PASS');
+            await page.locator('#taskCancel').click();
+            if(await page.locator('#calendarTaskPopup').isVisible())
+              throw Error('Habit editor did not close');
+            console.log('EDITOR CLOSE: PASS');
+            if(errors.length)console.warn('OTHER BROWSER CONSOLE ERRORS:',errors.slice(0,8).join(' | '));
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
+          node /tmp/lifesims-habit-check.cjs
