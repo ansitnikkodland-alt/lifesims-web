@@ -1564,7 +1564,7 @@ function openSingleMetric(field,date=today()){
    ['Настроение',r.mood],
    ['Физическое состояние (Oura)',physicalCondition(r,date)],
    ['Гигиена',hygieneCondition(r,date)],
-   ['Сытость',r.nutrition==null?estimatedFoodNeed(date):r.nutrition]
+   ['Сытость',r.nutrition==null?satietyAssessment(date).value:r.nutrition]
   ];
   for(const [name,value] of data)addNumber(name,value==null?null:value+'%');
   note('Ресурс = среднее имеющихся показателей + сумма подписанных XP за выполненные сегодня действия (ограничено 0–100%). При отсутствии показателей, но наличии действий, игровая база составляет 50%.');
@@ -1670,7 +1670,100 @@ function showNeedsEditor(field='',date=today()){
  fillState(date);$('needsEditor').open=true;$('lifeModalMask').hidden=false;
 }
 function xpTotal(){const origin=Object.values(state.legacySkills||{}).reduce((sum,x)=>sum+(Number.isFinite(+x)?+x:0),0);const earned=state.events.reduce((sum,e)=>sum+(e.kind==='complete'&&Number.isFinite(+e.xp)?+e.xp:0),0);return Math.max(0,Math.round(origin+earned))}
-function metric(el,name,value,suffix='%',displayValue=null,field=''){const root=document.createElement('button');root.type='button';root.className='meter need-action';root.setAttribute('aria-label','Редактировать: '+name);root.onclick=()=>openSingleMetric(field,today());const s=document.createElement('span');const l=document.createElement('strong');l.textContent=name;const v=document.createElement('b');v.textContent=displayValue==null?(value==null?'—':String(value)+suffix):displayValue;s.append(l,v);const bar=document.createElement('div');bar.className='bar';if(value==null){const n=document.createElement('div');n.className='empty';bar.append(n)}else{const n=document.createElement('b');n.style.setProperty('--val',Math.min(100,Math.max(0,Number(value)))+'%');n.style.setProperty('--meter-color',meterColor(value,field==='entropy'));bar.append(n)}root.append(s,bar);el.append(root)}
+function metric(el,name,value,suffix='%',displayValue=null,field='',sourceDate=null,detail=''){
+ const root=document.createElement('button');root.type='button';root.className='meter need-action';
+ root.setAttribute('aria-label','Редактировать: '+name+(sourceDate?' · запись '+freshnessLabel(sourceDate):''));
+ root.onclick=()=>openSingleMetric(field,today());
+ const s=document.createElement('span'),l=document.createElement('strong'),v=document.createElement('b');
+ l.textContent=name;v.textContent=displayValue==null?(value==null?'—':String(value)+suffix):displayValue;
+ s.append(l,v);
+ const bar=document.createElement('div');bar.className='bar';
+ if(value==null){const n=document.createElement('div');n.className='empty';bar.append(n)}
+ else{const n=document.createElement('b');n.style.setProperty('--val',Math.max(0,Math.min(100,Number(value)))+'%');n.style.setProperty('--meter-color',meterColor(value,field==='entropy'));bar.append(n)}
+ root.append(s,bar);
+ if(sourceDate||detail){const foot=document.createElement('small');foot.className='metric-origin';
+  foot.textContent=(sourceDate?freshnessLabel(sourceDate):'')+(detail?(sourceDate?' · ':'')+detail:'');
+  root.append(foot)}
+ el.append(root)
+}
+
+function freshnessLabel(day,ref=today()){
+ if(!day)return '';
+ if(day===ref)return 'сегодня';
+ if(day===plusDays(ref,-1))return 'вчера';
+ if(day===plusDays(ref,-2))return 'позавчера';
+ return /^\d{4}-\d\d-\d\d$/.test(day)?day.slice(8)+'.'+day.slice(5,7)+'.'+day.slice(0,4):day;
+}
+function latestObserved(check,ref=today()){
+ return Object.keys(state.days||{}).filter(day=>day<=ref&&/^\d{4}-\d\d-\d\d$/.test(day)&&check(state.days[day],day)).sort().pop()||null;
+}
+function metricSnapshot(field,ref=today()){
+ const date=latestObserved(r=>Number.isFinite(r?.[field]),ref);
+ return date?{value:state.days[date][field],date}:{value:null,date:null};
+}
+function physicalSnapshot(ref=today()){
+ const date=latestObserved(r=>Number.isFinite(r?.condition)||Number.isFinite(r?.ouraScores?.readiness),ref);
+ if(!date)return {value:null,date:null};
+ const r=currentRecord(date);
+ const value=r.conditionManual&&Number.isFinite(r.condition)?r.condition:
+  Number.isFinite(r.ouraScores?.readiness)?r.ouraScores.readiness:r.condition;
+ return {value:Number.isFinite(value)?value:null,date};
+}
+function sleepSnapshot(ref=today()){
+ const date=latestObserved(r=>Number.isFinite(r?.sleepHours),ref);
+ return date?{value:sleepAssessment(date).need,date}:{value:null,date:null};
+}
+function hygieneSnapshot(ref=today()){
+ const direct=metricSnapshot('hygiene',ref),shower=showerReference();
+ if(shower&&shower.day<=ref&&(!direct.date||shower.day>=direct.date)){
+  return {value:hygieneCondition(currentRecord(ref),ref),date:shower.day,
+   detail:'расчёт на сегодня'};
+ }
+ return direct;
+}
+function lastCalorieDay(ref=today()){
+ const dates=new Set(Object.keys(state.days||{}).filter(d=>d<=ref&&Number.isFinite(state.days[d]?.totalCalories)));
+ for(const m of state.foodMeals||[])if(m.date<=ref&&Number.isFinite(m.kcal))dates.add(m.date);
+ return [...dates].sort().pop()||null;
+}
+function calorieValues(date){
+ const vals=(state.foodMeals||[]).filter(m=>m.date===date&&Number.isFinite(m.kcal));
+ return {eaten:vals.length?Math.round(vals.reduce((n,m)=>n+Number(m.kcal),0)):null,
+  spent:Number.isFinite(state.days[date]?.totalCalories)?state.days[date].totalCalories:null};
+}
+// Game mechanic (not measured hunger): 600 recorded kcal fills 100% initially,
+// every meal fades linearly over four hours; manual value fades the same way.
+function satietyAssessment(ref=today(),now=new Date()){
+ const instant=ref===today()?now:new Date(ref+'T23:59:59');
+ const ms=instant.getTime(),period=4*60*60*1000;
+ const meals=(state.foodMeals||[]).filter(m=>m.date<=ref&&typeof m.time==='string'&&
+  /^\d\d:\d\d$/.test(m.time)&&Number.isFinite(m.kcal))
+  .map(m=>({...m,atMs:new Date(m.date+'T'+m.time+':00').getTime()}))
+  .filter(m=>Number.isFinite(m.atMs)&&m.atMs<=ms).sort((a,b)=>a.atMs-b.atMs);
+ const r=currentRecord(ref),manualAt=typeof r.hungerSetAt==='string'?Date.parse(r.hungerSetAt):NaN;
+ const manual=Number.isFinite(r.hunger)&&Number.isFinite(manualAt)&&manualAt<=ms&&manualAt>=asDay(ref).getTime();
+ const fade=t=>Math.max(0,1-(ms-t)/period);
+ let pct=manual?r.hunger*fade(manualAt):0;
+ for(const m of meals){
+  if((manual&&m.atMs<manualAt)||ms-m.atMs>period)continue;
+  pct+=Math.min(100,Math.max(0,m.kcal/600*100))*fade(m.atMs);
+ }
+ const newest=meals[meals.length-1];
+ const source=manual&&(!newest||manualAt>=newest.atMs)?ref:newest?.date||null;
+ return {value:source?Math.round(Math.max(0,Math.min(100,pct))):null,date:source,
+  detail:manual?'ручная оценка · спад за 4 ч':'игровая сытость · спад за 4 ч'};
+}
+function resourceSnapshot(ref=today()){
+ const dates=new Set(Object.keys(state.days||{}).filter(d=>d<=ref&&
+  ['sleepHours','mood','condition','hygiene','nutrition','steps','totalCalories'].some(k=>Number.isFinite(state.days[d]?.[k]))||
+  (d<=ref&&Number.isFinite(state.days[d]?.ouraScores?.readiness))));
+ for(const m of state.foodMeals||[])if(m.date<=ref)dates.add(m.date);
+ for(const e of state.events||[])if(e.date<=ref&&e.kind==='complete')dates.add(e.date);
+ const shower=showerReference();if(shower&&shower.day<=ref)dates.add(shower.day);
+ const date=[...dates].sort().pop()||null;
+ return date?{value:derivedResource(currentRecord(date),date),date}:{value:null,date:null};
+}
+
 function estimatedFoodNeed(d){
  // In-game satiety from time of the most recently logged meal, never a judgement
  // of food quality or adequate caloric intake. Missing entries mean "unknown".
@@ -1732,14 +1825,14 @@ function resourceActivityImpact(date){
 }
 function derivedResource(r,d){
  const sleep=sleepAssessment(d).need;
- const vals=[sleep,r.mood,physicalCondition(r,d),hygieneCondition(r,d),r.nutrition==null?estimatedFoodNeed(d):r.nutrition];
+ const vals=[sleep,r.mood,physicalCondition(r,d),hygieneCondition(r,d),r.nutrition==null?satietyAssessment(d).value:r.nutrition];
  const available=vals.filter(x=>typeof x==='number'&&Number.isFinite(x));
  const influence=resourceActivityImpact(d);
  if(!available.length&&!influence)return null;
  const base=available.length?available.reduce((a,b)=>a+b,0)/available.length:50;
  return Math.max(0,Math.min(100,Math.round(base+influence)));
 }
-function renderCrystal(){const r=currentRecord(today());const v=derivedResource(r,today());const p=v==null?['#c2e9ff','#76c9ef','#2169b6']:v>65?['#c7fff0','#55dfa5','#0e9874']:v>35?['#fff2b1','#edbf53','#a57a15']:['#ffc2cd','#f4778c','#af405b'];const el=$('plumbob');el.style.setProperty('--gem-light',p[0]);el.style.setProperty('--gem-middle',p[1]);el.style.setProperty('--gem-dark',p[2]);const tint=$('sceneCrystalTint');if(tint)tint.style.setProperty('--crystal-hue',v==null?'0deg':v>65?'-55deg':v>35?'-135deg':'-185deg');el.title=v==null?'Ресурс не записан; нажми, чтобы записать':`Ресурс: ${v}%`}
+function renderCrystal(){const snapshot=resourceSnapshot(today()),v=snapshot.value;const p=v==null?['#c2e9ff','#76c9ef','#2169b6']:v>65?['#c7fff0','#55dfa5','#0e9874']:v>35?['#fff2b1','#edbf53','#a57a15']:['#ffc2cd','#f4778c','#af405b'];const el=$('plumbob');el.style.setProperty('--gem-light',p[0]);el.style.setProperty('--gem-middle',p[1]);el.style.setProperty('--gem-dark',p[2]);const tint=$('sceneCrystalTint');if(tint)tint.style.setProperty('--crystal-hue',v==null?'0deg':v>65?'-55deg':v>35?'-135deg':'-185deg');el.title=v==null?'Ресурс не записан; нажми, чтобы записать':`Ресурс: ${v}% · ${freshnessLabel(snapshot.date)}`}
 function sleepAssessment(date){const dates=Object.keys(state.days).filter(d=>d<=date&&state.days[d]?.sleepHours!=null).sort();if(!dates.length)return {need:null,debt:null,last:null};let debt=0,prev=null,gaps=false;for(const d of dates){const rec=state.days[d],hours=Number(rec.sleepHours);if(prev&&plusDays(prev,1)!==d)gaps=true;debt=Math.max(0,debt+7.5-hours);if(rec.sleepDebtAdjustment!=null)debt=Number(rec.sleepDebtAdjustment);prev=d}const last=Number(state.days[dates[dates.length-1]].sleepHours);if(dates[dates.length-1]!==date)return {need:null,debt:gaps?null:debt,last};
  // Missing days make cumulative debt unknown, but last night's measured sleep
  // still supports a transparent, partial estimate of the sleep need.
