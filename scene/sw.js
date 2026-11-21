@@ -1,4 +1,4 @@
-const CACHE='lifesims-scene-v58';
+const CACHE='lifesims-scene-v59';
 const FILES=['./','./index.html','./room-illustrated-v42.jpg','./calendar-style.css','./task-premium.css','./task-premium.js','./habit-grid.js','./focus-timer.js','./oura-style.css','./food-log.css','./food-log.js','./meal-chat.css','./meal-photo.js','./meal-chat.js','./oura-sync.js','./privacy.html','./terms.html','./manifest.webmanifest','../icon.svg'];
 self.addEventListener('install',event=>{
  event.waitUntil(caches.open(CACHE)
