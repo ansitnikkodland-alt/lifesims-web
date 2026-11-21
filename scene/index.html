@@ -1034,6 +1034,56 @@ function updateSlider(k){
 function fillState(d){$('stateDate').value=d;const r=currentRecord(d);for(const k of fields){const val=r[k];if(sliderFields.includes(k)){$(k+'Unknown').checked=val==null;$(k).value=val==null?50:String(val);updateSlider(k)}else stateInput(k).value=val==null?'':String(val)}updateDebt()}
 function parseField(k){if(sliderFields.includes(k)&&$(k+'Unknown').checked)return null;const el=stateInput(k),v=el.value.trim();if(v==='')return null;if(['meds','food','cycle'].includes(k))return v;const n=Number(v);if(!Number.isFinite(n)||el.validity.badInput||!el.checkValidity())throw Error(`Неправильное значение: ${k}`);return n}
 function saveFieldState(e){e.preventDefault();const d=$('stateDate').value||today();if(!/^\d{4}-\d\d-\d\d$/.test(d))return toast('Выбери дату');let patch={};try{for(const k of fields)patch[k]=parseField(k)}catch(e){toast(e.message);return}const old=currentRecord(d);const changed=fields.some(k=>old[k]!==patch[k]);if(!changed)return toast('Нечего обновлять');const fromOura=Array.isArray(old.ouraFields)?old.ouraFields.filter(k=>old[k]===patch[k]):[];const r={...old,...patch,ouraFields:fromOura,updatedAt:new Date().toISOString()};if(old.mood!==patch.mood)r.moodSource='manual';if(old.condition!==patch.condition)r.conditionManual=patch.condition!=null;if(setDay(d,r)){activeDay=d;toast('Показатели сохранены за '+d);renderAll()}}
+// Game-only effects from tasks/habits. Never write into Oura measurements,
+// sleep hours or the user's manually entered daily baseline.
+const RESOURCE_EFFECT_TARGETS=new Set(['resource','mood','condition','hygiene','nutrition','hunger','sleepNeed','entropy','activity']);
+function validatedResourceEffect(raw){
+ if(!raw||typeof raw!=='object'||!RESOURCE_EFFECT_TARGETS.has(raw.target))return null;
+ const mode=raw.mode==='set'?'set':'delta',amount=Number(raw.amount),hours=Number(raw.hours);
+ if(!Number.isFinite(amount)||(mode==='set'?(amount<0||amount>100):(amount< -100||amount>100)))return null;
+ if(![0,24,72,168].includes(hours))return null;
+ return {target:raw.target,mode,amount:Math.round(amount),hours};
+}
+function resourceEventTimestamp(event){
+ const date=event?.date;
+ if(typeof date!=='string'||!/^\d{4}-\d\d-\d\d$/.test(date))return NaN;
+ for(const timestamp of [event.performedAt,event.at]){
+  if(typeof timestamp!=='string')continue;
+  const ms=Date.parse(timestamp);
+  if(Number.isFinite(ms)&&dayStr(new Date(ms))===date)return ms;
+ }
+ // Historical entries without a known time use 12:00 as an explicit game estimate.
+ return new Date(date+'T12:00:00').getTime();
+}
+function activeResourceEffects(target,date){
+ if(!RESOURCE_EFFECT_TARGETS.has(target))return [];
+ const end=date===today()?Date.now():asDay(plusDays(date,1)).getTime()-1;
+ return (state.events||[]).filter(event=>{
+  if(event?.kind!=='complete')return false;
+  const effect=validatedResourceEffect(event.resourceEffect);
+  if(!effect||effect.target!==target)return false;
+  const at=resourceEventTimestamp(event);
+  return Number.isFinite(at)&&at<=end&&(effect.hours===0?event.date===date:end-at<=effect.hours*3600000);
+ }).sort((a,b)=>resourceEventTimestamp(a)-resourceEventTimestamp(b));
+}
+function latestResourceEffectDate(target,date){
+ const records=activeResourceEffects(target,date);
+ return records.length?records.map(e=>e.date).sort().pop():null;
+}
+function actionAdjustedNeed(target,date,baseline){
+ const events=activeResourceEffects(target,date);
+ if(!events.length)return Number.isFinite(baseline)?baseline:null;
+ let value=Number.isFinite(baseline)?baseline:50; // explicit game-only neutral baseline
+ for(const event of events){
+  const effect=validatedResourceEffect(event.resourceEffect);
+  value=effect.mode==='set'?effect.amount:value+effect.amount;
+  value=Math.max(0,Math.min(100,value));
+ }
+ return Math.round(value);
+}
+function effectSnapshot(activity){
+ return validatedResourceEffect(activity?.resourceEffect);
+}
 function weekKey(d){const date=asDay(d);const weekday=(date.getDay()+6)%7;date.setDate(date.getDate()-weekday);return dayStr(date)}
 function due(a,d){
  if(a.legacyDone)return false;
@@ -1064,7 +1114,7 @@ function complete(a,date){if(a.kind!=='habit'&&done(a,date))return toast('Уже
  if(a.id==='hygiene_antiperspirant'){state.room??={};state.room.lastAntiperspirantAt=stamp}
  if(a.object==='shower'&&/принят.*душ|принять душ|помытьс|приняла душ/i.test(a.name)){state.room??={};state.room.lastShowerAt=stamp}
  if(/уборк|помыть|убрать|постират|мыть посуд|разобрать|пропылесос/i.test(a.name)){state.room??={};state.room.lastCleanAt=stamp;state.room.entropyOffset=Math.min(0,(state.room.entropyOffset||0)-4)}
- state.events.push({id:uid(),kind:'complete',activityId:a.id,name:a.name,date,at:stamp,xp})})){toast(`✓ ${a.name}${xp?' · '+(xp>0?'+':'')+xp+' XP':''}`);$('sceneStatus').textContent='✓ '+a.name;renderAll()}}
+ state.events.push({id:uid(),kind:'complete',activityId:a.id,name:a.name,date,at:stamp,xp,resourceEffect:effectSnapshot(a)})})){toast(`✓ ${a.name}${xp?' · '+(xp>0?'+':'')+xp+' XP':''}`);$('sceneStatus').textContent='✓ '+a.name;renderAll()}}
 let activeQuickKind='task';
 function relevantActivities(date,kind){
  return state.activities.filter(a=>{
@@ -1331,7 +1381,7 @@ function saveHabitBackdate(e){
     activity.completions??=[];
     activity.completions.push({date,at,xp,performedAt:performedAt||null,recordedAt});
     state.events.push({id:uid(),kind:'complete',activityId:activity.id,name:activity.name,
-     date,at,performedAt:performedAt||null,recordedAt,xp});
+     date,at,performedAt:performedAt||null,recordedAt,xp,resourceEffect:effectSnapshot(activity)});
     if(activity.id==='hygiene_antiperspirant'&&performedAt){
      state.room??={};const previous=Date.parse(state.room.lastAntiperspirantAt||'');
      if(!Number.isFinite(previous)||previous<Date.parse(performedAt))state.room.lastAntiperspirantAt=performedAt;
@@ -3204,7 +3254,7 @@ window.LifeSimsTaskBridge={
    a.completions??=[];
    a.completions.push({date,at:stamp,xp,recordedAt:stamp,performedAt:null});
    state.events.push({id:uid(),kind:'complete',activityId:a.id,name:a.name,date,at:stamp,
-    recordedAt:stamp,performedAt:null,xp});
+    recordedAt:stamp,performedAt:null,xp,resourceEffect:effectSnapshot(a)});
   }))return false;
   renderAll();return true;
  },
