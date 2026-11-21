@@ -665,7 +665,7 @@ body{background:#091428}
 #objectLinkDialog button{min-height:44px;min-width:44px}
 #objectLinkDialog .row{display:flex;flex-wrap:wrap;gap:9px}
 </style></head>
-<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v46</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
+<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v47</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
 <img id="sceneRugColor" class="rug-color-layer" alt="" aria-hidden="true">
 <span id="sceneCrystalTint" aria-hidden="true"></span>
@@ -2713,6 +2713,8 @@ window.LifeSimsFoodBridge={
   const record={
    id:previous?.id||uid(),date:meal.date,time:meal.time,title:meal.title.trim(),
    ingredients:typeof meal.ingredients==='string'?meal.ingredients.trim().slice(0,700):(previous?.ingredients||''),
+   photoSource:typeof meal.photoSource==='string'?meal.photoSource.slice(0,160):(previous?.photoSource||''),
+   barcode:typeof meal.barcode==='string'&&/^\d{8,14}$/.test(meal.barcode)?meal.barcode:(previous?.barcode||null),
    grams:meal.grams==null?null:Number(meal.grams),
    kcal:meal.kcal==null?null:Math.round(Number(meal.kcal)),
    protein:meal.protein==null?null:Math.round(Number(meal.protein)*10)/10,
@@ -3617,6 +3619,7 @@ window.LifeSimsFood={render,estimate,open:openNutrition,close:closeNutrition};
 render();
 })();
 </script>
+<script src="./meal-photo.js"></script>
 <script src="./meal-chat.js"></script>
 <script>
 /* LifeSims Oura OAuth V2 — browser-only, no client secret. */
