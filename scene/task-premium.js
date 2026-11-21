@@ -124,6 +124,11 @@
   <div id="tpEditorTags" class="tp-tag-picks"></div>
   <p class="tp-note">Дела «Без срока» всегда остаются во входящих до выполнения. Дата начала не является сроком.</p>`;
   form.insertBefore(panel,before);
+  const nature=el('fieldset','tp-editor tp-habit-nature');nature.id='tpHabitNature';
+  nature.innerHTML='<legend>Тип привычки</legend><label class="tp-checkbox tp-negative-toggle">'+
+   '<input type="checkbox" id="tpNegativeHabit"> Отрицательная привычка (отмечать красным)</label>'+
+   '<p class="tp-note">Например, алкоголь. Положительные привычки отмечаются обычным цветом. Это не влияет на уже записанные выполнения.</p>';
+  form.insertBefore(nature,before);
   const resource=el('fieldset','tp-editor tp-resource-editor');resource.id='tpResourceEditor';
   resource.innerHTML="<legend>⚡ Влияние дела или привычки на состояние</legend>\n<label>Какой показатель меняется<select id=\"tpEffectTarget\">\n<option value=\"\">Не влияет</option>\n<option value=\"resource\">◆ Общий ресурс (кристалл)</option>\n<option value=\"mood\">☺ Настроение</option>\n<option value=\"condition\">♥ Физическое состояние</option>\n<option value=\"hygiene\">♨ Гигиена</option>\n<option value=\"nutrition\">🍎 Питание</option>\n<option value=\"hunger\">🍽 Сытость</option>\n<option value=\"sleepNeed\">💤 Потребность во сне</option>\n<option value=\"entropy\">🌀 Энтропия / беспорядок</option>\n<option value=\"activity\">🚶 Активность (игровая)</option>\n</select></label>\n<div id=\"tpEffectFields\" hidden><div class=\"tp-editor-grid\">\n<label>Как изменить<select id=\"tpEffectMode\"><option value=\"delta\">Прибавить / вычесть</option><option value=\"set\">Установить значение</option></select></label>\n<label>На сколько, п. п.<input id=\"tpEffectAmount\" type=\"number\" min=\"-100\" max=\"100\" step=\"1\" value=\"10\" required></label>\n<label>Срок действия<select id=\"tpEffectHours\">\n<option value=\"0\">Только выбранный день</option>\n<option value=\"24\">24 часа</option>\n<option value=\"72\">72 часа</option>\n<option value=\"168\">7 дней</option>\n</select></label></div>\n<p class=\"tp-note\">«+15» добавляет 15 пунктов к игровой шкале. «Установить 100» действует как отдельное событие. Каждый повтор учитывается отдельно. Измерения Oura и ручные записи не изменяются; эффекты исчезают по окончании срока.</p></div>";
   form.insertBefore(resource,before);
@@ -138,7 +143,10 @@
    const opt=el('option','','Без срока');opt.value='inbox';repeat.prepend(opt);
   }
   $('tpEditorManageTags').onclick=()=>openManager('tag');
-  $('taskKind').addEventListener('change',e=>panel.hidden=e.target.value==='habit');
+  $('taskKind').addEventListener('change',e=>{
+   panel.hidden=e.target.value==='habit';
+   $('tpHabitNature').hidden=e.target.value!=='habit';
+  });
  }
  function fillForm(a,formKind){
   const panel=$('tpEditor');if(!panel)return;
@@ -155,6 +163,9 @@
    check.checked=(a?.tags||[]).includes(x.id);label.append(check,document.createTextNode(' #'+x.name));choices.append(label);
   }
   panel.hidden=formKind==='habit';
+  $('tpHabitNature').hidden=formKind!=='habit';
+  $('tpNegativeHabit').checked=a?.negative===true||
+   (a?.negative!==false&&(Number(a?.xp)<0||String(a?.name||'').trim().toLocaleLowerCase('ru')==='алкоголь'));
   const effect=a?.resourceEffect||null;
   $('tpEffectTarget').value=effect?.target||'';
   $('tpEffectMode').value=effect?.mode==='set'?'set':'delta';
@@ -167,6 +178,7 @@
    target:$('tpEffectTarget').value,mode:$('tpEffectMode').value,
    amount:Number($('tpEffectAmount').value),hours:Number($('tpEffectHours').value)
   }:null;
+  if($('taskKind').value==='habit')return {resourceEffect,negative:!!$('tpNegativeHabit').checked};
   if(!$('tpEditor')||$('tpEditor').hidden)return {resourceEffect};
   return {resourceEffect,projectId:$('tpEditorProject').value||null,
    priority:Number($('tpEditorPriority').value)||0,
