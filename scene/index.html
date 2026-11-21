@@ -2144,6 +2144,40 @@ function openCalorieBalance(day=today(),mealId=null){
  closeDayAgenda();closeOtherMetricPopups();
  window.LifeSimsFood?.open?.(day,mealId);
 }
+function render24CalorieCard(){
+ const host=$('calorieCardHost');if(!host)return;
+ const summary=rolling24CalorieBalance();
+ let card=host.querySelector('.calorie-balance-card');
+ if(!card){card=document.createElement('button');card.type='button';
+  card.className='meter need-action calorie-balance-card';host.replaceChildren(card)}
+ card.onclick=()=>openCalorieBalance(today());
+ card.setAttribute('aria-label','Дефицит или профицит калорий за последние 24 часа. Открыть питание');
+ const row=document.createElement('span'),name=document.createElement('strong'),value=document.createElement('b');
+ name.textContent='⚖️ Дефицит / профицит · 24 ч';
+ value.textContent=summary.balance==null?'—':(summary.balance>0?'+':'')+summary.balance+' ккал';
+ value.style.color=summary.balance==null?'#d6e0ee':summary.balance>0?'#ffbdbd':'#95e9df';
+ row.append(name,value);
+ const track=document.createElement('div');track.className='bar';
+ if(summary.balance!=null){
+  const bar=document.createElement('b');
+  bar.style.setProperty('--val',Math.min(100,Math.abs(summary.balance)/Math.max(1,summary.spent)*100)+'%');
+  bar.style.setProperty('--meter-color',summary.balance>0?'#f2938e':'#46bed3');
+  track.append(bar);
+ }else{const empty=document.createElement('div');empty.className='empty';track.append(empty)}
+ const details=document.createElement('small');
+ details.textContent='Съедено за 24 ч: '+(summary.eaten==null?'нет записанных калорий':'≈'+summary.eaten+' ккал')+
+  ' · расход за 24 ч: '+(summary.spent==null?'нет завершённого дня Oura':'≈'+summary.spent+' ккал');
+ const source=document.createElement('small');source.className='metric-origin';
+ source.textContent=summary.estimatedFrom?
+  'Оценка расхода по '+summary.source+' за '+summary.estimatedFrom+
+   (summary.unknownMeals?' · '+summary.unknownMeals+' записей еды без калорий':''):
+  'Для оценки расхода нужен завершённый день Oura (последние 8 дней)';
+ const period=document.createElement('small');period.className='metric-origin';
+ const from=new Date(summary.start),to=new Date(summary.end);
+ period.textContent='Период: '+from.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'})+
+  ' — '+to.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+ card.replaceChildren(row,track,details,source,period);
+}
 function renderHungerMeter(){
  const val=$('hungerMeterValue'),track=$('hungerMeterTrack'),note=$('hungerMeterOrigin');
  if(!val||!track||!note)return;
@@ -2204,36 +2238,11 @@ function renderNeeds(){
   const group=document.createElement('div');group.className='activity-card-wrap';
   card.replaceWith(group);group.append(card,button);
  }
- // Today's partial values are displayed as partial; when both are missing use
- // the most recent day with food or energy expenditure.
+ // Calendar-specific daily values are retained for the 'Today' summary only.
  const current=calorieValues(d);
  const usedDate=current.eaten!=null||current.spent!=null?d:lastCalorieDay(d);
  const values=usedDate?calorieValues(usedDate):{eaten:null,spent:null};
- const balance=values.eaten==null||values.spent==null?null:values.eaten-values.spent;
- const calories=document.createElement('button');
- calories.type='button';calories.className='meter need-action calorie-balance-card';
- calories.setAttribute('aria-label','Открыть дефицит или профицит калорий и журнал еды');
- calories.onclick=()=>openCalorieBalance(d);
- const summary=document.createElement('span'),name=document.createElement('strong'),num=document.createElement('b');
- name.textContent='⚖️ Дефицит / профицит калорий';
- num.textContent=balance==null?'—':(balance>0?'+':'')+Math.round(balance)+' ккал';
- num.style.color=balance==null?'#ccd7e2':'#95e9df';
- summary.append(name,num);
- const track=document.createElement('div');track.className='bar',fill=document.createElement('b');
- if(balance!=null){
-  fill.style.setProperty('--val',Math.min(100,Math.abs(balance)/Math.max(values.spent,1)*100)+'%');
-  fill.style.setProperty('--meter-color','#46bed3');track.append(fill);
- }else{track.append(document.createElement('div')).className='empty'}
- const extra=document.createElement('small');
- extra.textContent='Сожжено: '+(values.spent==null?'—':values.spent+' ккал')+
-  ' · съедено: '+(values.eaten==null?'—':'≈'+values.eaten+' ккал');
- calories.append(summary,track,extra);
- if(usedDate){
-  const origin=document.createElement('small');origin.className='metric-origin';
-  origin.textContent=freshnessLabel(usedDate)+(balance==null?' · неполные данные':'');
-  calories.append(origin);
- }
- $('calorieCardHost').replaceChildren(calories);
+ render24CalorieCard();
  renderHungerMeter();
  $('xpTop').textContent=xpTotal()+' XP';
  const completed=state.events.filter(e=>e.date===d&&e.kind==='complete').length;
@@ -3012,7 +3021,7 @@ function duplicateCalendarEvent(id){
   }else toast('Не удалось создать копию');
 }
 function renderAll(){
- const jobs=[['Сытость',renderHungerMeter],['Календарь',renderSchedule],['Потребности',renderNeeds],['Дела и привычки',renderTopActivities],
+ const jobs=[['Калории за 24 часа',render24CalorieCard],['Сытость',renderHungerMeter],['Календарь',renderSchedule],['Потребности',renderNeeds],['Дела и привычки',renderTopActivities],
   ['История',renderHistory],['Недосып',updateDebt],['Персонаж',renderWork]];
  if(typeof renderRoomMess==='function')jobs.push(['Комната',renderRoomMess]);
  jobs.push(['3D',()=>window.LifeSims3D?.sync?.(window.LifeSims3DBridge?.snapshot?.())]);
