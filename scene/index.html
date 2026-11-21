@@ -63,7 +63,7 @@
 .needs-editor .heading{margin:10px 0}
 .needs-editor #stateForm{margin-top:12px}
 </style><link rel="stylesheet" href="./calendar-style.css">
-<link rel="stylesheet" href="./task-premium.css?v=63">
+<link rel="stylesheet" href="./task-premium.css?v=64">
 <link rel="stylesheet" href="./oura-style.css">
 <style>
 
@@ -785,8 +785,11 @@ body{background:#091428}
   scroll-snap-align:start;
 }
 .nav [data-tab]:focus-visible{outline-offset:-3px}
+</style><style id="lifesims-v64-agenda-meter">
+.agenda-metric-track{height:11px;background:#0c1930;border:1px solid #526a90;border-radius:20px;overflow:hidden;margin:8px 0 3px;width:100%}
+.agenda-metric-track>span{display:block;height:100%;border-radius:18px;transition:width .2s ease}
 </style></head>
-<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v63</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
+<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v64</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
 <img id="sceneRugColor" class="rug-color-layer" alt="" aria-hidden="true">
 <span id="sceneCrystalTint" aria-hidden="true"></span>
@@ -2790,7 +2793,21 @@ function renderDayMetrics(date,body,heading){
   const main=document.createElement('div');main.className='agenda-event-main';
   const label=document.createElement('strong');label.className='agenda-event-title';label.textContent=name;
   const val=document.createElement('div');val.className='agenda-event-meta';val.textContent=value;
-  main.append(label,val);row.append(main);
+  main.append(label,val);
+  const percent=String(value).trim().match(/^(\d+(?:[.,]\d+)?)\s*(%|\/100)$/);
+  const numeric=Number(String(value).replace(/[^\d.,-]/g,'').replace(',','.'));
+  const maximum=percent?100:name==='Фактический сон'?8:name==='🚶 Шаги'?10000:null;
+  const measured=percent?Number(percent[1].replace(',','.')):numeric;
+  if(maximum!==null&&Number.isFinite(measured)&&value!=='—'){
+   const fullness=Math.max(0,Math.min(100,measured/maximum*100));
+   const track=document.createElement('div');track.className='agenda-metric-track';
+   track.setAttribute('role','progressbar');track.setAttribute('aria-label',name);
+   track.setAttribute('aria-valuemin','0');track.setAttribute('aria-valuemax',String(maximum));
+   track.setAttribute('aria-valuenow',String(Math.max(0,measured)));
+   const fill=document.createElement('span');fill.style.width=fullness+'%';
+   fill.style.background=meterColor(fullness);track.append(fill);main.append(track);
+  }
+  row.append(main);
   if(editor){
    const edit=document.createElement('button');edit.type='button';edit.className='agenda-edit';
    edit.textContent='✎';edit.setAttribute('aria-label','Изменить: '+name);
@@ -2819,7 +2836,6 @@ function renderDayAgenda(){
   $('agendaSubtitle').textContent=occurrences.length+' мероприятий · '+taskCount+' дел · '+habitCount+' привычек';
   const body=$('agendaBody');body.replaceChildren();
   function title(label){const h=document.createElement('div');h.className='agenda-group-title';h.textContent=label;body.append(h)}
-  renderDayMetrics(date,body,title);
   function eventLine(item,allDay){
     const row=document.createElement('div');row.className='agenda-entry';
     const time=document.createElement('span');time.className='agenda-time';
@@ -2845,12 +2861,14 @@ function renderDayAgenda(){
     }
     body.append(row);
   }
+  title('📅 Мероприятия');
+  if(!occurrences.length){const empty=document.createElement('p');empty.className='hint';empty.textContent='Мероприятий на этот день нет';body.append(empty)}
   const allDay=occurrences.filter(e=>e.allDay);
   if(allDay.length){title('Весь день');for(const e of allDay)eventLine(e,true)}
   const timed=occurrences.filter(e=>!e.allDay).sort((a,b)=>a.startsAt-b.startsAt);
   if(timed.length){title('По времени');for(const e of timed)eventLine(e,false)}
   if(tasks.length){
-    for(const [kind,header] of [['task','Дела'],['habit','Привычки']]){
+    for(const [kind,header] of [['task','☑ Дела'],['habit','◇ Привычки']]){
      const group=tasks.filter(a=>(a.kind==='habit'?'habit':'task')===kind);
      if(!group.length)continue;
      title(header);
@@ -2873,22 +2891,6 @@ function renderDayAgenda(){
      }
     }
   }
-  if(completed.length){
-    title('Запись выполнений и действий');
-    for(const e of completed){
-      const line=document.createElement('div');line.className='agenda-entry';
-      const icon=document.createElement('span');icon.className='agenda-time';icon.textContent='✓';
-      const info=document.createElement('div');info.className='agenda-event-main';
-      info.textContent=(e.name||'Выполненное действие')+(resourceEffectLabel(e.resourceEffect)?' · '+resourceEffectLabel(e.resourceEffect):'');
-      const edit=document.createElement('button');edit.type='button';edit.className='agenda-edit';
-      edit.textContent='✎';edit.setAttribute('aria-label','Редактировать запись: '+(e.name||'Событие'));
-      edit.onclick=()=>openHistoryLogEditor(state.events.indexOf(e));
-      const remove=document.createElement('button');remove.type='button';remove.className='agenda-delete';
-      remove.textContent='🗑';remove.setAttribute('aria-label','Удалить действие: '+(e.name||'Событие'));
-      remove.onclick=()=>deleteDayAction(state.events.indexOf(e));
-      line.append(icon,info,edit,remove);body.append(line);
-    }
-  }
   const meals=(state.foodMeals||[]).filter(m=>m.date===date).sort((a,b)=>a.time.localeCompare(b.time));
   title('🍽 Питание'+(meals.length?' · съедено ≈'+Math.round(meals.reduce((s,m)=>s+(Number(m.kcal)||0),0))+' ккал':' · нет записей'));
   for(const meal of meals){
@@ -2907,6 +2909,24 @@ function renderDayAgenda(){
   const addMeal=document.createElement('button');addMeal.type='button';
   addMeal.className='secondary';addMeal.textContent='＋ Записать приём пищи за '+date;
   addMeal.onclick=()=>openCalorieBalance(date);body.append(addMeal);
+  renderDayMetrics(date,body,title);
+  if(completed.length){
+    title('Запись выполнений и действий');
+    for(const e of completed){
+      const line=document.createElement('div');line.className='agenda-entry';
+      const icon=document.createElement('span');icon.className='agenda-time';icon.textContent='✓';
+      const info=document.createElement('div');info.className='agenda-event-main';
+      info.textContent=(e.name||'Выполненное действие')+(resourceEffectLabel(e.resourceEffect)?' · '+resourceEffectLabel(e.resourceEffect):'');
+      const edit=document.createElement('button');edit.type='button';edit.className='agenda-edit';
+      edit.textContent='✎';edit.setAttribute('aria-label','Редактировать запись: '+(e.name||'Событие'));
+      edit.onclick=()=>openHistoryLogEditor(state.events.indexOf(e));
+      const remove=document.createElement('button');remove.type='button';remove.className='agenda-delete';
+      remove.textContent='🗑';remove.setAttribute('aria-label','Удалить действие: '+(e.name||'Событие'));
+      remove.onclick=()=>deleteDayAction(state.events.indexOf(e));
+      line.append(icon,info,edit,remove);body.append(line);
+    }
+  }
+
   if(!body.children.length){
     const empty=document.createElement('p');empty.className='agenda-empty';
     empty.textContent='На этот день записей нет. Можно добавить мероприятие или дело.';
@@ -3604,7 +3624,7 @@ window.LifeSims3DBridge={
 };
 window.addEventListener('resize',()=>{if(currentSheetAnchor)placeSheet(currentSheetAnchor)},{passive:true});
 window.addEventListener('scroll',()=>{if(currentSheetAnchor)placeSheet(currentSheetAnchor)},{passive:true});
-if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=63',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
+if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=64',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 window.LifeSimsCalendarBridge={
   getSchedule:()=>JSON.parse(JSON.stringify(state.schedule||[])),
   getHidden:()=>JSON.parse(JSON.stringify(state.googleHidden||[])),
@@ -3794,9 +3814,9 @@ window.LifeSimsFoodBridge={
 };
 })();
 </script>
-<script src="./task-premium.js?v=63"></script>
-<script src="./habit-grid.js?v=63"></script>
-<script src="./focus-timer.js?v=63"></script>
+<script src="./task-premium.js?v=64"></script>
+<script src="./habit-grid.js?v=64"></script>
+<script src="./focus-timer.js?v=64"></script>
 <script>
 /* LifeSims Google Calendar sync. OAuth tokens remain in memory; no background writes. */
 (function () {
