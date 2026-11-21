@@ -1,5 +1,5 @@
-const CACHE='lifesims-scene-v45';
-const FILES=['./','./index.html','./room-illustrated-v42.jpg','./calendar-style.css','./oura-style.css','./food-log.css','./food-log.js','./oura-sync.js','./privacy.html','./terms.html','./manifest.webmanifest','../icon.svg'];
+const CACHE='lifesims-scene-v46';
+const FILES=['./','./index.html','./room-illustrated-v42.jpg','./calendar-style.css','./oura-style.css','./food-log.css','./food-log.js','./meal-chat.css','./meal-chat.js','./oura-sync.js','./privacy.html','./terms.html','./manifest.webmanifest','../icon.svg'];
 self.addEventListener('install',event=>{
  event.waitUntil(caches.open(CACHE)
   .then(cache=>cache.addAll(FILES.map(path=>new Request(path,{cache:'reload'}))))
