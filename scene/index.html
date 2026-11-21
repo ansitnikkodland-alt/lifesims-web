@@ -1099,6 +1099,16 @@ function actionAdjustedNeed(target,date,baseline){
  }
  return Math.round(value);
 }
+function resourceEffectLabel(raw){
+ const effect=validatedResourceEffect(raw);
+ if(!effect)return '';
+ const names={resource:'ресурс',mood:'настроение',condition:'физическое состояние',
+  hygiene:'гигиена',nutrition:'питание',hunger:'сытость',sleepNeed:'потребность во сне',
+  entropy:'энтропия',activity:'активность'};
+ return '⚡ '+(names[effect.target]||effect.target)+' '+
+  (effect.mode==='set'?'→ '+effect.amount+'%':(effect.amount>=0?'+':'')+effect.amount+' п. п.')+
+  (effect.hours===0?' · на день':' · '+(effect.hours===24?'24 ч':effect.hours===72?'72 ч':'7 дней'));
+}
 function effectSnapshot(activity){
  return validatedResourceEffect(activity?.resourceEffect);
 }
@@ -2653,7 +2663,7 @@ function renderDayMetrics(date,body,heading){
   ['Эмоции',Array.isArray(rec.diaryTags)?rec.diaryTags.join(', ')||'—':'—','diary']
  ];
  const tracked=new Set(['sleepHours','sleepDebtAdjustment','mood','condition','hygiene','hunger','hungerSetAt',
- 'nutrition','steps','totalCalories','weight','waist','hips','chest','meds','food','cycle','physicalTags','physicalNote','diary','diaryTags','updatedAt','ouraScores']);
+ 'nutrition','steps','totalCalories','weight','waist','hips','chest','meds','food','cycle','physicalTags','physicalNote','diary','diaryTags','updatedAt','ouraScores','manualResourceOverrides']);
  const scores=rec.ouraScores&&typeof rec.ouraScores==='object'?rec.ouraScores:{};
  for(const [key,value] of Object.entries(scores))items.push(['💍 Oura · '+key,stringify(value),null]);
  for(const [key,value] of Object.entries(rec)){
@@ -2748,7 +2758,8 @@ function renderDayAgenda(){
       const main=document.createElement('div');main.className='agenda-event-main';
       const name=document.createElement('div');name.className='agenda-event-title';name.textContent=task.name;
       const meta=document.createElement('div');meta.className='agenda-event-meta';
-      meta.textContent=repeatable?'Привычка · за дату: '+(task.completions||[]).filter(c=>c.date===date).length+' раз':'Дело · '+(finished?'выполнено':'запланировано');
+      meta.textContent=(repeatable?'Привычка · за дату: '+(task.completions||[]).filter(c=>c.date===date).length+' раз':'Дело · '+(finished?'выполнено':'запланировано'))+
+       (resourceEffectLabel(task.resourceEffect)?' · '+resourceEffectLabel(task.resourceEffect):'');
       main.append(name,meta);row.append(check,main);
       const edit=document.createElement('button');edit.className='agenda-edit';edit.type='button';edit.textContent='✎';
       edit.setAttribute('aria-label','Изменить дело '+task.name);
@@ -2762,7 +2773,8 @@ function renderDayAgenda(){
     for(const e of completed){
       const line=document.createElement('div');line.className='agenda-entry';
       const icon=document.createElement('span');icon.className='agenda-time';icon.textContent='✓';
-      const info=document.createElement('div');info.className='agenda-event-main';info.textContent=e.name||'Выполненное действие';
+      const info=document.createElement('div');info.className='agenda-event-main';
+      info.textContent=(e.name||'Выполненное действие')+(resourceEffectLabel(e.resourceEffect)?' · '+resourceEffectLabel(e.resourceEffect):'');
       const edit=document.createElement('button');edit.type='button';edit.className='agenda-edit';
       edit.textContent='✎';edit.setAttribute('aria-label','Редактировать запись: '+(e.name||'Событие'));
       edit.onclick=()=>openHistoryLogEditor(state.events.indexOf(e));
