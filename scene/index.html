@@ -1859,13 +1859,13 @@ function openSingleMetric(field,date=today()){
   addNumber('Расчётный ресурс',derivedResource(r,date)==null?null:derivedResource(r,date)+'%');const impact=resourceActivityImpact(date);addNumber('Влияние выполненных дел и привычек', (impact>0?'+':'')+impact+' XP');
   const data=[
    ['Обеспеченность сном',sleepAssessment(date).need==null?null:100-sleepAssessment(date).need],
-   ['Настроение',r.mood],
-   ['Физическое состояние (Oura)',physicalCondition(r,date)],
+   ['Настроение (включая дела)',actionAdjustedNeed('mood',date,r.mood)],
+   ['Физическое состояние (включая игровые эффекты)',physicalCondition(r,date)],
    ['Гигиена',hygieneCondition(r,date)],
-   ['Сытость',r.nutrition==null?satietyAssessment(date).value:r.nutrition]
+   ['Сытость / питание',actionAdjustedNeed('nutrition',date,r.nutrition==null?satietyAssessment(date).value:r.nutrition)]
   ];
   for(const [name,value] of data)addNumber(name,value==null?null:value+'%');
-  note('Ресурс = среднее имеющихся показателей + сумма подписанных XP за выполненные сегодня действия (ограничено 0–100%). При отсутствии показателей, но наличии действий, игровая база составляет 50%.');
+  note('Ресурс — игровое среднее доступных показателей с учётом связанных дел и привычек. XP учитываются отдельно только у действий без собственной привязки, чтобы не начислять один эффект дважды. Если измерений нет, действие рассчитывается от условной игровой базы 50%. Исходные данные Oura не меняются.');
  }else if(field==='entropy'){
   addNumber('Игровая энтропия',gameEntropy()+'%');
   const input=document.createElement('input');input.type='range';input.min='0';input.max='100';input.step='5';input.value=gameEntropy();input.className='color-slider';
@@ -1994,7 +1994,9 @@ function openSingleMetric(field,date=today()){
   if(field==='steps')note('Шаги загружаются из Oura при синхронизации. Можно указать число вручную, если данных нет или нужна корректировка.');
   if(field==='totalCalories')note('Это расход энергии (Oura), а не съеденные калории.');
   if(field==='mood'){
-   note('Настроение можно изменять вручную или через дневник. Ручная оценка имеет приоритет.');
+   const adjusted=actionAdjustedNeed('mood',date,r.mood);
+   addNumber('Настроение с учётом действий',adjusted==null?null:adjusted+'%');
+   note('Настроение можно изменять вручную или через дневник. Ручная оценка имеет приоритет перед более ранними игровыми эффектами.');
    addButton('✎ Открыть дневник и теги',()=>{dialog.close();openDiary(date)});
   }
   addButton('Сохранить показатель',()=>commitValue([field],field));
