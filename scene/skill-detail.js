@@ -17,10 +17,11 @@
  let selected=null;
  function skillEvents(name,data){
   const activities=new Map(data.activities.filter(a=>a?.id).map(a=>[a.id,a]));
+  const defaults=new Map((data.defaults||[]).filter(a=>a?.id).map(a=>[a.id,a]));
   return data.events.filter(event=>{
    if(event?.kind!=='complete'||!event.date||event.date>bridge.today?.())return false;
    // Preserve the skill recorded on completion; never rewrite history after editing an activity.
-   const savedSkill=Object.prototype.hasOwnProperty.call(event,'skill')?event.skill:activities.get(event.activityId)?.skill;
+   const savedSkill=Object.prototype.hasOwnProperty.call(event,'skill')?event.skill:(activities.get(event.activityId)?.skill||defaults.get(event.activityId)?.skill);
    return savedSkill===name;
   }).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.at||'').localeCompare(String(a.at||'')));
  }
