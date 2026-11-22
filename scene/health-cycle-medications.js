@@ -389,7 +389,7 @@ function setMedicationStatus(m,d,time,status){
 }
 function fillUi(){
  root.innerHTML=[
- '<div class="health-head"><div><h2>🌸 Дневник здоровья</h2><p>Цикл, лекарства и симптомы · версия журнала 105</p></div></div>',
+ '<div class="health-head"><div><h2>🌸 Дневник здоровья</h2><p>Цикл, лекарства и симптомы · версия журнала 106</p></div></div>',
  '<div class="health-switch"><button id="healthCycleTab" type="button">🌸 Цикл</button><button id="healthPillsTab" type="button">💊 Лекарства</button></div>',
  '<div id="healthNotice" class="health-notice" role="status" aria-live="polite"></div>',
  '<div class="health-panel"><h3>Влияние записей на ресурс «Здоровье»</h3><p class="hint">Автоматическая игровая оценка по прозрачным правилам, а не медицинский диагноз или вывод нейросети. Прогноз ПМС и сами месячные нейтральны.</p><div id="healthEffectList"></div></div>',
@@ -489,10 +489,10 @@ function renderIllnessHints(){
  if(!hint.hidden)hint.textContent='🩺 Симптомы могут указывать на болезнь ('+
   result.reasons.join('; ')+'). После сохранения предложу отметить болезнь в LifeSims — только с твоего согласия.';
 }
-function offerIllnessAfterSave(d){
- const result=B.illnessSuggestion?.(d,[...draftSymptoms]);
+function offerIllnessAfterSave(d,symptoms=[...draftSymptoms]){
+ const result=B.illnessSuggestion?.(d,symptoms);
  if(!result?.suggest||!result.canMark||!illnessDialog||illnessDialog.open)return;
- const key=d+'|'+[...draftSymptoms].sort().join('|');
+ const key=d+'|'+[...symptoms].sort().join('|');
  if(promptedIllness.has(key))return;
  promptedIllness.add(key);pendingIllnessDate=d;
  $('healthIllnessReason').textContent='Ты отметила: '+result.reasons.join('; ')+
@@ -500,32 +500,84 @@ function offerIllnessAfterSave(d){
  illnessDialog.showModal();
 }
 
-function showChoices(){
- const host=$('healthSymptoms');host.replaceChildren();
- const all=new Set(SYMPTOM_GROUPS.flatMap(([_,opts])=>opts.map(x=>x[1])));
+// Shared symptom chooser: the resource Health and the Physical Condition popup
+// edit the same state.health.cycleDays[date].symptoms field.
+function renderSymptomChoices(host,selected,onToggle){
+ host.replaceChildren();
+ const h=data(),all=new Set(SYMPTOM_GROUPS.flatMap(([_,opts])=>opts.map(x=>x[1])));
+ const icons=new Map(SYMPTOM_GROUPS.flatMap(([_,opts])=>opts.map(x=>[x[1],x[0]])));
  const seen=new Set();
- const recent=Object.entries(data().cycleDays).sort(([a],[b])=>b.localeCompare(a))
+ const recent=Object.entries(h.cycleDays).sort(([a],[b])=>b.localeCompare(a))
   .flatMap(([_,v])=>Array.isArray(v?.symptoms)?v.symptoms:[]).filter(name=>{
    if(typeof name!=='string'||!name.trim()||seen.has(name))return false;
    seen.add(name);return true;
   }).slice(0,8);
- const groups=recent.length?[['Недавние',recent.map(label=>[SYMPTOM_GROUPS.flatMap(x=>x[1]).find(x=>x[1]===label)?.[0]||'🩺',label])],...SYMPTOM_GROUPS]:SYMPTOM_GROUPS;
- const addGroup=(heading,opts)=>{
-  const section=el('section','health-symptom-group'),title=el('h4','',heading),grid=el('div','health-choice-grid');
-  section.append(title);
-  let visible=0;
-  for(const [emoji,name] of opts){
-   // Discharge tracking is explicitly optional, and stays disabled for this user.
-   if(name==='Мажущие выделения'&&!data().settings.dischargeEnabled)continue;
-   const checked=draftSymptoms.has(name),btn=button(emoji+' '+name,()=>chooseSymptom(name),'health-choice'+(checked?' chosen':''));
-   btn.setAttribute('aria-pressed',String(checked));grid.append(btn);visible++;
+ const groups=recent.length?[['Недавние',recent.map(label=>[icons.get(label)||'🩺',label])],...SYMPTOM_GROUPS]:SYMPTOM_GROUPS;
+ const renderGroup=(heading,items)=>{
+  const group=el('section','health-symptom-group'),title=el('h4','',heading),grid=el('div','health-choice-grid');
+  group.append(title);
+  let count=0;
+  for(const [emoji,name] of items){
+   if(name==='Мажущие выделения'&&!h.settings.dischargeEnabled)continue;
+   const checked=selected.has(name);
+   const btn=button(emoji+' '+name,()=>onToggle(name),'health-choice'+(checked?' chosen':''));
+   btn.setAttribute('aria-pressed',String(checked));
+   grid.append(btn);count++;
   }
-  if(visible){section.append(grid);host.append(section)}
+  if(count){group.append(grid);host.append(group)}
  };
- for(const [heading,opts] of groups)addGroup(heading,opts);
- const older=[...draftSymptoms].filter(x=>!all.has(x));
- if(older.length)addGroup('Ранее сохранённые симптомы',older.map(name=>['🩺',name]));
+ for(const [heading,items] of groups)renderGroup(heading,items);
+ const older=[...selected].filter(x=>!all.has(x));
+ if(older.length)renderGroup('Ранее записанные симптомы',older.map(name=>['🩺',name]));
+}
+function showChoices(){
+ renderSymptomChoices($('healthSymptoms'),draftSymptoms,chooseSymptom);
  renderIllnessHints();
+}
+// The physical-state popup is a second view of the *same* symptom diary.
+// Keep previous state.days[date].physicalTags data intact for compatibility.
+function mountPhysicalSymptoms(host,d){
+ if(!host||!validDay(d))return;
+ host.replaceChildren();host.classList.add('physical-symptom-picker');
+ const h=data(),entry=h.cycleDays[d]||{};
+ const saved=Array.isArray(entry.symptoms)?entry.symptoms:
+  (Array.isArray(B.legacyPhysicalTags?.(d))?B.legacyPhysicalTags(d):[]);
+ const selected=new Set(saved.filter(x=>typeof x==='string'));
+ host.append(el('h4','','🩺 Симптомы'));
+ host.append(el('p','hint','Такие же отметки, как в ресурсе «Здоровье». Выбери нужные симптомы и сохрани.'));
+ const hint=el('div','health-illness-hint'),caution=el('div','health-safety-hint');
+ hint.hidden=true;caution.hidden=true;
+ const grid=el('div','health-symptom-groups');
+ const status=el('p','hint');status.setAttribute('role','status');
+ host.append(hint,caution,grid,status);
+ const actions=el('div','health-actions');
+ const saveButton=button('Сохранить симптомы',()=>{
+  if(d>nowDay()){status.textContent='Нельзя записывать симптомы за будущую дату.';return}
+  const symptoms=[...selected];
+  const saved=change(next=>{
+   next.cycleDays[d]={...(next.cycleDays[d]||{}),symptoms};
+  });
+  if(!saved){status.textContent='Не удалось сохранить симптомы.';return}
+  status.textContent='✓ Симптомы сохранены';
+  // Close only the physical-state editor; show the opt-in illness dialog next.
+  const parent=host.closest('dialog');
+  if(parent?.open)parent.close();
+  offerIllnessAfterSave(d,symptoms);
+ },'primary');
+ actions.append(saveButton);host.append(actions);
+ function refresh(){
+  renderSymptomChoices(grid,selected,name=>{
+   if(selected.has(name))selected.delete(name);else selected.add(name);
+   refresh();
+  });
+  const assessment=B.illnessSuggestion?.(d,[...selected]);
+  caution.hidden=!assessment?.caution;
+  if(assessment?.caution)caution.textContent='⚠ '+assessment.caution;
+  hint.hidden=!assessment?.suggest||assessment.active||assessment.declined;
+  if(!hint.hidden)hint.textContent='🩺 '+assessment.reasons.join('; ')+
+   '. После сохранения можно будет подтвердить игровой статус «Болезнь».';
+ }
+ refresh();
 }
 function saveCycle(e){
  e.preventDefault();const d=$('healthDate').value;
@@ -808,7 +860,7 @@ function markCalendar(container){
   }
  }
 }
-window.LifeSimsHealth={render,openAt,appendAgenda,markCalendar,forecast};
+window.LifeSimsHealth={render,openAt,appendAgenda,markCalendar,forecast,mountPhysicalSymptoms};
 fillUi();resetMedicationForm();render();
 window.setInterval(checkReminders,60000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){checkReminders();render()}});
