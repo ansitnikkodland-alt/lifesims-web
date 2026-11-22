@@ -71,13 +71,40 @@ function isScheduled(m,d){
  const days=Array.isArray(m.weekdays)?m.weekdays:[0,1,2,3,4,5,6];
  return days.includes(parse(d).getDay());
 }
+// Old LifeSims stored all medicines in one free-text field. Split individual
+// medicines while preserving decimal commas (2,5) and the original diary text.
+function parseLegacyMedicine(value){
+ const item=String(value||'').trim().replace(/[,;.\s]+$/u,'');
+ // Dose units are copied only when explicitly written; never assume "мг".
+ const match=item.match(/^(.+?)[\s,]+(\d+(?:[.,]\d+)?(?:\s*(?:мкг|мг|mg|mcg|мл|ml|г|гр|таблетк[а-яё]*|таб\.?|капсул[а-яё]*|капс\.?|МЕ|ЕД|IU)\.?)?)$/iu);
+ return match?{name:match[1].trim(),dose:match[2].trim()}:{name:item,dose:''};
+}
+function splitLegacyMedicines(raw){
+ const result=[];
+ // A comma is a separator only when followed by a *name*, not by a digit.
+ // Preserve the legacy line index so previously edited single-line records
+ // retain their IDs, but use sub-IDs for records containing several medicines.
+ const lines=String(raw||'').split(/\r?\n/u).map(s=>s.trim()).filter(Boolean);
+ for(let index=0;index<lines.length;index++){
+  const pieces=lines[index].split(/[,;](?=\s*[\p{L}])/u).map(x=>x.trim()).filter(Boolean);
+  for(let j=0;j<pieces.length;j++){
+   const parsed=parseLegacyMedicine(pieces[j]);
+   if(!parsed.name)continue;
+   result.push({legacyIndex:index,partIndex:j,compound:pieces.length>1,
+    sourceLine:pieces[j],name:parsed.name,dose:parsed.dose});
+  }
+ }
+ return result.slice(0,150);
+}
 function legacyMeds(h,d){
  const raw=B.legacyMeds?.()?.[d];
  if(typeof raw!=='string'||!raw.trim())return [];
- return raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).slice(0,80).map((line,index)=>{
-  const id='legacy-meds:'+d+':'+index,edited=h.legacyMedicationEdits?.[id]||{};
-  return {id,name:typeof edited.name==='string'&&edited.name.trim()?edited.name:line,
-   dose:typeof edited.dose==='string'?edited.dose:'',archived:true,legacy:true,sourceDate:d,sourceLine:line};
+ return splitLegacyMedicines(raw).map(part=>{
+  const id='legacy-meds:'+d+':'+part.legacyIndex+(part.compound?':'+part.partIndex:'');
+  const edited=h.legacyMedicationEdits?.[id]||{};
+  return {id,name:typeof edited.name==='string'&&edited.name.trim()?edited.name:part.name,
+   dose:typeof edited.dose==='string'?edited.dose:part.dose,
+   archived:true,legacy:true,sourceDate:d,sourceLine:part.sourceLine};
  });
 }
 function slots(h,d){
