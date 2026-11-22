@@ -4021,6 +4021,7 @@ function renderHistory(){
     panel.append(row);
     count++;
   }
+  count+=window.LifeSimsHealth?.appendHistory?.(chosen,panel)||0;
   if(!count){
     const p=document.createElement('p');p.className='muted';
     p.textContent='Событий и записей на выбранную дату нет.';
