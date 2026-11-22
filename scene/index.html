@@ -962,7 +962,7 @@ body{background:#091428}
 <fieldset id="eventRecurrenceOptions" class="event-repeat-options" hidden><legend>Повторения</legend><label class="field">Каждые <input id="eventRepeatInterval" type="number" min="1" max="365" value="1" step="1"> <span id="eventRepeatUnit">недель</span></label><div class="field"><strong>Окончание</strong><div class="row"><label><input type="radio" name="eventRecurrenceEnd" value="never" checked> Бесконечно</label><label><input type="radio" name="eventRecurrenceEnd" value="count"> После N раз</label><label><input type="radio" name="eventRecurrenceEnd" value="until"> До даты</label></div></div><label id="eventRepeatCountLabel" class="field" hidden>Количество повторов<input id="eventRepeatCount" type="number" min="1" max="3650" value="10"></label><label id="eventRepeatUntilLabel" class="field" hidden>Последняя дата<input id="eventRepeatUntil" type="date"></label></fieldset><fieldset id="eventWeekdays" hidden><legend>Дни недели</legend><div class="row"><label><input type="checkbox" name="eventWeekday" value="1"> Пн</label><label><input type="checkbox" name="eventWeekday" value="2"> Вт</label><label><input type="checkbox" name="eventWeekday" value="3"> Ср</label><label><input type="checkbox" name="eventWeekday" value="4"> Чт</label><label><input type="checkbox" name="eventWeekday" value="5"> Пт</label><label><input type="checkbox" name="eventWeekday" value="6"> Сб</label><label><input type="checkbox" name="eventWeekday" value="7"> Вс</label></div></fieldset>
 <label class="field">Место <input id="eventLocation" maxlength="300" placeholder="Адрес или место встречи"></label>
 <label class="field">Описание <textarea id="eventDescription" rows="3" placeholder="Дополнительные сведения"></textarea></label>
-<label class="field">Связанный навык <input id="eventSkill" list="skillSuggestions" maxlength="70" autocomplete="off" placeholder="Выбрать или создать навык"><small>После окончания неотменённого мероприятия навык автоматически получает +2 XP. Если отметить участие вручную, применяется выбранный ниже опыт вместо автоматического.</small></label>
+<label class="field">Связанные навыки <input id="eventSkill" list="skillSuggestions" maxlength="70" autocomplete="off" placeholder="Выбрать или создать навык"><small>Каждый выбранный навык автоматически получает +2 XP по окончании мероприятия. При подтверждённом участии указанный ниже опыт начисляется каждому.</small></label>
 <div class="cols"><label class="field">Связанное дело <select id="eventTaskLink"><option value="">Без связи</option></select></label>
 <label class="field">Связанная привычка <select id="eventHabitLink"><option value="">Без связи</option></select></label></div>
 <label class="field">Опыт навыка за подтверждённое участие <select id="eventSkillXP"><option value="0">0 XP</option><option value="5">+5 XP</option><option value="10" selected>+10 XP</option><option value="15">+15 XP</option><option value="20">+20 XP</option><option value="40">+40 XP</option></select></label>
@@ -981,7 +981,7 @@ body{background:#091428}
 <label class="field">Повтор <select id="taskRepeat"><option value="once">Однократно</option><option value="daily">Ежедневно</option><option value="weekly">По дням недели</option></select></label></div>
 <fieldset id="taskWeekdays" hidden><legend>Конкретные дни недели</legend><div class="row"><label><input type="checkbox" name="taskWeekday" value="1"> Пн</label><label><input type="checkbox" name="taskWeekday" value="2"> Вт</label><label><input type="checkbox" name="taskWeekday" value="3"> Ср</label><label><input type="checkbox" name="taskWeekday" value="4"> Чт</label><label><input type="checkbox" name="taskWeekday" value="5"> Пт</label><label><input type="checkbox" name="taskWeekday" value="6"> Сб</label><label><input type="checkbox" name="taskWeekday" value="7"> Вс</label></div></fieldset>
 <div class="cols"><label class="field">Начало <input id="taskStartDate" type="date" required></label><label class="field">Влияние на ресурс <select id="taskXP"><option value="-40">−40 XP · сильное снижение</option><option value="-20">−20 XP</option><option value="-15">−15 XP</option><option value="-10">−10 XP</option><option value="-5">−5 XP</option><option value="0">0 XP · без влияния</option><option value="5">+5 XP</option><option value="10" selected>+10 XP</option><option value="15">+15 XP</option><option value="20">+20 XP</option><option value="40">+40 XP</option></select></label></div>
-<label class="field">Повышаемый навык <input id="taskSkill" list="skillSuggestions" maxlength="70" autocomplete="off" placeholder="Не повышает навык"><datalist id="skillSuggestions"></datalist><small>Выбери навык или впиши новый, либо оставь пустым.</small></label><label class="field">Связать с предметом в комнате <select id="taskObject"><option value="">Без связи</option><option value="bed">🛏 Кровать</option><option value="books">📚 Книжный шкаф</option><option value="tableBook">📖 Книга на журнальном столике</option><option value="phone">📱 Телефон</option><option value="coffee">☕ Чашка кофе</option><option value="clutter">🧹 Вещи для уборки</option><option value="desk">💻 Рабочий стол</option><option value="sink">🚰 Раковина</option><option value="shower">🚿 Душевая кабина</option><option value="fridge">🧊 Холодильник</option><option value="toilet">🚽 Туалет</option><option value="catLitter">🐈 Туалет котиков</option><option value="sofa">🛋 Диван</option><option value="sim">👤 Персонаж</option><option value="window">🪟 Окно</option></select></label>
+<label class="field">Связанные навыки <input id="taskSkill" list="skillSuggestions" maxlength="70" autocomplete="off" placeholder="Не повышает навык"><datalist id="skillSuggestions"></datalist><small>Можно добавлять несколько навыков кнопкой «Добавить навык» или Enter.</small></label><label class="field">Связать с предметом в комнате <select id="taskObject"><option value="">Без связи</option><option value="bed">🛏 Кровать</option><option value="books">📚 Книжный шкаф</option><option value="tableBook">📖 Книга на журнальном столике</option><option value="phone">📱 Телефон</option><option value="coffee">☕ Чашка кофе</option><option value="clutter">🧹 Вещи для уборки</option><option value="desk">💻 Рабочий стол</option><option value="sink">🚰 Раковина</option><option value="shower">🚿 Душевая кабина</option><option value="fridge">🧊 Холодильник</option><option value="toilet">🚽 Туалет</option><option value="catLitter">🐈 Туалет котиков</option><option value="sofa">🛋 Диван</option><option value="sim">👤 Персонаж</option><option value="window">🪟 Окно</option></select></label>
 <div class="row"><button class="primary" type="submit" id="taskSave">Сохранить дело/привычку</button><button class="secondary" type="button" id="taskCancel">Отмена</button><button class="secondary" type="button" id="taskDelete" hidden>Удалить</button></div>
 <p class="hint">Изменение или удаление дела не удаляет записи о его прежнем выполнении и уже полученный XP.</p>
 </form></details>
@@ -1124,6 +1124,33 @@ function skillsOf(item){
 function withSkills(item,values){
  const skills=skillNames(values);return {...item,skills,skill:skills[0]||null};
 }
+function createSkillPicker(id){
+ const input=$(id),label=input?.closest('label');
+ if(!input||!label)return null;
+ const tags=document.createElement('div'),button=document.createElement('button');
+ tags.className='multi-skill-tags';tags.setAttribute('aria-live','polite');
+ button.type='button';button.className='secondary multi-skill-add';button.textContent='＋ Добавить навык';
+ let chosen=[];
+ function paint(){
+  tags.replaceChildren();
+  for(const name of chosen){
+   const chip=document.createElement('span');chip.className='multi-skill-tag';
+   const txt=document.createElement('span');txt.textContent=name;
+   const remove=document.createElement('button');remove.className='multi-skill-remove';remove.type='button';
+   remove.textContent='×';remove.setAttribute('aria-label','Убрать навык '+name);
+   remove.onclick=()=>{chosen=chosen.filter(x=>x!==name);paint()};
+   chip.append(txt,remove);tags.append(chip);
+  }
+ }
+ function add(){if(input.value.trim()){chosen=skillNames([...chosen,input.value]);input.value='';paint();}}
+ button.onclick=add;
+ input.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===','){event.preventDefault();add();}});
+ label.append(button,tags);
+ return {set(values){chosen=skillNames(values);input.value='';paint()},get(){return skillNames([...chosen,input.value.trim()])}};
+}
+const taskSkillsPicker=createSkillPicker('taskSkill');
+const eventSkillsPicker=createSkillPicker('eventSkill');
+
 
 function normalize(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.schema!==VERSION||!raw.days||typeof raw.days!=='object'||Array.isArray(raw.days)||!Array.isArray(raw.activities)||!Array.isArray(raw.events))throw Error('Неизвестный или повреждённый формат');const safe=base();const normalized={...safe,...raw,foodMeals:Array.isArray(raw.foodMeals)?raw.foodMeals.filter(x=>x&&typeof x==='object'&&typeof x.id==='string'&&typeof x.date==='string'):[],foodTemplates:Array.isArray(raw.foodTemplates)?raw.foodTemplates.filter(x=>x&&typeof x==='object'&&typeof x.title==='string'&&x.title.trim().length>0):[],googleHidden:Array.isArray(raw.googleHidden)?raw.googleHidden.filter(x=>x&&typeof x.calendarId==='string'&&typeof x.id==='string').map(x=>({calendarId:x.calendarId,id:x.id,title:typeof x.title==='string'?x.title:'',hiddenAt:typeof x.hiddenAt==='string'?x.hiddenAt:''})):[],schedule:Array.isArray(raw.schedule)?raw.schedule:(Array.isArray(raw.legacyCopy?.events)?raw.legacyCopy.events.map((e,i)=>({id:'legacy-schedule-'+i,title:e.title||'Мероприятие',startsAt:e.startsAt,endsAt:e.endsAt,repeat:e.repeat==='weekly'?'weekly':'none',weekdays:e.repeat==='weekly'&&e.startsAt?[((new Date(e.startsAt.slice(0,10)+'T12:00:00').getDay()+6)%7)+1]:[]})):[]),room:(raw.room&&typeof raw.room==='object'&&!Array.isArray(raw.room))?{...safe.room,...raw.room}:safe.room};
  if(!raw.room?.antiperspirantInitialized){
@@ -1522,7 +1549,7 @@ function renderTopActivities(){
 }
 
 function clearActivityEditor(){
- $('taskForm').reset();$('taskEditId').value='';
+ $('taskForm').reset();$('taskEditId').value='';taskSkillsPicker?.set([]);
  $('taskStartDate').value=$('historyDate').value||today();
  refreshSkillSuggestions();$('taskSkill').value='';
  document.querySelectorAll('[name=taskWeekday]').forEach(x=>x.checked=false);
@@ -1540,7 +1567,7 @@ function openActivityEditor(id){
  $('taskXP').value=String(Number.isFinite(a.xp)?a.xp:0);
  if(!$('taskXP').value)$('taskXP').value='0';
  $('taskObject').value=a.object||'';
- $('taskSkill').value=a.skill||'';
+ taskSkillsPicker?.set(skillsOf(a));
  $('taskWeekdays').hidden=a.repeat!=='weekly';
  document.querySelectorAll('[name=taskWeekday]').forEach(x=>x.checked=Array.isArray(a.weekdays)?a.weekdays.includes(Number(x.value)):false);
  $('taskDelete').hidden=false;$('taskEditorHeading').textContent='Изменить дело или привычку';
@@ -1560,7 +1587,7 @@ function addActivity(e){
  if(meta.habitGoal&&(!['min','max'].includes(meta.habitGoal.type)||!Number.isFinite(meta.habitGoal.value)||meta.habitGoal.value<0||meta.habitGoal.value>100000))return toast('Для нормы укажи неотрицательное число не больше 100000.');
  if(meta.resourceEffect&&!validatedResourceEffect(meta.resourceEffect))return toast('Проверь настройки влияния на показатель: значение должно быть от −100 до +100, а срок — допустимым.');
  if(meta.resourceEffect)meta.resourceEffect=validatedResourceEffect(meta.resourceEffect);
- const act={...(old||{}),...meta,id:old?.id||uid(),name,repeat,weekdays:repeat==='weekly'?weekdays:[],createdDate:$('taskStartDate').value||today(),kind:$('taskKind').value==='habit'?'habit':'task',xp:Number($('taskXP').value),skill:$('taskSkill').value.trim().slice(0,70)||null,object:$('taskObject').value||null,completions:old?.completions||[]};
+ const act={...(old||{}),...meta,id:old?.id||uid(),name,repeat,weekdays:repeat==='weekly'?weekdays:[],createdDate:$('taskStartDate').value||today(),kind:$('taskKind').value==='habit'?'habit':'task',xp:Number($('taskXP').value),...withSkills({},taskSkillsPicker?.get()||[]),object:$('taskObject').value||null,completions:old?.completions||[]};
  if(!transact(()=>{const i=state.activities.findIndex(x=>x.id===act.id);if(i<0)state.activities.push(act);else state.activities[i]=act;}))return toast('Не удалось сохранить');
  clearActivityEditor();$('calendarTaskEditor').open=false;
  if($('calendarTaskPopup')?.open)$('calendarTaskPopup').close();
@@ -3399,7 +3426,8 @@ function scheduleHistoryOccurrences(from,to){
     entries.push({id:event.id,occurrenceKey:key,date,title:info.title,startsAt:start,endsAt:end,
       google:!!event.google,googleIdentity:event.google?.id?(event.google.calendarId||'primary')+'::'+event.google.id:null,repeat:event.repeat&&event.repeat!=='none',allDay:!!info.allDay,
       sourceName:event.google?.sourceName||'LifeSims',color:info.color||event.google?.color||'#4285f4',
-      location:info.location||'',description:info.description||'',skill:info.skill||null,
+      location:info.location||'',description:info.description||'',skill:skillsOf(localOverride&&('skills'in localOverride||'skill'in localOverride)?localOverride:event)[0]||null,
+       skills:skillsOf(localOverride&&('skills'in localOverride||'skill'in localOverride)?localOverride:event),
       linkedTaskId:info.linkedTaskId||null,linkedHabitId:info.linkedHabitId||null,
       skillXp:Number.isFinite(Number(info.skillXp))?Number(info.skillXp):0});
    }
@@ -3924,7 +3952,7 @@ function populateEventActivityLinks(){
  refreshSkillSuggestions();
 }
 function clearEventForm(){
-  $('eventForm').reset();$('eventEditId').value='';populateEventActivityLinks();
+  $('eventForm').reset();$('eventEditId').value='';populateEventActivityLinks();eventSkillsPicker?.set([]);
   $('eventSkill').value='';$('eventTaskLink').value='';$('eventHabitLink').value='';$('eventSkillXP').value='10';
   $('eventRepeatInterval').value='1';$('eventRepeatCount').value='10';$('eventRepeatUntil').value='';document.querySelector('[name=eventRecurrenceEnd][value=never]').checked=true;toggleEventRecurrence();$('eventAllDay').checked=false;
   $('eventDayStart').value='';$('eventDayEnd').value='';
@@ -3975,7 +4003,7 @@ function openCalendarEventEditor(id,occurrenceDate){
  const end=document.querySelector('[name=eventRecurrenceEnd][value='+(event.repeatEndMode||'never')+']');if(end)end.checked=true;toggleEventRecurrence();
  $('eventLocation').value=override?.location??event.location??'';
  $('eventDescription').value=override?.description??event.description??'';
- $('eventSkill').value=override?.skill??event.skill??'';
+ eventSkillsPicker?.set(override&&('skills'in override||'skill'in override)?skillsOf(override):skillsOf(event));
  $('eventTaskLink').value=override?.linkedTaskId??event.linkedTaskId??'';
  $('eventHabitLink').value=override?.linkedHabitId??event.linkedHabitId??'';
  $('eventSkillXP').value=String(override?.skillXp??event.skillXp??10);
@@ -4068,13 +4096,13 @@ function saveEvent(e){
  if(old&&old.repeat&&old.repeat!=='none'&&!approvedCalendarSaveScope)
    return chooseCalendarSeriesScope('save',old.id,occurrenceKey||old.startsAt.slice(0,10));
   const scope=old&&old.repeat&&old.repeat!=='none'?(approvedCalendarSaveScope||$('eventScope').value):'all';
- const skill=$('eventSkill').value.trim().slice(0,70)||null;
+ const selectedSkills=eventSkillsPicker?.get()||[],skill=selectedSkills[0]||null;
  const linkedTaskId=$('eventTaskLink').value||null,linkedHabitId=$('eventHabitLink').value||null;
  const skillXp=Number($('eventSkillXP').value);
  if(!Number.isFinite(skillXp)||skillXp<0||skillXp>40)return toast('Проверь количество опыта навыка');
  const next={...(old||{}),id,title,startsAt,endsAt,repeat,allDay,weekdays:repeat==='weekly'?weekdays:[],repeatInterval:interval,repeatEndMode:endMode,repeatCount,repeatUntil,
   location:$('eventLocation').value.trim(),description:$('eventDescription').value.trim(),color:$('eventColor').value,
-  skill,linkedTaskId,linkedHabitId,skillXp};
+  skill,skills:selectedSkills,linkedTaskId,linkedHabitId,skillXp};
  if(!transact(()=>{
   state.schedule??=[];
   const i=state.schedule.findIndex(x=>x.id===id);
@@ -4095,7 +4123,7 @@ function saveEvent(e){
    // Keep the original recurring series and override only the selected occurrence.
    const overrides={...(old.overrides||{})};
    overrides[occurrenceKey]={title,startsAt,endsAt,allDay,location:next.location,description:next.description,color:next.color,
-    skill:next.skill,linkedTaskId:next.linkedTaskId,linkedHabitId:next.linkedHabitId,skillXp:next.skillXp};
+    skill:next.skill,skills:next.skills,linkedTaskId:next.linkedTaskId,linkedHabitId:next.linkedHabitId,skillXp:next.skillXp};
    state.schedule[i]={...old,overrides};
   }else if(scope==='future'){
    const previousDay=plusDays(occurrenceKey,-1);
