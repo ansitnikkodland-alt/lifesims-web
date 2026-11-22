@@ -1,4 +1,4 @@
-name: Verify LifeSims app usage icon and attribution rules
+name: Verify LifeSims Motivate Clock time reports and app assignments
 on:
   push:
     paths:
@@ -30,9 +30,9 @@ jobs:
               const errors=[];page.on('pageerror',e=>errors.push(e.message));
               let response;
               for(let i=0;i<20;i++){
-                response=await page.goto('https://ansitnikkodland-alt.github.io/lifesims-web/scene/?v=117&run='+i,
+                response=await page.goto('https://ansitnikkodland-alt.github.io/lifesims-web/scene/?v=118&run='+i,
                    {waitUntil:'domcontentloaded',timeout:35000});
-                if(response.ok()&&(await page.locator('body').innerText()).includes('Моя жизнь · v117'))break;
+                if(response.ok()&&(await page.locator('body').innerText()).includes('Моя жизнь · v118'))break;
                 await page.waitForTimeout(3500);
               }
               assert(response.ok(),'public site unavailable');
@@ -52,16 +52,29 @@ jobs:
               await app.click();
               const dialog=page.locator('#sfLinkDialog');
               assert(await dialog.isVisible(),'association editor missing');
+              await dialog.locator('label',{hasText:'Work / Rest'}).locator('select').selectOption('work');
               await dialog.locator('label',{hasText:'Навык'}).locator('select').selectOption({label:'Программирование'});
+              await dialog.locator('.sf-link-new-project input').fill('Разработка LifeSims');
+              await dialog.locator('.sf-link-new-project button').click();
+              const project=await dialog.locator('label',{hasText:'Проект'}).locator('select').inputValue();
+              assert(project,'project was not selected after creation');
               await dialog.getByRole('button',{name:'Сохранить по умолчанию'}).click();
               const saved=await page.evaluate(sample=>
                 window.LifeSimsScreenTimeBridge.link({...sample,date:'2026-11-24'}),sample);
-              assert(saved.isDefault&&saved.link.skill==='Программирование','future default not applied');
+              assert(saved.isDefault&&saved.link.skill==='Программирование'&&
+                saved.link.mode==='work'&&saved.link.projectId,'future default not applied');
+              const report=page.locator('#sfTimeReport');
+              assert(await report.count()===1,'Work/Rest project dashboard missing');
+              const reportText=await report.innerText();
+              assert(reportText.includes('Работа')&&reportText.includes('Отдых')&&
+                reportText.includes('Разработка LifeSims')&&reportText.includes('40 мин'),
+                'Work/Rest/project report not displaying the linked time: '+reportText.slice(0,800));
               await page.reload({waitUntil:'domcontentloaded'});
               await page.waitForFunction(()=>!!window.LifeSimsScreenTimeBridge,{timeout:20000});
               const restored=await page.evaluate(sample=>window.LifeSimsScreenTimeBridge.link(sample),sample);
-              assert(restored.link.skill==='Программирование','rule not persisted after reload');
-              console.log('Association editor, app icon placeholder, future defaults, persistence OK');
+              assert(restored.link.skill==='Программирование'&&restored.link.mode==='work'&&
+                !!restored.link.projectId,'Work/Rest/project rule not persisted after reload');
+              console.log('Motivate Clock Work/Rest, project creation, app icons, reports, future defaults and persistence OK');
               assert.equal(errors.length,0,'JS errors: '+errors.join('; '));
             }finally{await browser.close()}
           })().catch(e=>{console.error(e);process.exitCode=1});
