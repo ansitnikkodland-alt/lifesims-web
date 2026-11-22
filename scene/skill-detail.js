@@ -11,6 +11,8 @@
   return node;
  };
  const dialog=make('dialog','skill-detail-dialog');dialog.id='skillDetailDialog';
+ const healthMount=$('lifesims-health-mount');
+ const healthParking=$('health-parking');
  dialog.setAttribute('aria-labelledby','skillDetailTitle');
  dialog.innerHTML='<div class="skill-detail-heading"><h3 id="skillDetailTitle"></h3><button id="skillDetailClose" type="button" aria-label="Закрыть">×</button></div><div id="skillDetailBody"></div>';
  document.body.append(dialog);
@@ -53,7 +55,7 @@
   picker.append(make('summary','skill-existing-toggle','🔗 Связать существующие дела, привычки и мероприятия'));
   const content=make('div','skill-existing-content');
   content.append(make('p','skill-detail-note',
-   'Выбирай уже созданные записи. Одно дело, привычка или мероприятие может быть связано с несколькими навыками одновременно. Новые связи не удаляют предыдущие, а старая история XP сохраняется.'));
+   'Выбирай уже созданные записи. Одно дело, привычка или мероприятие может быть связано с несколькими ресурсами одновременно. Новые связи не удаляют предыдущие, а старая история XP сохраняется.'));
   const query=make('input','skill-existing-search');query.type='search';query.id='skillExistingSearch';
   query.placeholder='Поиск по названию';query.autocomplete='off';query.value=linkDraft.query;
   query.setAttribute('aria-label','Найти существующее дело, привычку или мероприятие');
@@ -69,7 +71,7 @@
     const input=make('input');input.type='checkbox';
     input.checked=(key==='eventIds'?linkDraft.eventIds:linkDraft.activityIds).has(entry.id);
     const info=make('span','skill-existing-info'),titleText=make('strong','',entry.name||entry.title);
-    const current=namesOf(entry).length?'Сейчас: ↗ '+namesOf(entry).join(', '):'Без навыка';
+    const current=namesOf(entry).length?'Сейчас: ↗ '+namesOf(entry).join(', '):'Без ресурса';
     const extra=key==='eventIds'&&Object.values(entry.overrides||{}).some(o=>namesOf(o).includes(name))&&!namesOf(entry).includes(name)
      ?' · Отдельное повторение уже связано с этим навыком':'';
     const details=make('small','',current+extra);
@@ -173,7 +175,7 @@
   save.type='button';save.onclick=()=>{
    try{
     const result=bridge.setScore(name,experience.value);
-    if(!result.changed)status.textContent='Навык уже имеет такое значение.';
+    if(!result.changed)status.textContent='Ресурс уже имеет такое значение.';
    }catch(error){
     status.textContent='⚠ '+String(error?.message||'Не удалось сохранить');
    }
@@ -206,7 +208,7 @@
    const names=('skills'in e||'skill'in e)?namesOf(e):namesOf(activities.get(e.activityId)||defaults.get(e.activityId));
    return names.includes(selected);
   }).sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.at||'').localeCompare(String(a.at||''))):skillEvents(selected,data);
-  $('skillDetailTitle').textContent='↗ '+selected;
+  $('skillDetailTitle').textContent='↗ Ресурс: '+selected;
   const body=$('skillDetailBody');body.replaceChildren();
   const summary=make('div','skill-detail-summary');
   const stats=[
@@ -225,6 +227,14 @@
    card.append(make('span','',label),make('strong','',value));summary.append(card);
   }
   body.append(summary);
+  // The health journal lives inside the Health resource, not a separate navigation tab.
+  if(selected==='Здоровье'&&healthMount){
+   const healthPanel=make('section','health-resource-journal');
+   healthPanel.append(healthMount);body.append(healthPanel);
+   window.LifeSimsHealth?.render?.();
+  }else if(healthMount&&healthParking&&healthMount.parentNode!==healthParking){
+   healthParking.append(healthMount);
+  }
   const scale=typeof bridge.displayScale==='function'?bridge.displayScale():Math.max(100,skill.score*1.15);
   const bar=make('div','skill-detail-progress skill-xp-track');
   bar.setAttribute('role','progressbar');
@@ -240,7 +250,7 @@
   body.append(axis);
   body.append(manualSkillEditor(selected,skill,data));
   body.append(make('p','skill-detail-note',
-   'Начальные значения из прежних данных включены в итог. Ручная корректировка задаёт текущий опыт, не удаляя прежние записи. Положительные действия развивают навык, отрицательные привычки его снижают. Количество из таблицы привычек пересчитывает эффект без двойного учёта. После окончания неотменённого мероприятия связанный навык получает +2 XP; ручная отметка участия заменяет это начисление. Без полезной практики навык уменьшается на 0,1% каждый день.'));
+   'Начальные значения из прежних данных включены в итог. Ручная корректировка задаёт текущий опыт, не удаляя прежние записи. Положительные действия развивают ресурс, отрицательные привычки его снижают. Количество из таблицы привычек пересчитывает эффект без двойного учёта. После окончания неотменённого мероприятия связанный навык получает +2 XP; ручная отметка участия заменяет это начисление. Без полезной практики навык уменьшается на 0,1% каждый день.'));
   body.append(linkEditor(selected,data));
   body.append(make('h4','','Связанные дела и привычки'));
   const list=make('div','skill-detail-actions');
@@ -290,7 +300,7 @@
    controls.append(button);
   }
   body.append(controls);
-  body.append(make('h4','','История изменений навыка'));
+  body.append(make('h4','','История изменений ресурса'));
   const historyList=make('div','skill-detail-history');
   for(const event of history){
    const row=make('div','skill-detail-history-row'),info=make('div');
@@ -313,7 +323,10 @@
   if(!dialog.open)dialog.showModal();
  }
  $('skillDetailClose').onclick=()=>dialog.close();
- dialog.addEventListener('close',()=>{selected=null;linkDraft=null;keepPickerOpen=false});
+ dialog.addEventListener('close',()=>{
+  if(healthMount&&healthParking)healthParking.append(healthMount);
+  selected=null;linkDraft=null;keepPickerOpen=false;
+ });
  dialog.addEventListener('click',event=>{
   if(event.target!==dialog)return;
   const r=dialog.getBoundingClientRect();
