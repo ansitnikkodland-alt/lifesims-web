@@ -41,7 +41,8 @@ jobs:
             const url=route.request().url();
             const product={code:'4601234567890',product_name_ru:'Творог тестовый',brands:'Тест',
              quantity:'200 г',nutriments:{'energy-kcal_100g':120,proteins_100g:10,fat_100g:5,carbohydrates_100g:4}};
-            const response=url.includes('/cgi/search.pl')?{products:[product]}:{status:1,product};
+            const response=url.includes('/4600000000000')?{status:0,product:null}:
+             url.includes('/cgi/search.pl')?{products:[product]}:{status:1,product};
             route.fulfill({status:200,contentType:'application/json',
              headers:{'Access-Control-Allow-Origin':'*'},body:JSON.stringify(response)});
            });
@@ -100,7 +101,7 @@ jobs:
            await page.locator('#mealLookupGrams').fill('40');
            await page.locator('#mealChatSend').click();
            const label=await page.evaluate(()=>window.LifeSimsFoodBridge.list().find(x=>x.title==='Батончик тестовый'));
-           if(!label||label.grams!==40||label.kcal!==108.8)
+           if(!label||label.grams!==40||label.kcal!==109)
              throw Error('Smart label saving incorrect: '+JSON.stringify(label));
            console.log('ONE PHOTO BUTTON -> OCR LABEL -> INGREDIENTS/MACROS: PASS');
            await page.evaluate(()=>{
@@ -122,6 +123,25 @@ jobs:
            const barcode=await page.evaluate(()=>window.LifeSimsFoodBridge.list().find(x=>x.barcode==='4601234567890'));
            if(!barcode)throw Error('Smart barcode record missing');
            console.log('ONE PHOTO BUTTON -> BARCODE -> CATALOG: PASS');
+           await page.evaluate(()=>{
+            window.BarcodeDetector=class{
+             static async getSupportedFormats(){return ['ean_13']}
+             async detect(){return [{rawValue:'4600000000000'}]}
+            };
+           });
+           const [unknownPicker]=await Promise.all([
+            page.waitForEvent('filechooser'),page.locator('#mealSmartCapture').click()
+           ]);
+           await unknownPicker.setFiles(image);
+           await page.locator('#mealLookupNutrition').waitFor({state:'visible',timeout:15000});
+           if(await page.locator('#mealLookupKcal').inputValue()!=='272')
+            throw Error('Missing catalog item did not fall back to OCR');
+           await page.locator('#mealLookupGrams').fill('50');
+           await page.locator('#mealChatSend').click();
+           const fallback=await page.evaluate(()=>window.LifeSimsFoodBridge.list().find(x=>x.barcode==='4600000000000'));
+           if(!fallback||fallback.kcal!==136||!fallback.ingredients.includes('орехи'))
+            throw Error('Unknown barcode fallback failed: '+JSON.stringify(fallback));
+           console.log('UNKNOWN BARCODE -> OCR LABEL FALLBACK: PASS');
            await page.evaluate(()=>{
             window.LifeSimsMealPhoto.analyzeSmart=async()=>({kind:'meal',source:'Контрольная модель',
               title:'Омлет',per100:null,gramsEstimate:180,candidates:[],
