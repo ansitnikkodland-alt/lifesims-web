@@ -191,7 +191,7 @@ jobs:
              title:'Тестовый перекус '+n,kcal:35,protein:1,fat:1,carbs:5});
             return previous;
            });
-           const satietyButton=page.locator('#needsGrid button').filter({hasText:'Сытость'}).first();
+           const satietyButton=page.locator('#hungerMeterCard');
            await satietyButton.click();
            await page.locator('#singleMetricDialog').waitFor({state:'visible'});
            await page.locator('.satiety-food-history').waitFor({state:'visible'});
