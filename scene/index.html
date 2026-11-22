@@ -1103,7 +1103,7 @@ const defs=[
 {id:'sim_diary',object:'sim',name:'Записать в дневник',xp:0,repeat:'daily',open:'diary'},
 {id:'sofa_rest',object:'sofa',name:'Отдохнуть',xp:5,repeat:'daily',skill:'Здоровье'}];
 const labels={window:'🪟 Окно · мероприятия',bed:'🛏 Кровать',books:'📚 Книжная полка',desk:'💻 Компьютер',phone:'📱 Телефон',tableBook:'📖 Книга на столике',fridge:'🧊 Холодильник',coffee:'☕ Кофе',clutter:'🧹 Уборка',sink:'🚰 Раковина',sim:'👤 Персонаж',sofa:'🛋 Диван',shower:'🚿 Ванная',toilet:'🚽 Туалет',catLitter:'🐈 Туалет котиков'};
-const base=()=>({schema:VERSION,createdAt:new Date().toISOString(),days:{},activities:[...defs.filter(a=>a.xp>0).map(a=>({...a,kind:'habit',difficulty:3,createdDate:a.id==='to_poop'?today():undefined,completions:[]})),{id:'coffee_habit',kind:'habit',name:'Кофе',xp:0,skill:null,repeat:'daily',difficulty:3,habitUnit:'чаш.',completions:[]}],events:[],schedule:[],googleHidden:[],foodMeals:[],foodTemplates:[],financeChecks:[],room:{work:null,lastShowerDateReported:'2026-11-18',antiperspirantInitialized:true,poopHabitInitialized:true,illnessEpisodes:[]},legacySkills:{},legacyCopy:null,skillDecaySince:today(),
+const base=()=>({schema:VERSION,createdAt:new Date().toISOString(),days:{},activities:[...defs.filter(a=>a.xp>0).map(a=>({...a,kind:'habit',difficulty:3,createdDate:a.id==='to_poop'?today():undefined,completions:[]})),{id:'coffee_habit',kind:'habit',name:'Кофе',xp:0,skill:null,repeat:'daily',difficulty:3,habitUnit:'чаш.',habitGoal:{type:'max',value:5},completions:[]}],events:[],schedule:[],googleHidden:[],foodMeals:[],foodTemplates:[],financeChecks:[],room:{work:null,lastShowerDateReported:'2026-11-18',antiperspirantInitialized:true,poopHabitInitialized:true,illnessEpisodes:[]},legacySkills:{},legacyCopy:null,skillDecaySince:today(),
  taskProjects:[],taskTags:[{id:'tp-family',name:'Семья'},{id:'tp-work',name:'Работа'}],
  habitMeasurements:{},customSkills:[],focusSettings:{focus:25,short:5,long:15},focusTimer:{mode:'focus',running:false,remainingSec:1500,elapsedSec:0,endAt:null,startAt:null,taskId:''}});
 let state,storageOK=true,storageBlocked=false,activeDay=today(),historyView='month',selectedTab='needs';
@@ -1462,7 +1462,9 @@ function makeCoffeeHabitItem(date){
  const goal=coffee?.habitGoal;const breached=habitNormBreached(coffee,date);if(breached)el.classList.add('negative-habit-day');
  const info=document.createElement('div');info.className='itemtext';
  const title=document.createElement('strong');title.textContent='☕ '+(coffee?.name||'Кофе');
- const desc=document.createElement('small');desc.textContent=count+' '+(coffee?.habitUnit||'чаш.')+' · '+date+(goal?' · '+(goal.type==='max'?'не больше ':'не меньше ')+goal.value+(breached?' · превышение/недобор':''):'');
+ const desc=document.createElement('small');const max=coffeeHealthLimit(coffee);
+ desc.textContent=count+' '+(coffee?.habitUnit||'чаш.')+' · '+date+
+  ' · максимум '+max+' без штрафа'+(count>max?' · ⚠ −'+Math.min(12,(count-max)*3)+' п. п. за день':' · безопасно по игровому правилу');
  info.append(title,desc);
  const add=document.createElement('button');add.className='secondary';add.type='button';
  add.textContent='+1 эспрессо';add.setAttribute('aria-label','Добавить эспрессо за '+date);
@@ -2016,7 +2018,8 @@ if(object==='fridge'){
 }
 if(object==='coffee'){
  const count=document.createElement('p');count.className='hint';
- count.textContent='Эспрессо за сегодня: '+espressoCount(today());
+ const amount=habitAmount('coffee_habit',today()),threshold=coffeeHealthLimit(state.activities.find(a=>a.id==='coffee_habit'));
+ count.textContent='Эспрессо за сегодня: '+amount+' · без штрафа до '+threshold+' включительно';
  const drink=document.createElement('button');drink.type='button';
  drink.textContent='☕ Выпила 1 эспрессо';
  drink.onclick=()=>{closeSheet();recordEspresso(today())};
@@ -2266,6 +2269,11 @@ function openSingleMetric(field,date=today()){
   note('Физическое состояние — игровая оценка, без изменения Oura. to poop: +3 п. п. за день с отметкой, −3 п. п. за завершённый день без неё. Учитывается скользящая неделя (ограниченный эффект). Это игровое правило, а не медицинская норма.');
   const bowel=poopHealthEffect(date);
   note('🚽 to poop: '+habitAmount(POOP_HABIT_ID,date)+' раз за день · недельный эффект '+(bowel.delta>=0?'+':'')+bowel.delta+' п. п.');
+  const harm=negativeHabitHealthEffect(date),coffee=state.activities.find(a=>a.id==='coffee_habit'),limit=coffeeHealthLimit(coffee);
+  note('☕ Кофе: '+habitAmount('coffee_habit',date)+' эспрессо · без штрафа до '+limit+' включительно; влияние с '+(limit+1)+'-го.');
+  note('Отрицательные привычки: −'+harm.points+' п. п. к физическому состоянию за 7 дней'+
+   (harm.items.length?' ('+harm.items.map(x=>x.name+': −'+x.points).join('; ')+')':'')+
+   '. −3 п. п. за единицу отрицательной привычки или превышения нормы, максимум −12 за привычку в день и −30 суммарно за неделю. Уже заданные отрицательные эффекты физического состояния не дублируются.');
   note(isIllnessActive(date)?'🩺 В игре отмечена болезнь: −20 п. п. к физическому состоянию.':'Болезнь можно отметить самостоятельно, независимо от туалета. Приложение не устанавливает диагноз.');
   if(date===today())addButton(isIllnessActive(date)?'✓ Закончить болезнь':'🩺 Отметить болезнь (−20 п. п.)',()=>{
    if(setIllnessActive(!isIllnessActive(today())))dialog.close();
@@ -2387,14 +2395,27 @@ function skillImpactHistory(day=today()){
  });
  // The built-in coffee counter stores espresso events rather than ordinary completions.
  const coffee=activities.get('coffee_habit');
- if(coffee)for(const e of state.events||[]){
-  if(e?.kind!=='espresso'||!/^\d{4}-\d{2}-\d{2}$/.test(e.date||'')||e.date>day)continue;
-  const harmful=e.negative===true||(e.negative!==false&&isNegativeSkillHabit(coffee));
-  const skill=Object.prototype.hasOwnProperty.call(e,'skill')?e.skill:coffee.skill;
-  if(!harmful||!skill)continue;
-  const points=Object.prototype.hasOwnProperty.call(e,'skillXp')&&Number.isFinite(Number(e.skillXp))?
-   -Math.abs(Number(e.skillXp)):skillExperience(coffee);
-  entries.push({...e,kind:'complete',activityId:'coffee_habit',name:coffee.name,skill,negative:true,points});
+ if(coffee){
+  const espresso=(state.events||[]).filter(e=>e?.kind==='espresso'&&
+   /^\d{4}-\d{2}-\d{2}$/.test(e.date||'')&&e.date<=day)
+   .sort((a,b)=>a.date.localeCompare(b.date)||String(a.at||'').localeCompare(String(b.at||'')));
+  const seen=new Map(),limit=coffeeHealthLimit(coffee);
+  for(const e of espresso){
+   const ordinal=(seen.get(e.date)||0)+1;seen.set(e.date,ordinal);
+   if(ordinal<=limit||ordinal>habitAmount('coffee_habit',e.date))continue;
+   const skill=Object.prototype.hasOwnProperty.call(e,'skill')?e.skill:coffee.skill;
+   if(!skill)continue;
+   const magnitude=Math.abs(Number(e.skillXp))||Math.round((Math.abs(Number(coffee.xp))||10)*difficultyOf(coffee)/3);
+   entries.push({...e,kind:'complete',activityId:'coffee_habit',name:coffee.name,skill,negative:true,points:-magnitude});
+  }
+  for(const [d,amountRaw] of Object.entries(state.habitMeasurements?.coffee_habit||{})){
+   if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||d>day||!coffee.skill)continue;
+   const amount=Number(amountRaw),extras=Math.max(0,amount-Math.max(limit,seen.get(d)||0));
+   if(!Number.isFinite(extras)||extras<=0)continue;
+   const magnitude=Math.round((Math.abs(Number(coffee.xp))||10)*difficultyOf(coffee)/3);
+   entries.push({kind:'complete',activityId:'coffee_habit',name:coffee.name+' · превышение нормы',
+    date:d,at:d+'T23:59:59',skill:coffee.skill,negative:true,points:-magnitude*extras,manual:true});
+  }
  }
  const recorded=new Map();
  for(const e of entries){
@@ -2640,12 +2661,13 @@ function metricSnapshot(field,ref=today()){
 function physicalSnapshot(ref=today()){
  const observed=latestObserved(r=>Number.isFinite(r?.condition)||Number.isFinite(r?.ouraScores?.readiness),ref);
  const effected=latestResourceEffectDate('condition',ref);
- const bowel=poopHealthEffect(ref),ill=isIllnessActive(ref);
- const date=[observed,effected,...(bowel.tracked||ill?[ref]:[])].filter(Boolean).sort().pop()||null;
+ const bowel=poopHealthEffect(ref),ill=isIllnessActive(ref),harm=negativeHabitHealthEffect(ref);
+ const date=[observed,effected,...(bowel.tracked||ill||harm.tracked?[ref]:[])].filter(Boolean).sort().pop()||null;
  const base=observed?unadjustedPhysicalCondition(currentRecord(observed),observed):null;
  const value=actionAdjustedNeed('condition',ref,base);
- if(!bowel.tracked&&!ill)return {value,date};
- return {value:Math.max(0,Math.min(100,Math.round((Number.isFinite(value)?value:50)+bowel.delta+(ill?POOP_ILLNESS_POINTS:0)))),date};
+ if(!bowel.tracked&&!ill&&!harm.tracked)return {value,date};
+ return {value:Math.max(0,Math.min(100,Math.round((Number.isFinite(value)?value:50)+bowel.delta+
+  (ill?POOP_ILLNESS_POINTS:0)-harm.points))),date};
 }
 function sleepSnapshot(ref=today()){
  const observed=latestObserved(r=>Number.isFinite(r?.sleepHours),ref);
@@ -2885,11 +2907,58 @@ function maybeSuggestPoopIllness(date=today()){
  document.getElementById('poopIllnessCount').textContent=String(habitAmount(POOP_HABIT_ID,date));
  modal.showModal();
 }
+// Negative habits affect the game physical condition even when the assigned
+// habit resource is something else. These derived effects are never persisted
+// into Oura readings or manual health measurements.
+const NEGATIVE_HABIT_POINTS_PER_UNIT=3;
+function coffeeHealthLimit(coffee){
+ const g=coffee?.habitGoal;
+ return g?.type==='max'&&g.value!=null&&Number.isFinite(Number(g.value))&&Number(g.value)>=0?
+  Number(g.value):5;
+}
+function negativeHabitUnits(activity,date){
+ if(activity?.kind!=='habit'||activity.legacyDone)return 0;
+ const amount=Math.max(0,Number(habitAmount(activity.id,date))||0),goal=activity.habitGoal;
+ // The first five espressos are neutral, even if coffee is marked negative.
+ if(activity.id==='coffee_habit')return Math.max(0,amount-coffeeHealthLimit(activity));
+ const max=goal?.type==='max'&&goal.value!=null&&Number.isFinite(Number(goal.value))&&Number(goal.value)>=0;
+ const min=goal?.type==='min'&&goal.value!=null&&Number.isFinite(Number(goal.value))&&Number(goal.value)>=0;
+ if(max)return Math.max(0,amount-Number(goal.value));
+ if(min)return habitHasAmount(activity.id,date)?Math.max(0,Number(goal.value)-amount):0;
+ return isNegativeSkillHabit(activity)?amount:0;
+}
+function negativeHabitHealthEffect(date=today()){
+ const day=date<=today()?date:today(),windowStart=plusDays(day,-6);
+ let sum=0;const items=[];
+ for(const a of state.activities||[]){
+  if(a?.kind!=='habit'||a.legacyDone)continue;
+  const created=a.createdDate||String(state.createdAt||'').slice(0,10)||day;
+  if(created>day)continue;
+  let points=0,quantity=0;
+  for(let d=(created>windowStart?created:windowStart);d<=day;d=plusDays(d,1)){
+   const units=negativeHabitUnits(a,d);
+   if(units<=0||!Number.isFinite(units))continue;
+   const configured=validatedResourceEffect(a.resourceEffect);
+   const alreadyConfigured=configured?.target==='condition'&&(configured.mode==='set'||configured.amount<0);
+   const alreadyRecorded=(state.events||[]).some(e=>{
+    if(e?.kind!=='complete'||e.activityId!==a.id||e.date!==d)return false;
+    const effect=validatedResourceEffect(e.resourceEffect);
+    return effect?.target==='condition'&&(effect.mode==='set'||effect.amount<0);
+   });
+   // Never stack the automatic penalty with an explicitly saved condition loss.
+   if(alreadyConfigured||alreadyRecorded)continue;
+   points+=Math.min(12,units*NEGATIVE_HABIT_POINTS_PER_UNIT);quantity+=units;
+  }
+  if(points>0){sum+=points;items.push({id:a.id,name:a.name,points,quantity});}
+ }
+ return {points:Math.min(30,sum),rawPoints:sum,items,tracked:sum>0};
+}
 function physicalCondition(r,d=today()){
  const base=actionAdjustedNeed('condition',d,unadjustedPhysicalCondition(r,d));
- const bowel=poopHealthEffect(d),ill=isIllnessActive(d);
- if(!bowel.tracked&&!ill)return base;
- return Math.max(0,Math.min(100,Math.round((Number.isFinite(base)?base:50)+bowel.delta+(ill?POOP_ILLNESS_POINTS:0))));
+ const bowel=poopHealthEffect(d),ill=isIllnessActive(d),harm=negativeHabitHealthEffect(d);
+ if(!bowel.tracked&&!ill&&!harm.tracked)return base;
+ return Math.max(0,Math.min(100,Math.round((Number.isFinite(base)?base:50)+bowel.delta+
+  (ill?POOP_ILLNESS_POINTS:0)-harm.points)));
 }
 function showerReference(){
  // A date supplied by the user can be used without fabricating a time of day.
