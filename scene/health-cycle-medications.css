@@ -79,3 +79,24 @@
 #lifesims-health-mount .health-effect-row{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #3f5576;padding:5px 0;font-size:12px}
 #lifesims-health-mount .health-resource-journal{min-width:0}
 .health-resource-journal{padding:10px 0;border-top:1px solid #4b6387;margin-top:10px}
+
+/* Full symptom catalog and separate Mood meter picker (v104). */
+#lifesims-health-mount .health-symptom-group{padding:10px 0 12px;border-bottom:1px solid #4d6181}
+#lifesims-health-mount .health-symptom-group h4{font-size:14px;font-weight:750;margin:0 0 11px;color:#f8f4fe}
+#lifesims-health-mount .health-symptom-groups .health-choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#lifesims-health-mount .health-symptom-groups .health-choice{border:1px solid #4e6489;border-radius:12px;min-height:68px;display:flex;align-items:center;justify-content:center;text-align:center;white-space:normal;flex-direction:column;line-height:1.25;font-size:12px}
+#lifesims-health-mount .health-symptom-groups .health-choice.chosen{border-color:#edb0d0;background:#684968}
+.mood-picker-panel{display:block;margin:16px 0 9px;padding:14px 0;border-top:1px solid #6880a6}
+.mood-picker-panel h4{font-size:17px;margin:3px 0 8px}
+.mood-picker-group{margin:12px 0 18px}
+.mood-picker-group h5,.mood-picker-existing h5{font-weight:750;margin:6px 0 12px;font-size:14px}
+.mood-picker-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px 5px}
+.mood-picker-option{appearance:none;display:flex;align-items:center;justify-content:flex-start;flex-direction:column;gap:4px;min-width:0;min-height:85px;padding:7px 2px;background:#233650;border:1px solid #50698e;color:#f7f4ff;border-radius:14px;text-align:center;white-space:normal}
+.mood-picker-option.selected{border-color:#ecabc5;background:#65446a;box-shadow:inset 0 0 0 1px #e9b8d0}
+.mood-picker-option .mood-picker-icon{font-size:27px;line-height:30px}
+.mood-picker-option .mood-picker-label{font-size:11px;line-height:1.2;overflow-wrap:anywhere}
+.mood-picker-summary{font-size:13px;line-height:1.5;color:#dfedff;margin:12px 0}
+.mood-picker-actions{display:flex;flex-wrap:wrap;gap:10px}
+.mood-picker-actions>button{min-height:44px;flex:1}
+.mood-picker-feedback{font-size:13px;margin:8px 0}
+@media(max-width:350px){.mood-picker-grid{grid-template-columns:repeat(3,minmax(0,1fr))}}
