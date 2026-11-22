@@ -904,7 +904,7 @@ body{background:#091428}
 </div>
 </div>
 <div class="grid" id="needsGrid"></div><div id="ouraMount" class="oura-mount" aria-label="Синхронизация Oura"><p class="hint">Загрузка панели Oura…</p></div>
-<p class="hint">Нажми на любую потребность, чтобы изменить её показатель. Ресурс автоматически рассчитывается по доступным оценкам: сон, восстановление Oura и записанные настроение, физическое состояние, гигиена и питание. Неизвестные показатели остаются пустыми. Если записана еда, питание оценивается только по времени после последнего приёма пищи (игровая сытость, не качество рациона). Ручное значение питания имеет приоритет. Потребность во сне — игровая оценка по фактическому сну и накопленному недосыпу. Подключение Oura доступно ниже.</p><hr class="separator"><div class="card"><h3>Сегодня</h3><div id="todaySummary" class="muted">Нет записей</div></div><details id="needsEditor" class="card needs-editor"><summary>✎ Показатели дня</summary><button type="button" id="needsClose" class="secondary needs-popup-close">× Закрыть</button><div class="heading"><h3>Показатели и состояние</h3><input type="date" id="stateDate" aria-label="Дата записи"></div><p class="hint">Нажми на потребность выше, чтобы открыть нужное поле. Здесь также доступны сон, шаги, вес, лекарства и питание.</p><form id="stateForm"><div class="cols"><label class="field">Фактический сон, часов <input id="sleepHours" type="number" min="0" max="24" step="0.01" placeholder="Не записано"></label><label class="field">Недосып (ручная корректировка, ч) <input id="sleepDebtAdjustment" type="number" min="0" max="500" step="0.01" placeholder="Автоматический расчёт"></label><p class="hint">◆ Ресурс — игровая оценка по имеющимся данным. Физическое состояние автоматически использует Oura Readiness за сегодня (или вчера при отсутствии сегодняшнего); это не медицинская оценка. Ручное значение физического состояния используется только при отсутствии Oura.</p><label class="field">Настроение: <output id="moodValue">—</output>% <input id="mood" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="moodUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Физическое состояние: <output id="conditionValue">—</output>% <input id="condition" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="conditionUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Гигиена: <output id="hygieneValue">—</output>% <input id="hygiene" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="hygieneUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Питание: <output id="nutritionValue">—</output>% <input id="nutrition" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="nutritionUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Шаги <input id="steps" type="number" min="0" max="100000" step="1" placeholder="Не записано"></label><label class="field">Общий расход, ккал <input id="totalCalories" type="number" min="0" max="20000" step="1" placeholder="Не записано"></label><label class="field">Вес, кг <input id="weight" type="number" min="20" max="350" step="0.1" placeholder="Не записано"></label><label class="field">Талия, см <input id="waist" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label><label class="field">Бёдра, см <input id="hips" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label><label class="field">Грудь, см <input id="chest" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label></div><label class="field">Лекарства <button class="secondary" type="button" id="medsYesterday">Как вчера</button><textarea id="meds" placeholder="Только реально принятые лекарства"></textarea></label><label class="field">Питание <button class="secondary" type="button" id="foodYesterday">Как вчера</button><textarea id="foodLegacy" placeholder="Прежняя текстовая запись еды"></textarea></label><label class="field">Цикл <input id="cycle" maxlength="200" placeholder="Заметка о цикле"></label><button class="primary" type="submit">Сохранить запись за дату</button></form><div class="notice" id="sleepDebtNote">Долг сна рассчитывается по записанным дням.</div>
+<p class="hint">Нажми на любую потребность, чтобы изменить её показатель. Ресурс автоматически рассчитывается по доступным оценкам: сон, восстановление Oura и записанные настроение, физическое состояние, гигиена и питание. Неизвестные показатели остаются пустыми. Если записана еда, питание оценивается только по времени после последнего приёма пищи (игровая сытость, не качество рациона). Ручное значение питания имеет приоритет. Сон — игровая шкала по фактическому сну и накопленному недосыпу. Подключение Oura доступно ниже.</p><hr class="separator"><div class="card"><h3>Сегодня</h3><div id="todaySummary" class="muted">Нет записей</div></div><details id="needsEditor" class="card needs-editor"><summary>✎ Показатели дня</summary><button type="button" id="needsClose" class="secondary needs-popup-close">× Закрыть</button><div class="heading"><h3>Показатели и состояние</h3><input type="date" id="stateDate" aria-label="Дата записи"></div><p class="hint">Нажми на потребность выше, чтобы открыть нужное поле. Здесь также доступны сон, шаги, вес, лекарства и питание.</p><form id="stateForm"><div class="cols"><label class="field">Фактический сон, часов <input id="sleepHours" type="number" min="0" max="24" step="0.01" placeholder="Не записано"></label><label class="field">Недосып (ручная корректировка, ч) <input id="sleepDebtAdjustment" type="number" min="0" max="500" step="0.01" placeholder="Автоматический расчёт"></label><p class="hint">◆ Ресурс — игровая оценка по имеющимся данным. Физическое состояние автоматически использует Oura Readiness за сегодня (или вчера при отсутствии сегодняшнего); это не медицинская оценка. Ручное значение физического состояния используется только при отсутствии Oura.</p><label class="field">Настроение: <output id="moodValue">—</output>% <input id="mood" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="moodUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Физическое состояние: <output id="conditionValue">—</output>% <input id="condition" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="conditionUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Гигиена: <output id="hygieneValue">—</output>% <input id="hygiene" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="hygieneUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Питание: <output id="nutritionValue">—</output>% <input id="nutrition" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="nutritionUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Шаги <input id="steps" type="number" min="0" max="100000" step="1" placeholder="Не записано"></label><label class="field">Общий расход, ккал <input id="totalCalories" type="number" min="0" max="20000" step="1" placeholder="Не записано"></label><label class="field">Вес, кг <input id="weight" type="number" min="20" max="350" step="0.1" placeholder="Не записано"></label><label class="field">Талия, см <input id="waist" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label><label class="field">Бёдра, см <input id="hips" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label><label class="field">Грудь, см <input id="chest" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label></div><label class="field">Лекарства <button class="secondary" type="button" id="medsYesterday">Как вчера</button><textarea id="meds" placeholder="Только реально принятые лекарства"></textarea></label><label class="field">Питание <button class="secondary" type="button" id="foodYesterday">Как вчера</button><textarea id="foodLegacy" placeholder="Прежняя текстовая запись еды"></textarea></label><label class="field">Цикл <input id="cycle" maxlength="200" placeholder="Заметка о цикле"></label><button class="primary" type="submit">Сохранить запись за дату</button></form><div class="notice" id="sleepDebtNote">Долг сна рассчитывается по записанным дням.</div>
 <div class="card"><h3>🌀 Энтропия в комнате</h3><label class="field">Уровень игрового беспорядка: <output id="entropyValue">—</output><input id="entropyRange" class="color-slider" type="range" min="0" max="100" step="5"></label><p class="hint">Ползунок корректирует игровую оценку. Уборка уменьшает энтропию, время постепенно повышает. Это не измерение реального дома.</p></div></details></section><div id="lifeModalMask" class="life-modal-mask" hidden></div>
 
 
@@ -1364,7 +1364,7 @@ function resourceEffectLabel(raw){
  const effect=validatedResourceEffect(raw);
  if(!effect)return '';
  const names={resource:'ресурс',mood:'настроение',condition:'физическое состояние',
-  hygiene:'гигиена',nutrition:'питание',hunger:'сытость',sleepNeed:'потребность во сне',
+  hygiene:'гигиена',nutrition:'питание',hunger:'сытость',sleepNeed:'сон',
   entropy:'энтропия',activity:'активность'};
  return '⚡ '+(names[effect.target]||effect.target)+' '+
   (effect.mode==='set'?'→ '+effect.amount+'%':(effect.amount>=0?'+':'')+effect.amount+' п. п.')+
@@ -1510,7 +1510,7 @@ function makeActivityItem(a,date){
   ' · '+((Number(a.xp)||0)>0?'+':'')+(Number(a.xp)||0)+' XP'+(repeatable?' · за дату: '+count+' раз':'')+
   (validatedResourceEffect(a.resourceEffect)?' · ⚡ '+({
    mood:'Настроение',condition:'Физическое состояние',hygiene:'Гигиена',nutrition:'Питание',
-   hunger:'Сытость',sleepNeed:'Потребность во сне',entropy:'Энтропия',activity:'Активность',resource:'Ресурс'
+   hunger:'Сытость',sleepNeed:'Сон',entropy:'Энтропия',activity:'Активность',resource:'Ресурс'
   }[a.resourceEffect.target]||'Показатель')+' '+(a.resourceEffect.mode==='set'?'→ '+a.resourceEffect.amount+'%':(a.resourceEffect.amount>=0?'+':'')+a.resourceEffect.amount+' п. п.'):'');
  text.append(title,description);el.append(mark,text);
  if(a.object){const badge=document.createElement('span');badge.className='pill';badge.textContent='Комната';el.append(badge)}
@@ -2291,7 +2291,7 @@ function appendSatietyFoodHistory(root,asOfDate,dialog){
 function openSingleMetric(field,date=today()){
  if(field==='nutrition'){closeOtherMetricPopups();window.LifeSimsFood?.open?.();return}
  const titles={
-  resource:'◆ Ресурс',sleepHours:'💤 Потребность во сне',mood:'☺ Настроение',
+  resource:'◆ Ресурс',sleepHours:'💤 Сон',mood:'☺ Настроение',
   hygiene:'♨ Гигиена',condition:'♥ Физическое состояние',entropy:'🌀 Энтропия',
   hunger:'🍽 Сытость',steps:'🚶 Активность',totalCalories:'🔥 Расход калорий'
  };
@@ -2329,7 +2329,7 @@ function openSingleMetric(field,date=today()){
  if(field==='resource'){
   addNumber('Расчётный ресурс',derivedResource(r,date)==null?null:derivedResource(r,date)+'%');const impact=resourceActivityImpact(date);addNumber('Влияние выполненных дел и привычек', (impact>0?'+':'')+impact+' XP');
   const data=[
-   ['Обеспеченность сном',sleepAssessment(date).need==null?null:100-sleepAssessment(date).need],
+   ['Сон · 8 часов = 100%',sleepAssessment(date).score],
    ['Настроение (включая дела)',actionAdjustedNeed('mood',date,r.mood)],
    ['Физическое состояние (включая игровые эффекты)',physicalCondition(r,date)],
    ['Гигиена',hygieneCondition(r,date)],
@@ -2396,11 +2396,12 @@ function openSingleMetric(field,date=today()){
   }
  }else if(field==='sleepHours'){
   const sleep=sleepAssessment(date);
-  addNumber('Потребность во сне',sleep.need==null?null:sleep.need+'%');
-  addNumber('Расчётный недосып',sleep.debt==null?'неизвестен':sleep.debt.toFixed(1)+' ч');
+  addNumber('Сон · 8 ч = 100%',sleep.score==null?'нет данных':sleep.score+'% · '+sleep.last+' ч');
+  addNumber('Долг сна · '+sleep.debtSource,sleep.debt==null?'недостаточно данных':sleep.debt.toFixed(1)+' ч');
+  addNumber('Ночей Oura за 14 дней',sleep.ouraNights);
   singleMetricField(date,'sleepHours');
   singleMetricField(date,'sleepDebtAdjustment');
-  note('Сон и корректировка недосыпа — разные данные. Значения из Oura автоматически подставляются, когда доступны.');
+  note('8 часов = 100% сна. Расчётный долг сна использует данные Oura за 14 дней, минимум 5 ночей, но не равен показателю Sleep Debt в приложении Oura. Ручная корректировка имеет приоритет.');
   addButton('Сохранить сон',()=>commitValue(['sleepHours','sleepDebtAdjustment']));
  }else if(field==='condition'){
   // Keep the manually editable scale, but replace the legacy tags and verbose
@@ -2993,8 +2994,12 @@ function sleepSnapshot(ref=today()){
  const effected=latestResourceEffectDate('sleepNeed',ref);
  const date=[observed,effected].filter(Boolean).sort().pop()||null;
  if(!date)return {value:null,date:null};
- const value=sleepAssessment(ref).need;
- return {value:value==null&&observed?sleepAssessment(observed).need:value,date};
+ const current=sleepAssessment(ref),previous=observed?sleepAssessment(observed):null;
+ const value=current.score??previous?.score??null;
+ return {value,date:current.score==null?observed:date,last:current.last??previous?.last??null,
+  debt:current.debt??previous?.debt??null,
+  debtSource:current.debt==null?(previous?.debtSource||current.debtSource):current.debtSource,
+  ouraNights:current.ouraNights};
 }
 function hygieneSnapshot(ref=today()){
  const direct=metricSnapshot('hygiene',ref),shower=showerReference();
@@ -3364,10 +3369,10 @@ function resourceActivityImpact(date){
    Number(event.xp):0),0);
 }
 function derivedResource(r,d){
- const sleepNeed=sleepAssessment(d).need;
+ const sleepScore=sleepSnapshot(d).value;
  const mood=actionAdjustedNeed('mood',d,r.mood);
  const nutrition=actionAdjustedNeed('nutrition',d,r.nutrition==null?satietyAssessment(d).value:r.nutrition);
- const vals=[sleepNeed==null?null:100-sleepNeed,mood,physicalCondition(r,d),hygieneCondition(r,d),nutrition];
+ const vals=[sleepScore,mood,physicalCondition(r,d),hygieneCondition(r,d),nutrition];
  if(activeResourceEffects('activity',d).length){
   const steps=Number.isFinite(r.steps)?Math.round(Math.min(100,r.steps/10000*100)):r.ouraScores?.activity;
   vals.push(actionAdjustedNeed('activity',d,steps));
@@ -3492,7 +3497,10 @@ function renderNeeds(){
  const hygiene=hygieneSnapshot(d),steps=stepsSnapshot(d),hunger=satietyAssessment(d);
  const ouraScoreDate=latestObserved(q=>Number.isFinite(q?.ouraScores?.activity),d);
  const ouraActivity=ouraScoreDate?{value:state.days[ouraScoreDate].ouraScores.activity,date:ouraScoreDate}:{value:null,date:null};
- metric(g,'💤 Потребность во сне',sleep.value,'%',null,'sleepHours',sleep.date);
+ metric(g,'💤 Сон',sleep.value,'%',null,'sleepHours',sleep.date,
+  '8 часов = 100% · '+(sleep.last==null?'нет данных ночи':'записано '+sleep.last+' ч')+
+  ' · долг сна: '+(sleep.debt==null?'недостаточно данных Oura':sleep.debt.toFixed(1)+' ч')+
+  ' ('+(sleep.debtSource||'расчёт')+')');
  // The simulated resource is visible only as the crystal over the Sim.
  metric(g,'☺ Настроение',mood.value,'%',null,'mood',mood.date);
  metric(g,'♨ Гигиена',hygiene.value,'%',null,'hygiene',hygiene.date,hygiene.detail||'');
@@ -3826,9 +3834,9 @@ function renderDayMetrics(date,body,heading){
  const stringify=val=>val==null||val===''?'—':typeof val==='object'?JSON.stringify(val):String(val);
  const items=[
   ['◆ Ресурс',number(derivedResource(rec,date),'%'),'resource'],
-  ['💤 Потребность во сне',number(sleep.need,'%'),'sleepHours'],
+  ['💤 Сон · 8 ч = 100%',number(sleep.score,'%'),'sleepHours'],
   ['Фактический сон',number(rec.sleepHours,' ч'),'sleepHours'],
-  ['Расчётный недосып',number(sleep.debt,' ч'),'sleepDebtAdjustment'],
+  ['Долг сна · '+sleep.debtSource,number(sleep.debt,' ч'),'sleepDebtAdjustment'],
   ['Ручная корректировка недосыпа',number(rec.sleepDebtAdjustment,' ч'),'sleepDebtAdjustment'],
   ['☺ Настроение',number(actionAdjustedNeed('mood',date,rec.mood),'%'),'mood'],
   ['♥ Физическое состояние',number(physicalCondition(rec,date),'%'),'condition'],
