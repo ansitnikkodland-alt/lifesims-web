@@ -898,7 +898,7 @@ body{background:#091428}
 </section>
 <section class="section activities-page" id="tasks"><div class="heading"><h2>☑ Дела</h2><input id="topTasksDate" type="date" aria-label="Дата дел"></div><div class="card"><div id="topTasksList" class="activity-list"></div><button class="secondary activity-add" type="button" id="topTasksAdd">+ Добавить дело</button></div></section>
 <section class="section activities-page" id="habits"><div class="heading"><h2>◇ Привычки</h2><input id="topHabitsDate" type="date" aria-label="Дата привычек"></div><div class="card"><div id="topHabitsList" class="activity-list"></div><div class="row"><button class="secondary activity-add" type="button" id="topHabitsAdd">+ Добавить привычку</button><button class="secondary" type="button" id="habitBackdateOpen">📅 Записать задним числом</button></div></div></section>
-<section class="section" id="skills"><div class="heading"><h2>↗ Навыки</h2></div><p class="hint">Практика повышает навык. После 14 дней без практики его очки постепенно снижаются на 1% в неделю. История и общий XP сохраняются.</p><div id="skillsList" class="skills-list" aria-live="polite"></div></section><section class="section" id="history">
+<section class="section" id="skills"><div class="heading"><h2>↗ Навыки</h2></div><p class="hint">Полезные действия повышают навык, отрицательные привычки снижают его. Сила влияния зависит от сложности. После 14 дней без практики опыт постепенно снижается на 1% в неделю. История и общий XP сохраняются.</p><div id="skillsList" class="skills-list" aria-live="polite"></div></section><section class="section" id="history">
 <div class="heading"><h2>Календарь жизни</h2><input type="date" id="historyDate" aria-label="Выбранная дата"></div>
 <div class="history-controls"><button data-view="day">День</button><button data-view="week">Неделя</button><button data-view="month">Месяц</button><button type="button" id="todayPeriod">Сегодня</button><button id="prevPeriod" aria-label="Предыдущий период">◀</button><button id="nextPeriod" aria-label="Следующий период">▶</button></div>
 <div id="historyRange" class="hint"></div><div id="calendar"></div>
@@ -1259,7 +1259,20 @@ function due(a,d){
 }
 function done(a,d){if(a.legacyDone)return true;const cm=Array.isArray(a.completions)?a.completions:[];if(a.repeat==='once'||a.repeat==='inbox')return cm.length>0;if(a.repeat==='weekly')return cm.some(c=>Array.isArray(a.weekdays)&&a.weekdays.length>1?c.date===d:weekKey(c.date)===weekKey(d));return cm.some(c=>c.date===d)}
 function difficultyOf(a){const n=Number(a?.difficulty);return Number.isInteger(n)&&n>=1&&n<=5?n:3}
-function skillExperience(a){const points=Number(a?.xp);return a?.skill&&Number.isFinite(points)&&points>0?Math.round(points*difficultyOf(a)/3):0}
+// Skill direction follows the habit's type, independently of the resource XP sign.
+function isNegativeSkillHabit(a){
+ return a?.kind==='habit'&&(a.negative===true||
+  (a.negative!==false&&(Number(a.xp)<0||String(a.name||'').trim().toLocaleLowerCase('ru')==='алкоголь')));
+}
+function skillExperience(a){
+ const points=Number(a?.xp);
+ if(!a?.skill||!Number.isFinite(points))return 0;
+ const harmful=isNegativeSkillHabit(a);
+ // A zero-resource-XP harmful habit still affects its linked skill.
+ const magnitude=Math.abs(points)||(harmful?10:0);
+ const direction=harmful||(a.kind!=='habit'&&points<0)?-1:1;
+ return direction*Math.round(magnitude*difficultyOf(a)/3);
+}
 // An appearance measurement task commits its dated measurements and task completion together.
 function isWeightMeasurementTask(a){
  if(a?.kind!=='task')return false;
@@ -1268,13 +1281,13 @@ function isWeightMeasurementTask(a){
 }
 function appendActivityCompletion(a,date){
  const xp=Number.isFinite(a.xp)?a.xp:0,skillXp=skillExperience(a),difficulty=difficultyOf(a),stamp=new Date().toISOString();
- a.completions??=[];a.completions.push({date,at:stamp,xp,skillXp,difficulty});
+ a.completions??=[];a.completions.push({date,at:stamp,xp,skillXp,difficulty,negative:isNegativeSkillHabit(a)});
  adjustHabitMeasurement(a.id,date,1);
  if(a.id==='bed_make'){state.room??={};state.room.bedMadeOn=date}
  if(a.id==='hygiene_antiperspirant'){state.room??={};state.room.lastAntiperspirantAt=stamp}
  if(a.object==='shower'&&/принят.*душ|принять душ|помытьс|приняла душ/i.test(a.name)){state.room??={};state.room.lastShowerAt=stamp}
  if(/уборк|помыть|убрать|постират|мыть посуд|разобрать|пропылесос/i.test(a.name)){state.room??={};state.room.lastCleanAt=stamp;state.room.entropyOffset=Math.min(0,(state.room.entropyOffset||0)-4)}
- state.events.push({id:uid(),kind:'complete',activityId:a.id,name:a.name,date,at:stamp,xp,skillXp,difficulty,skill:a.skill||null,resourceEffect:effectSnapshot(a)});
+ state.events.push({id:uid(),kind:'complete',activityId:a.id,name:a.name,date,at:stamp,xp,skillXp,difficulty,negative:isNegativeSkillHabit(a),skill:a.skill||null,resourceEffect:effectSnapshot(a)});
  return xp;
 }
 function showCompletion(a,xp){
@@ -2258,30 +2271,86 @@ function skillDayDiff(a,b){
  return Math.max(0,Math.floor((Date.UTC(d[1][0],d[1][1]-1,d[1][2])-Date.UTC(d[0][0],d[0][1]-1,d[0][2]))/86400000));
 }
 function fadeSkill(x,start,end){return Math.max(0,x*Math.pow(0.99,Math.max(0,skillDayDiff(start,end)-14)/7))}
+// Recalculate skill experience from dated records, including manual amounts from the habit grid.
+function skillImpactHistory(day=today()){
+ const activities=new Map(state.activities.map(a=>[a.id,a]));
+ const original=new Map(defs.map(a=>[a.id,a]));
+ const entries=(state.events||[]).filter(e=>e?.kind==='complete'&&/^\d{4}-\d{2}-\d{2}$/.test(e.date||'')&&e.date<=day).map(e=>{
+  const activity=activities.get(e.activityId)||original.get(e.activityId);
+  const raw=Object.prototype.hasOwnProperty.call(e,'skillXp')?Number(e.skillXp):Number(e.xp);
+  const harmful=e.negative===true||(e.negative!==false&&isNegativeSkillHabit(activity));
+  let points=Number.isFinite(raw)?raw:0;
+  // Repair old negative-habit completions which previously saved positive or zero skill XP.
+  if(harmful&&(e.skill||activity?.skill)){
+   const historicalDifficulty=Number.isInteger(Number(e.difficulty))&&Number(e.difficulty)>=1&&Number(e.difficulty)<=5?Number(e.difficulty):difficultyOf(activity);
+   points=-(Math.abs(points)||Math.round((Math.abs(Number(e.xp))||10)*historicalDifficulty/3));
+  }
+  return {...e,points};
+ });
+ const recorded=new Map();
+ for(const e of entries){
+  const a=activities.get(e.activityId);
+  if(!isNegativeSkillHabit(a))continue;
+  const amount=manualHabitAmount(e.activityId,e.date);
+  if(amount===null)continue;
+  const key=e.activityId+'|'+e.date,index=recorded.get(key)||0;
+  recorded.set(key,index+1);
+  // An entered daily quantity is authoritative, even if completion buttons were used earlier.
+  e.points*=Math.max(0,Math.min(1,amount-index));
+ }
+ for(const [id,dates] of Object.entries(state.habitMeasurements||{})){
+  const a=activities.get(id);
+  if(!isNegativeSkillHabit(a)||!a.skill||!dates||typeof dates!=='object')continue;
+  for(const [date,amountRaw] of Object.entries(dates)){
+   if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||date>day)continue;
+   const amount=Number(amountRaw);
+   if(!Number.isFinite(amount)||amount<=0)continue;
+   const count=entries.filter(e=>e.activityId===id&&e.date===date).length;
+   const remaining=Math.max(0,amount-count);
+   if(remaining>0)entries.push({kind:'complete',activityId:id,name:a.name+' · количество',date,
+    at:date+'T23:59:59',skill:a.skill,negative:true,points:skillExperience(a)*remaining,manual:true});
+  }
+ }
+ return entries.sort((a,b)=>a.date.localeCompare(b.date)||String(a.at||'').localeCompare(String(b.at||'')));
+}
 function skillScores(day=today()){
- const since=state.skillDecaySince||day, skills=new Map();
- function get(n){if(typeof n!=='string'||!n.trim())return null;n=n.trim().slice(0,70);
-  if(!skills.has(n)){const xp=Math.max(0,Number(state.legacySkills?.[n])||0);skills.set(n,{name:n,score:xp,earned:xp,anchor:since,last:null});}
+ const since=state.skillDecaySince||day,skills=new Map();
+ function get(n){
+  if(typeof n!=='string'||!n.trim())return null;n=n.trim().slice(0,70);
+  if(!skills.has(n)){
+   const xp=Math.max(0,Number(state.legacySkills?.[n])||0);
+   skills.set(n,{name:n,score:xp,earned:xp,anchor:since,practiceAnchor:since,last:null,loss:0,harm:0});
+  }
   return skills.get(n);
  }
  for(const n of [...DEFAULT_SKILLS,...defs.map(x=>x.skill),...state.activities.map(x=>x.skill),...Object.keys(state.legacySkills||{})])get(n);
- const activities=new Map(state.activities.map(a=>[a.id,a]));
- const original=new Map(defs.map(a=>[a.id,a]));
- for(const e of state.events.filter(e=>e?.kind==='complete'&&/^\d{4}-\d{2}-\d{2}$/.test(e.date||'')&&e.date<=day&&(Object.prototype.hasOwnProperty.call(e,'skillXp')?Number(e.skillXp):Number(e.xp))>0).slice().sort((a,b)=>a.date.localeCompare(b.date))){
-  const skill=Object.prototype.hasOwnProperty.call(e,'skill')?e.skill:(activities.get(e.activityId)?.skill||original.get(e.activityId)?.skill);
-  const item=get(skill);if(!item)continue;
-  if(e.date>since){item.score=fadeSkill(item.score,item.anchor,e.date);item.anchor=e.date;}
-  const skillPoints=Object.prototype.hasOwnProperty.call(e,'skillXp')?Number(e.skillXp):Number(e.xp);
-  if(!Number.isFinite(skillPoints)||skillPoints<=0)continue;
-  item.score+=skillPoints;item.earned+=skillPoints;item.last=e.date;
+ const activities=new Map(state.activities.map(a=>[a.id,a])),original=new Map(defs.map(a=>[a.id,a]));
+ function applyDecay(item,date){
+  if(date<=item.anchor)return;
+  const from=Math.max(0,skillDayDiff(item.practiceAnchor,item.anchor)-14);
+  const to=Math.max(0,skillDayDiff(item.practiceAnchor,date)-14);
+  const next=Math.max(0,item.score*Math.pow(0.99,Math.max(0,to-from)/7));
+  item.loss+=Math.max(0,item.score-next);
+  item.score=next;item.anchor=date;
  }
- return [...skills.values()].map(x=>{const score=fadeSkill(x.score,x.anchor,day);return {...x,score,loss:Math.max(0,x.earned-score),days:x.last?skillDayDiff(x.last,day):null}}).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name,'ru'));
+ for(const e of skillImpactHistory(day)){
+  const skill=Object.prototype.hasOwnProperty.call(e,'skill')?e.skill:(activities.get(e.activityId)?.skill||original.get(e.activityId)?.skill);
+  const item=get(skill),points=Number(e.points);
+  if(!item||!Number.isFinite(points)||points===0)continue;
+  applyDecay(item,e.date);
+  if(points>0){item.score+=points;item.earned+=points;item.last=e.date;if(e.date>=since)item.practiceAnchor=e.date;}
+  else{const next=Math.max(0,item.score+points);item.harm+=item.score-next;item.score=next;}
+ }
+ return [...skills.values()].map(x=>{
+  applyDecay(x,day);
+  return {...x,days:x.last?skillDayDiff(x.last,day):null};
+ }).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name,'ru'));
 }
 function refreshSkillSuggestions(){
  const list=$('skillSuggestions');if(!list)return;list.replaceChildren();
  for(const v of skillScores()){const option=document.createElement('option');option.value=v.name;list.append(option)}
 }
-window.LifeSimsSkillBridge={today, scores:()=>skillScores(),read:()=>({activities:state.activities||[],events:state.events||[],legacySkills:state.legacySkills||{},defaults:defs}),edit:id=>openActivityEditor(id),create:kind=>openNewCalendarTask(kind)};
+window.LifeSimsSkillBridge={today, scores:()=>skillScores(),history:()=>skillImpactHistory(),read:()=>({activities:state.activities||[],events:state.events||[],legacySkills:state.legacySkills||{},defaults:defs}),edit:id=>openActivityEditor(id),create:kind=>openNewCalendarTask(kind)};
 function renderSkills(){
  const list=$('skillsList');if(!list)return;list.replaceChildren();
  const f=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:1});
@@ -2300,6 +2369,7 @@ function renderSkills(){
   card.onclick=()=>window.LifeSimsSkillDetail?.open?.(skill.name);
   card.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();window.LifeSimsSkillDetail?.open?.(skill.name)}};
   if(skill.loss>=0.05){const loss=document.createElement('small');loss.className='skill-loss';loss.textContent='Снижение от отсутствия практики: −'+f.format(skill.loss)+' XP';card.append(loss)}
+  if(skill.harm>=0.05){const harm=document.createElement('small');harm.className='skill-loss';harm.textContent='Снижение от отрицательных привычек: −'+f.format(skill.harm)+' XP';card.append(harm)}
   list.append(card);
  }
  window.LifeSimsSkillDetail?.refresh?.();
@@ -3768,10 +3838,10 @@ window.LifeSimsTaskBridge={
   const stamp=new Date().toISOString(),xp=Number.isFinite(a.xp)?a.xp:0,skillXp=skillExperience(a),difficulty=difficultyOf(a);
   if(!transact(()=>{
    a.completions??=[];
-   a.completions.push({date,at:stamp,xp,skillXp,difficulty,recordedAt:stamp,performedAt:null});
+   a.completions.push({date,at:stamp,xp,skillXp,difficulty,negative:isNegativeSkillHabit(a),recordedAt:stamp,performedAt:null});
    adjustHabitMeasurement(a.id,date,1);
    state.events.push({id:uid(),kind:'complete',activityId:a.id,name:a.name,date,at:stamp,
-    recordedAt:stamp,performedAt:null,xp,skillXp,difficulty,skill:a.skill||null,resourceEffect:effectSnapshot(a)});
+    recordedAt:stamp,performedAt:null,xp,skillXp,difficulty,negative:isNegativeSkillHabit(a),skill:a.skill||null,resourceEffect:effectSnapshot(a)});
   }))return false;
   renderAll();return true;
  },
