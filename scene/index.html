@@ -2842,7 +2842,13 @@ window.LifeSimsPetsBridge={
    schedule:(state.schedule||[]).filter(e=>e?.id&&e?.title).map(e=>({id:e.id,title:e.title})),
    events:(state.events||[]).filter(e=>e?.kind==='pet_care'||e?.kind==='clean')
     .map(e=>({kind:e.kind,action:e.action,petId:e.petId,date:e.date,at:e.at,name:e.name})),
-   lastCatLitterAt:state.room?.lastCatLitterAt||null,now:new Date().toISOString()};
+   lastCatLitterAt:state.room?.lastCatLitterAt||null,
+   feedingTimes:Object.fromEntries(['ginger','black'].map(id=>{
+    const a=state.activities.find(x=>x?.id==='pet_feed_'+id);
+    const times=(a?.completions||[]).map(c=>c.at||c.date+'T12:00:00').filter(x=>Number.isFinite(Date.parse(x)));
+    return [id,times.sort((x,y)=>Date.parse(y)-Date.parse(x))[0]||null];
+   })),
+   now:new Date().toISOString()};
  },
  rename(id,value){
   const name=String(value||'').trim().slice(0,50);
@@ -2864,7 +2870,8 @@ window.LifeSimsPetsBridge={
   const a=state.activities.find(x=>x?.id==='pet_feed_'+id);
   if(!a||a.kind!=='habit'||!due(a,today()))return false;
   if((a.completions||[]).some(c=>c.date===today())){toast('✓ Кормление сегодня уже записано');return true}
-  complete(a,today());return true;
+  const previous=(a.completions||[]).length;
+  complete(a,today());return (a.completions||[]).length>previous;
  },
  cleanLitter(){cleanBathroomItem('catLitter');},
  link(id,group,itemId,on){
