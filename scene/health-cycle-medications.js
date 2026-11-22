@@ -219,6 +219,7 @@ const SYMPTOM_GROUPS=[
 const FLOWS={none:'Нет кровотечения',spotting:'Мажущие выделения',light:'Слабые',medium:'Умеренные',heavy:'Обильные'};
 const CONTRACEPTIVE_TYPES=[['pill','Противозачаточные таблетки'],['ring','Контрацептивное кольцо'],['patch','Контрацептивный пластырь'],['injection','Контрацептивная инъекция']];
 let date=nowDay(), month=date.slice(0,7), editingMed='', section='cycle', flash='',draftSymptoms=new Set(),showAllLegacy=false,legacyEdit=null;
+let illnessDialog=null,pendingIllnessDate='',promptedIllness=new Set();
 function data(){
  const h=B.read()||{};
  return {
@@ -388,7 +389,7 @@ function setMedicationStatus(m,d,time,status){
 }
 function fillUi(){
  root.innerHTML=[
- '<div class="health-head"><div><h2>🌸 Дневник здоровья</h2><p>Цикл, лекарства и симптомы · версия журнала 104</p></div></div>',
+ '<div class="health-head"><div><h2>🌸 Дневник здоровья</h2><p>Цикл, лекарства и симптомы · версия журнала 105</p></div></div>',
  '<div class="health-switch"><button id="healthCycleTab" type="button">🌸 Цикл</button><button id="healthPillsTab" type="button">💊 Лекарства</button></div>',
  '<div id="healthNotice" class="health-notice" role="status" aria-live="polite"></div>',
  '<div class="health-panel"><h3>Влияние записей на ресурс «Здоровье»</h3><p class="hint">Автоматическая игровая оценка по прозрачным правилам, а не медицинский диагноз или вывод нейросети. Прогноз ПМС и сами месячные нейтральны.</p><div id="healthEffectList"></div></div>',
@@ -397,7 +398,7 @@ function fillUi(){
  '<div class="health-panel"><div class="health-month-head"><button id="healthPrevMonth" type="button" aria-label="Предыдущий месяц">‹</button><strong id="healthMonthLabel"></strong><button id="healthNextMonth" type="button" aria-label="Следующий месяц">›</button></div><div id="healthMonthGrid" class="health-calendar"></div><p class="health-legend">● менструация &nbsp; ◌ прогноз &nbsp; ◇ возможный ПМС</p></div>',
  '<form id="healthQuickStart" class="health-panel"><h3>Начало менструации</h3><label>Дата начала<input id="healthQuickDate" type="date" required></label><button type="submit" class="primary">Записать начало</button><button id="healthQuickRemove" type="button" class="secondary">Убрать отметку</button><p class="hint">Для прогноза достаточно дат начала месячных. Все прежние записи сохранены.</p></form>',
  '<form id="healthCycleForm" class="health-panel"><h3>🩺 Симптомы здоровья</h3><label>Дата<input id="healthDate" type="date" required></label>',
- '<p class="health-group-title">Отмечай несколько симптомов при необходимости. Настроение теперь записывается отдельно при нажатии на показатель «Настроение».</p><div id="healthSymptoms" class="health-symptom-groups" role="group" aria-label="Симптомы здоровья"></div>',
+ '<p class="health-group-title">Отмечай несколько симптомов при необходимости. Настроение записывается отдельно при нажатии на показатель «Настроение».</p><div id="healthIllnessHint" class="health-illness-hint" hidden aria-live="polite"></div><div id="healthSafetyHint" class="health-safety-hint" hidden role="note"></div><div id="healthSymptoms" class="health-symptom-groups" role="group" aria-label="Симптомы здоровья"></div>',
  '<label>Заметка<textarea id="healthCycleNote" rows="2" maxlength="1000" placeholder="Что ещё отметить сегодня?"></textarea></label>',
  '<div id="healthDischargeFields" hidden><label>Характер выделений<select id="healthMucus"><option value="">Не отмечено</option><option value="dry">Нет, сухо</option><option value="sticky">Липкие</option><option value="creamy">Кремообразные</option><option value="watery">Водянистые</option><option value="eggwhite">Тягучие и прозрачные</option><option value="other">Другие</option></select></label></div>',
  '<div class="health-actions"><button type="submit" class="primary">Сохранить симптомы</button><button id="healthDeleteCycle" type="button" class="secondary">Очистить симптомы</button></div></form>',
@@ -458,8 +459,47 @@ function fillUi(){
  $('healthReminders').onchange=e=>change(h=>{h.settings.reminders=!!e.target.checked});
  $('healthContraception').onchange=e=>change(h=>{h.settings.contraceptionEnabled=!!e.target.checked});
  $('healthNotifyPermission').onclick=requestPermission;
+ // Native modal is separate from the resource dialog; illness requires a click.
+ illnessDialog=el('dialog','health-illness-dialog');illnessDialog.id='healthIllnessDialog';
+ const title=el('h3','', '🩺 Отметить болезнь?');
+ const reason=el('p','health-illness-reason');reason.id='healthIllnessReason';
+ const note=el('p','hint','Эти симптомы могут встречаться при разных состояниях. LifeSims не определяет диагноз. Болезнь изменит только игровое физическое состояние.');
+ const actions=el('div','health-actions');
+ const yes=button('Да, отметить болезнь',()=>{
+  illnessDialog.close();
+  if(B.confirmIllness?.(pendingIllnessDate)){flash='✓ Болезнь отмечена в игре';renderMessage()}
+  else{flash='Не удалось отметить болезнь';renderMessage()}
+ },'primary');
+ const no=button('Не сейчас',()=>{
+  illnessDialog.close();
+  B.declineIllness?.(pendingIllnessDate);render();
+ },'secondary');
+ actions.append(yes,no);illnessDialog.append(title,reason,note,actions);
+ illnessDialog.addEventListener('close',()=>{pendingIllnessDate=''});
+ document.body.append(illnessDialog);
 }
 function chooseSymptom(v){if(draftSymptoms.has(v))draftSymptoms.delete(v);else draftSymptoms.add(v);showChoices()}
+function renderIllnessHints(){
+ const result=B.illnessSuggestion?.(date,[...draftSymptoms]);
+ const hint=$('healthIllnessHint'),safety=$('healthSafetyHint');
+ if(!result){hint.hidden=true;safety.hidden=true;return}
+ safety.hidden=!result.caution;
+ if(result.caution)safety.textContent='⚠ '+result.caution;
+ hint.hidden=!result.suggest||result.active||result.declined;
+ if(!hint.hidden)hint.textContent='🩺 Симптомы могут указывать на болезнь ('+
+  result.reasons.join('; ')+'). После сохранения предложу отметить болезнь в LifeSims — только с твоего согласия.';
+}
+function offerIllnessAfterSave(d){
+ const result=B.illnessSuggestion?.(d,[...draftSymptoms]);
+ if(!result?.suggest||!result.canMark||!illnessDialog||illnessDialog.open)return;
+ const key=d+'|'+[...draftSymptoms].sort().join('|');
+ if(promptedIllness.has(key))return;
+ promptedIllness.add(key);pendingIllnessDate=d;
+ $('healthIllnessReason').textContent='Ты отметила: '+result.reasons.join('; ')+
+  '. Хочешь включить игровой статус «Болезнь»?';
+ illnessDialog.showModal();
+}
+
 function showChoices(){
  const host=$('healthSymptoms');host.replaceChildren();
  const all=new Set(SYMPTOM_GROUPS.flatMap(([_,opts])=>opts.map(x=>x[1])));
@@ -485,16 +525,18 @@ function showChoices(){
  for(const [heading,opts] of groups)addGroup(heading,opts);
  const older=[...draftSymptoms].filter(x=>!all.has(x));
  if(older.length)addGroup('Ранее сохранённые симптомы',older.map(name=>['🩺',name]));
+ renderIllnessHints();
 }
 function saveCycle(e){
  e.preventDefault();const d=$('healthDate').value;
  if(!validDay(d)||d>nowDay()){flash='Выбери сегодняшнюю или прошедшую дату.';renderMessage();return}
  date=d;month=date.slice(0,7);
- change(h=>{
+ const saved=change(h=>{
   const prev=h.cycleDays[d]||{};
   h.cycleDays[d]={...prev,symptoms:[...draftSymptoms],note:$('healthCycleNote').value.trim(),
     ...(h.settings.dischargeEnabled?{mucus:$('healthMucus').value}:{})};
  });
+ if(saved)offerIllnessAfterSave(d);
 }
 function setCycleFields(h){
  const v=h.cycleDays[date]||{};
