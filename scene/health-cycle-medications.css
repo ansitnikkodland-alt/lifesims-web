@@ -1,0 +1,43 @@
+/* Dedicated health module; does not alter other LifeSims panels. */
+.nav{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+#health{--hc:#eeabd1;--hp:#263956}
+#health .health-head{display:flex;align-items:center;justify-content:space-between;margin:5px 0 14px}
+#health .health-head h2{font-size:21px;margin:0;color:#fff}
+#health .health-head p{margin:2px 0;color:#c4cfec;font-size:12px}
+#health .health-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 14px}
+#health .health-switch button{background:#273b5b;border:1px solid #6c7fa3;border-radius:14px;padding:12px;color:#fff;font-weight:700}
+#health .health-switch button.active{background:#704369;border-color:#e8a8d2}
+#health .health-panel{background:linear-gradient(148deg,#263854,#192841);border:1px solid #53698d;border-radius:17px;margin:11px 0;padding:14px}
+#health .health-panel h3{font-size:16px;margin:0 0 12px}
+#health .health-warning{font-size:12px;color:#f1c9dc}
+#health label{display:grid;gap:5px;margin-bottom:11px;color:#e1e9f7;font-size:13px;font-weight:600}
+#health input:not([type=checkbox]),#health select,#health textarea{width:100%;min-width:0;padding:11px 10px;background:#14243f;color:#fff;border:1px solid #6e83a4;border-radius:11px}
+#health input[type=checkbox]{accent-color:#ea9fc6}
+#health .health-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+#health .health-chips{display:flex;flex-wrap:wrap;gap:7px;margin:7px 0}
+#health .health-chips label{display:flex;align-items:center;gap:6px;border:1px solid #536b89;background:#233653;border-radius:12px;padding:7px 9px;margin:0;font-size:12px}
+#health .health-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:7px}
+#health .health-actions button{min-height:35px;padding:7px 9px;border-radius:9px}
+#health .health-month-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}
+#health .health-month-head button{background:#30486c;color:white;border:1px solid #8296b6;border-radius:10px;font-size:21px;width:42px;height:40px}
+#health .health-calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+#health .health-weekday{text-align:center;font-size:11px;color:#b1c3df}
+#health .health-day{min-width:0;min-height:50px;padding:4px 0 1px;border-radius:11px;border:1px solid #546b8d;background:#213351;color:#fff;position:relative;font-size:14px}
+#health .health-day.bleeding{background:#8b466c;border-color:#efafd2}
+#health .health-day.predicted{border-style:dashed;border-color:#f0a9c9}
+#health .health-day.selected{outline:2px solid #98e4e7;outline-offset:1px}
+#health .health-day.today{font-weight:900}
+#health .health-day-icon{display:block;color:#ffd1eb;font-size:10px;line-height:10px}
+#health .health-day-med{position:absolute;right:1px;top:0;font-size:10px}
+#health .health-legend,#health .health-notice{font-size:12px;color:#c9d8ed}
+#health .health-notice{min-height:14px}
+#health .health-med-row,#health .health-dose-row{border-top:1px solid #485e81;padding:10px 0;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px}
+#health .health-med-info,#health .health-dose-main{display:grid;gap:3px;flex:1;min-width:150px}
+#health small{font-size:12px;color:#d1dcec}
+#health .health-status.taken{color:#85dfbb}#health .health-status.skipped{color:#ff9cba}
+#health .health-active{background:#8b587c;color:white;border:1px solid #ffbee0}
+#health .health-history-row{border-bottom:1px solid #405875;padding:7px 0;font-size:12px}
+#health .health-inline{display:flex;align-items:center;gap:10px}
+.health-agenda-link{display:block;width:100%;text-align:left;padding:10px;border-radius:11px;color:#fff;background:#563f69;border:1px solid #b37fb2}
+.calendar-day-markers{flex-wrap:wrap}.health-calendar-marker{font-size:11px;position:absolute;right:2px;top:2px}
+@media(max-width:390px){#health .health-cols{grid-template-columns:1fr}#health .health-panel{padding:10px}#health .health-day{min-height:44px}}
