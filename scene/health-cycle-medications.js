@@ -818,8 +818,11 @@ function checkReminders(){
   try{new Notification('LifeSims · напоминание',{body:'Пора отметить запланированный приём',tag:key})}catch(_){}
  }
 }
+function setDate(d,tab=section){
+ date=validDay(d)?d:nowDay();month=date.slice(0,7);section=tab;render();
+}
 function openAt(d,tab='cycle'){
- date=validDay(d)?d:nowDay();month=date.slice(0,7);section=tab;render();B.openHealthResource?.();
+ setDate(d,tab);B.openHealthResource?.(date);
 }
 function appendAgenda(d,body){
  const h=data(),v=h.cycleDays[d],s=slots(h,d);
@@ -863,7 +866,7 @@ function markCalendar(container){
   }
  }
 }
-window.LifeSimsHealth={render,openAt,appendAgenda,markCalendar,forecast,mountPhysicalSymptoms,
+window.LifeSimsHealth={render,openAt,setDate,appendAgenda,markCalendar,forecast,mountPhysicalSymptoms,
  offerMoodIllness:(d,moods)=>offerIllnessAfterSave(d,[],moods)};
 fillUi();resetMedicationForm();render();
 window.setInterval(checkReminders,60000);
