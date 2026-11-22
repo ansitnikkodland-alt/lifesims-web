@@ -26,7 +26,7 @@
   }).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.at||'').localeCompare(String(a.at||'')));
  }
  function skillPoints(event){
-  const value=Object.prototype.hasOwnProperty.call(event,'skillXp')?Number(event.skillXp):Number(event.xp);
+  const value=Object.prototype.hasOwnProperty.call(event,'points')?Number(event.points):Object.prototype.hasOwnProperty.call(event,'skillXp')?Number(event.skillXp):Number(event.xp);
   return Number.isFinite(value)?value:null;
  }
  function repeatLabel(a){
@@ -42,7 +42,12 @@
   const data=bridge.read();
   const actions=data.activities.filter(a=>a?.skill===selected)
    .sort((a,b)=>(a.kind==='habit'?1:0)-(b.kind==='habit'?1:0)||String(a.name).localeCompare(String(b.name),'ru'));
-  const history=skillEvents(selected,data);
+  const history=typeof bridge.history==='function'?bridge.history().filter(e=>{
+   const activities=new Map(data.activities.filter(a=>a?.id).map(a=>[a.id,a]));
+   const defaults=new Map((data.defaults||[]).filter(a=>a?.id).map(a=>[a.id,a]));
+   const savedSkill=Object.prototype.hasOwnProperty.call(e,'skill')?e.skill:(activities.get(e.activityId)?.skill||defaults.get(e.activityId)?.skill);
+   return savedSkill===selected;
+  }).sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.at||'').localeCompare(String(a.at||''))):skillEvents(selected,data);
   $('skillDetailTitle').textContent='↗ '+selected;
   const body=$('skillDetailBody');body.replaceChildren();
   const summary=make('div','skill-detail-summary');
@@ -51,6 +56,7 @@
    ['Текущий опыт',fmt.format(skill.score)+' XP'],
    ['Накоплено',fmt.format(skill.earned)+' XP'],
    ['Снижение от паузы','−'+fmt.format(skill.loss)+' XP'],
+   ['Снижение от отрицательных привычек','−'+fmt.format(skill.harm||0)+' XP'],
    ['До следующего уровня',fmt.format(100-(skill.score%100))+' XP'],
    ['Последняя практика',skill.last||'Нет записей'],
    ['Связанные действия',actions.length],
@@ -64,7 +70,7 @@
   const bar=make('div','skill-detail-progress'),fill=make('b');
   fill.style.width=(skill.score%100)+'%';bar.append(fill);body.append(bar);
   body.append(make('p','skill-detail-note',
-   'Начальные значения из прежних данных включены в итог, если они были импортированы. История показывает сохранённые выполнения; опыт навыка определяется на дату выполнения. После 14 дней без практики действует снижение на 1% в неделю.'));
+   'Начальные значения из прежних данных включены в итог. Положительные действия развивают навык, отрицательные привычки его снижают. Количество из таблицы привычек пересчитывает эффект без двойного учёта. После 14 дней без полезной практики действует снижение на 1% в неделю.'));
   body.append(make('h4','','Связанные дела и привычки'));
   const list=make('div','skill-detail-actions');
   for(const activity of actions){
@@ -96,7 +102,7 @@
    controls.append(button);
   }
   body.append(controls);
-  body.append(make('h4','','История практики'));
+  body.append(make('h4','','История изменений навыка'));
   const historyList=make('div','skill-detail-history');
   for(const event of history){
    const row=make('div','skill-detail-history-row'),info=make('div');
@@ -107,7 +113,7 @@
    const pointsLabel=points==null?'XP не указаны':(points>0?'+':'')+fmt.format(points)+' XP';
    row.append(info,make('b','',pointsLabel));historyList.append(row);
   }
-  if(!history.length)historyList.append(make('p','skill-detail-note','История практики пока отсутствует.'));
+  if(!history.length)historyList.append(make('p','skill-detail-note','История изменений пока отсутствует.'));
   body.append(historyList);
  }
  function open(name){
