@@ -192,3 +192,25 @@
 .tp-habit-table .tp-habit-metric-link{color:#eff6fc!important;white-space:normal;text-align:left;overflow-wrap:anywhere;margin:0}
 .tp-habit-table .tp-habit-meal-edit:focus-visible,.tp-habit-table .tp-habit-metric-link:focus-visible{outline:2px solid #fdd98b;outline-offset:2px}
 @media(max-width:370px){.skill-detail-dialog{padding:10px}.skill-detail-summary{gap:6px}.skill-detail-stat strong{font-size:14px}}
+
+/* Existing-record linking from a skill's detail dialog. */
+.skill-existing-picker{margin:18px 0;border:1px solid #5a83aa;border-radius:14px;background:#253653;overflow:hidden}
+.skill-existing-toggle{cursor:pointer;display:list-item;list-style-position:inside;padding:14px 12px;min-height:48px;font-size:14px;font-weight:700;color:#e4fcfa}
+.skill-existing-toggle:focus-visible{outline:3px solid #75e4d5;outline-offset:-3px}
+.skill-existing-content{padding:0 12px 14px}
+.skill-existing-search{width:100%;min-height:44px;border:1px solid #7894b7;border-radius:11px;background:#152741;color:#fff;padding:9px 12px;font-size:14px}
+.skill-existing-group{margin:13px 0}
+.skill-existing-group h5{margin:8px 0;font-size:14px;color:#daefef}
+.skill-existing-options{max-height:240px;overflow:auto;border:1px solid #47617f;border-radius:12px;background:#192942}
+.skill-existing-row{display:flex;align-items:center;gap:12px;padding:9px 10px;cursor:pointer;min-height:48px;border-bottom:1px solid #304763}
+.skill-existing-row:last-child{border-bottom:0}
+.skill-existing-row:has(input:checked){background:#234458}
+.skill-existing-row[hidden]{display:none}
+.skill-existing-row input[type=checkbox]{width:20px;height:20px;flex-shrink:0;accent-color:#53cfb8}
+.skill-existing-info{flex:1;min-width:0;overflow-wrap:anywhere}
+.skill-existing-info strong{display:block;font-size:13px;font-weight:600}
+.skill-existing-info small{display:block;color:#b4c9e0;font-size:11px;margin-top:3px}
+.skill-existing-buttons{display:flex;gap:9px;flex-wrap:wrap;margin-top:12px}
+.skill-existing-buttons button{flex:1;min-width:125px}
+.skill-existing-count{color:#bfe8e0;font-size:12px;margin:11px 0 0}
+.skill-existing-status{min-height:20px;margin:9px 0 0;color:#b8f3dc;font-size:12px}
