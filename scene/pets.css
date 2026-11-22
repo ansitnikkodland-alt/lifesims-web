@@ -70,3 +70,38 @@ dialog.pet-dialog::backdrop{background:#060b21c2}
  dialog.pet-dialog{padding:13px!important}
  .pet-name-form{flex-wrap:wrap}
 }
+
+/* v109: photoreal cats, extracted from the approved cat reference.
+   The underlying room art and rug are not modified. */
+#scene #scenePets .pet-hotspot{
+ aspect-ratio:80/56;
+ width:clamp(72px,13%,108px);
+ max-height:none;
+ background:transparent;
+}
+#scene #scenePets .pet-hotspot.pet-ginger{left:53.5%;top:57%;width:clamp(72px,13%,108px)}
+#scene #scenePets .pet-hotspot.pet-black{left:66%;top:59.5%;width:clamp(72px,13%,108px)}
+#scene #scenePets .pet-realistic-sprite,
+.pet-dialog .pet-realistic-sprite{
+ display:block;width:100%;height:100%;
+ background-image:url('./pets-realistic-atlas.webp?v=109');
+ background-repeat:no-repeat;
+ background-size:200% 100%;
+ background-position:left center;
+ image-rendering:auto;
+ filter:drop-shadow(0 2px 2px rgba(23,12,8,.36));
+}
+#scene #scenePets .pet-realistic-black,
+.pet-dialog .pet-realistic-black{background-position:right center}
+#scene #scenePets .pet-realistic-ginger,
+.pet-dialog .pet-realistic-ginger{background-position:left center}
+.pet-dialog .pet-avatar{
+ width:73px;height:55px;flex:0 0 73px;
+ background:#544a59;
+ border-radius:12px;
+ overflow:hidden;
+}
+@media(max-width:430px){
+ #scene #scenePets .pet-hotspot.pet-ginger{left:53.5%;top:57%}
+ #scene #scenePets .pet-hotspot.pet-black{left:66%;top:59.5%}
+}
