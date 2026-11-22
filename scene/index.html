@@ -4943,6 +4943,22 @@ setInterval(renderSeasonalWindow,5*60*1000);
 // hygiene, resource/crystal, entropy and the rolling calorie balance. Also
 // repaint on resume: mobile browsers suspend intervals while the screen sleeps.
 let lastLiveMetricsDay=today();
+// Keep XP bars in sync when a linked calendar event finishes while the page stays open.
+function refreshSkillBarsIfChanged(){
+ const dialog=document.getElementById('skillDetailDialog');
+ if(selectedTab!=='skills'&&!dialog?.open)return;
+ const scores=skillScores(),scale=skillXpScale(scores);
+ const tracks=[...document.querySelectorAll('#skillsList .skill-xp-track')];
+ const current=new Map(scores.map(x=>[x.name,x.score]));
+ const oldNames=[...document.querySelectorAll('#skillsList .skill-item-head strong')].map(x=>x.textContent);
+ const changed=tracks.length!==scores.length||oldNames.some(n=>!current.has(n))||
+  tracks.some((track,i)=>Number(track.dataset.xpValue)!==scores[i]?.score||Number(track.dataset.xpScale)!==scale);
+ if(!changed)return;
+ // Never discard an unfinished manual correction while its field is focused.
+ if(dialog?.open&&dialog.contains(document.activeElement)&&
+    ['INPUT','TEXTAREA','SELECT'].includes(document.activeElement.tagName))return;
+ renderSkills();
+}
 function refreshLiveMetrics(){
  if(document.hidden)return;
  const currentDay=today();
@@ -4952,6 +4968,7 @@ function refreshLiveMetrics(){
  }else{
   renderNeeds(); // Derive time-dependent values from records, without saving.
   renderLiveCalendarEvent(); // Live event times may change without a state update.
+  refreshSkillBarsIfChanged(); // Automatic XP after linked events end, without a reload.
  }
 }
 setInterval(refreshLiveMetrics,30*1000);
@@ -5041,6 +5058,7 @@ window.LifeSimsCalendarBridge={
     if(!ok)throw Error('Не удалось сохранить синхронизированное мероприятие в браузере');
     renderSchedule();
     renderHistory();
+    refreshSkillBarsIfChanged(); // Google Calendar synchronization can change skill XP.
   }
 };
 
