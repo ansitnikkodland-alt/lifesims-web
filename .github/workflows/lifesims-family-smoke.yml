@@ -1,0 +1,36 @@
+name: LifeSims family photo profiles smoke
+on:
+  push:
+    paths:
+      - 'scene/index.html'
+      - 'scene/family.js'
+      - 'scene/family.css'
+      - 'scene/sw.js'
+      - 'tests/family-smoke.cjs'
+      - '.github/workflows/lifesims-family-smoke.yml'
+  pull_request:
+    paths:
+      - 'scene/index.html'
+      - 'scene/family.js'
+      - 'scene/family.css'
+      - 'scene/sw.js'
+      - 'tests/family-smoke.cjs'
+      - '.github/workflows/lifesims-family-smoke.yml'
+  workflow_dispatch:
+jobs:
+  family:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser driver
+        run: npm install --no-save playwright-core@1.56.1
+      - name: Start local LifeSims
+        run: |
+          python3 -m http.server 8765 > /tmp/lifesims_family_http.log 2>&1 &
+          sleep 2
+      - name: Verify isolated family profiles and photo room
+        run: node tests/family-smoke.cjs
