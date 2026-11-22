@@ -337,20 +337,18 @@ function renderMedications(h){
  for(const s of todaySlots)slotPanel.append(medicationSlotLine(s,date));
  renderMedicationList(h);
  const history=$('healthMedicationHistory');history.replaceChildren();
- const recent=h.medicationLog.filter(x=>x.date<=nowDay()&&x.date>=add(nowDay(),-29)).sort((a,b)=>(b.date+b.time).localeCompare(a.date+a.time));
+ // Show planned and unmarked historical doses as well as those already logged.
  const scheduled=[];
- for(let i=0;i<30;i++)scheduled.push(...slots(h,add(nowDay(),-i)));
+ for(let i=0;i<30;i++){const d=add(nowDay(),-i);scheduled.push(...slots(h,d).map(slot=>({...slot,date:d})))}
  const taken=scheduled.filter(x=>x.entry?.status==='taken').length;
  $('healthAdherence').textContent='По расписанию за 30 дней: '+taken+' принятых отметок из '+scheduled.length+' запланированных. Пропуски, которые не отмечены, не приравниваются к пропущенным дозам.';
- for(const entry of recent.slice(0,100)){
-   const m=h.medications.find(x=>x.id===entry.medicationId)||
-    {id:entry.medicationId,name:entry.medicationName||'Препарат из архива',dose:entry.dose||'',archived:true};
+ for(const dose of scheduled.filter(s=>s.date<nowDay()).slice(0,120)){
    const item=el('div','health-history-row');
-   item.append(el('span','',dayLabel(entry.date)+' · '));
-   item.append(medicationSlotLine({m,time:entry.time,entry},entry.date,true));
+   item.append(el('span','',dayLabel(dose.date)+' · '));
+   item.append(medicationSlotLine(dose,dose.date,true));
    history.append(item);
   }
-  if(!recent.length)history.append(el('p','hint','История появится после отметок приёма.'));
+  if(!scheduled.some(x=>x.date<nowDay()))history.append(el('p','hint','В истории пока нет запланированных или записанных приёмов.'));
  if(!('Notification' in window))$('healthNotifyStatus').textContent='Уведомления недоступны в этом браузере. Используй журнал приёмов.';
  else $('healthNotifyStatus').textContent='Разрешение браузера: '+(Notification.permission==='granted'?'предоставлено':Notification.permission==='denied'?'запрещено':'не запрашивалось')+'. Надёжной фоновой доставки нет.';
 }
