@@ -1,0 +1,78 @@
+name: LifeSims food product search and barcode regression
+on:
+  push:
+    paths:
+      - 'scene/meal-lookup.js'
+      - 'scene/meal-photo.js'
+      - 'scene/meal-chat.js'
+      - 'scene/index.html'
+      - '.github/workflows/lifesims-food-lookup-smoke.yml'
+  workflow_dispatch:
+jobs:
+  food-lookup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Syntax-check food modules
+        run: |
+          node --check scene/meal-photo.js
+          node --check scene/meal-chat.js
+          node --check scene/meal-lookup.js
+      - name: Install browser test tools
+        run: npm install --no-save playwright-core@1.56.1
+      - name: Serve LifeSims
+        run: |
+          python3 -m http.server 8765 > /tmp/lifesims-food-http.log 2>&1 &
+          sleep 2
+      - name: Test product selection nutrition calculation and barcode lookup
+        run: |
+          cat > /tmp/lifesims-food-lookup.cjs <<'JS'
+          const {chromium}=require(process.cwd()+'/node_modules/playwright-core');
+          (async()=>{
+           const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
+           const page=await browser.newPage({viewport:{width:390,height:844}});
+           const errors=[];
+           page.on('pageerror',e=>errors.push(e.message));
+           await page.route('https://world.openfoodfacts.org/**',route=>{
+            const url=route.request().url();
+            const product={code:'4601234567890',product_name_ru:'Творог тестовый',brands:'Тест',
+             quantity:'200 г',nutriments:{'energy-kcal_100g':120,proteins_100g:10,fat_100g:5,carbohydrates_100g:4}};
+            const response=url.includes('/cgi/search.pl')?{products:[product]}:{status:1,product};
+            route.fulfill({status:200,contentType:'application/json',
+             headers:{'Access-Control-Allow-Origin':'*'},body:JSON.stringify(response)});
+           });
+           await page.goto('http://127.0.0.1:8765/scene/?smoke=product-lookup',{waitUntil:'domcontentloaded'});
+           await page.evaluate(()=>window.LifeSimsMealChat.open());
+           await page.locator('#mealLookupSearchOpen').click();
+           await page.locator('#mealLookupName').fill('Творог');
+           await page.locator('#mealLookupFindName').click();
+           await page.locator('.meal-lookup-result').first().waitFor();
+           await page.locator('.meal-lookup-result').first().click();
+           await page.locator('#mealLookupNutrition').waitFor({state:'visible'});
+           if(await page.locator('#mealLookupKcal').inputValue()!=='120')throw Error('Calories missing after text lookup');
+           await page.locator('#mealLookupGrams').fill('150');
+           await page.locator('#mealChatSend').click();
+           const entries=await page.evaluate(()=>window.LifeSimsFoodBridge.list().filter(x=>x.title.includes('Творог тестовый')));
+           if(entries.length!==1||entries[0].grams!==150||entries[0].kcal!==180||entries[0].protein!==15)
+            throw Error('Product nutrition save incorrect: '+JSON.stringify(entries));
+           console.log('TEXT SEARCH + 150 G PRODUCT NUTRITION: PASS');
+           await page.locator('#mealLookupSearchOpen').click();
+           await page.locator('#mealLookupBarcode').fill('4601234567890');
+           await page.locator('#mealLookupFindCode').click();
+           await page.locator('#mealLookupNutrition').waitFor({state:'visible'});
+           await page.locator('#mealLookupKcal').fill('123');
+           await page.locator('#mealLookupGrams').fill('100');
+           await page.locator('#mealChatSend').click();
+           const all=await page.evaluate(()=>window.LifeSimsFoodBridge.list().filter(x=>x.title.includes('Творог тестовый')));
+           if(all.length!==2||!all.some(x=>x.kcal===123&&x.barcode==='4601234567890'))
+            throw Error('Barcode nutrition correction failed: '+JSON.stringify(all));
+           console.log('BARCODE + EDITED NUTRITION: PASS');
+           if(errors.length)throw Error('Unexpected JS page error: '+errors.join(' | '));
+           await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
+          node /tmp/lifesims-food-lookup.cjs
