@@ -23,11 +23,12 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Install Android SDK
-        uses: android-actions/setup-android@v3
-      - name: Install build dependencies
+      - name: Install Android build dependencies
         run: |
-          sdkmanager --install "platforms;android-35" "build-tools;35.0.0"
+          # GitHub Ubuntu runners include Android SDK. Use its installed
+          # cmdline-tools instead of downloading the deprecated 'tools' package.
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+          "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "platforms;android-35" "build-tools;35.0.0"
       - name: Install Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
