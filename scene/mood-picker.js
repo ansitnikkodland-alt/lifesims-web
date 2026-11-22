@@ -78,6 +78,9 @@ function show(date,root){
    message.textContent='✓ Настроение сохранено за '+date;
    // Refresh live meter without replacing a currently edited selection.
    const dialog=root.closest('dialog');if(dialog?.open)dialog.close();
+   // Only after an actual saved selection and only when the user chose "Больная".
+   // The Health dialog asks for explicit confirmation; it never sets illness itself.
+   if(selected.has('Больная'))window.LifeSimsHealth?.offerMoodIllness?.(date,[...selected]);
   }else message.textContent='Не удалось сохранить. Проверь локальное хранилище LifeSims.';
  };
  actions.append(clear,save);section.append(actions,message);
