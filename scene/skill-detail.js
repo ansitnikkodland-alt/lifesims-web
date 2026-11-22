@@ -42,6 +42,7 @@
   const data=bridge.read();
   const actions=data.activities.filter(a=>a?.skill===selected)
    .sort((a,b)=>(a.kind==='habit'?1:0)-(b.kind==='habit'?1:0)||String(a.name).localeCompare(String(b.name),'ru'));
+  const linkedEvents=(data.schedule||[]).filter(e=>e?.skill===selected||Object.values(e?.overrides||{}).some(o=>o?.skill===selected));
   const history=typeof bridge.history==='function'?bridge.history().filter(e=>{
    const activities=new Map(data.activities.filter(a=>a?.id).map(a=>[a.id,a]));
    const defaults=new Map((data.defaults||[]).filter(a=>a?.id).map(a=>[a.id,a]));
@@ -59,7 +60,8 @@
    ['Снижение от отрицательных привычек','−'+fmt.format(skill.harm||0)+' XP'],
    ['До следующего уровня',fmt.format(100-(skill.score%100))+' XP'],
    ['Последняя практика',skill.last||'Нет записей'],
-   ['Связанные действия',actions.length],
+   ['Связанные действия',actions.length+linkedEvents.length],
+   ['Связанные мероприятия',linkedEvents.length],
    ['Записанные выполнения',history.length]
   ];
   for(const [label,value] of stats){
@@ -90,6 +92,22 @@
   }
   if(!actions.length)list.append(make('p','skill-detail-note','Нет дел или привычек, привязанных к этому навыку.'));
   body.append(list);
+  body.append(make('h4','','Связанные мероприятия'));
+  const eventsList=make('div','skill-detail-actions');
+  for(const event of linkedEvents){
+   const row=make('div','skill-detail-action'),info=make('div','skill-detail-action-info');
+   info.append(make('strong','','📅 '+event.title));
+   const labels=[event.repeat&&event.repeat!=='none'?'Повторяющееся':'Однократное',
+    event.location||'',event.skill===selected?'Навык: '+event.skill:'Навык указан в отдельном повторении'];
+   if(event.linkedTaskId)labels.push('Связано с делом');
+   if(event.linkedHabitId)labels.push('Связано с привычкой');
+   info.append(make('small','',labels.filter(Boolean).join(' · ')));
+   const button=make('button','skill-detail-edit','Изменить');
+   button.type='button';button.onclick=()=>{dialog.close();bridge.editEvent?.(event.id)};
+   row.append(info,button);eventsList.append(row);
+  }
+  if(!linkedEvents.length)eventsList.append(make('p','skill-detail-note','Нет мероприятий, привязанных к этому навыку.'));
+  body.append(eventsList);
   const controls=make('div','skill-detail-create');
   for(const kind of ['task','habit']){
    const button=make('button','skill-detail-edit',kind==='task'?'＋ Дело':'＋ Привычка');
