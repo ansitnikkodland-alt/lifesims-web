@@ -12,7 +12,7 @@ const ROOM_DB='lifesims-family-room-photos-v1';
 const ITEMS={sim:'Персонаж',bed:'Кровать',fridge:'Холодильник',shower:'Душ',toilet:'Туалет',sink:'Раковина',desk:'Компьютер',phone:'Телефон',window:'Окно',sofa:'Диван',catLitter:'Лоток котиков'};
 const LIMIT=12*1024*1024;
 const id=()=>('p-'+(self.crypto?.randomUUID?.()||String(Date.now())+'-'+Math.random().toString(36).slice(2)));
-const fresh=()=>({version:1,people:[{id:PRIMARY,name:'Я',type:'adult',createdAt:new Date().toISOString(),avatar:'',roomActive:false,markers:{}}],links:[],care:[]});
+const fresh=()=>({version:1,people:[{id:PRIMARY,name:'Анюта',type:'adult',createdAt:new Date().toISOString(),avatar:'',roomActive:false,markers:{}}],links:[],care:[]});
 function catalog(){
  try{
   const saved=JSON.parse(localStorage.getItem(ROSTER)||'null');
