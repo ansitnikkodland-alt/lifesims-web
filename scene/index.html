@@ -1107,6 +1107,24 @@ const base=()=>({schema:VERSION,createdAt:new Date().toISOString(),days:{},activ
  taskProjects:[],taskTags:[{id:'tp-family',name:'Семья'},{id:'tp-work',name:'Работа'}],
  habitMeasurements:{},customSkills:[],focusSettings:{focus:25,short:5,long:15},focusTimer:{mode:'focus',running:false,remainingSec:1500,elapsedSec:0,endAt:null,startAt:null,taskId:''}});
 let state,storageOK=true,storageBlocked=false,activeDay=today(),historyView='month',selectedTab='needs';
+// Backward compatible with original single skill; skills[] is authoritative.
+function skillNames(values){
+ const list=Array.isArray(values)?values:[values],seen=new Set(),out=[];
+ for(const value of list){
+  if(typeof value!=='string')continue;
+  const name=value.trim().slice(0,70),key=name.toLocaleLowerCase('ru');
+  if(!name||seen.has(key))continue;
+  seen.add(key);out.push(name);if(out.length>=12)break;
+ }
+ return out;
+}
+function skillsOf(item){
+ return Array.isArray(item?.skills)?skillNames(item.skills):skillNames(item?.skill);
+}
+function withSkills(item,values){
+ const skills=skillNames(values);return {...item,skills,skill:skills[0]||null};
+}
+
 function normalize(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.schema!==VERSION||!raw.days||typeof raw.days!=='object'||Array.isArray(raw.days)||!Array.isArray(raw.activities)||!Array.isArray(raw.events))throw Error('Неизвестный или повреждённый формат');const safe=base();const normalized={...safe,...raw,foodMeals:Array.isArray(raw.foodMeals)?raw.foodMeals.filter(x=>x&&typeof x==='object'&&typeof x.id==='string'&&typeof x.date==='string'):[],foodTemplates:Array.isArray(raw.foodTemplates)?raw.foodTemplates.filter(x=>x&&typeof x==='object'&&typeof x.title==='string'&&x.title.trim().length>0):[],googleHidden:Array.isArray(raw.googleHidden)?raw.googleHidden.filter(x=>x&&typeof x.calendarId==='string'&&typeof x.id==='string').map(x=>({calendarId:x.calendarId,id:x.id,title:typeof x.title==='string'?x.title:'',hiddenAt:typeof x.hiddenAt==='string'?x.hiddenAt:''})):[],schedule:Array.isArray(raw.schedule)?raw.schedule:(Array.isArray(raw.legacyCopy?.events)?raw.legacyCopy.events.map((e,i)=>({id:'legacy-schedule-'+i,title:e.title||'Мероприятие',startsAt:e.startsAt,endsAt:e.endsAt,repeat:e.repeat==='weekly'?'weekly':'none',weekdays:e.repeat==='weekly'&&e.startsAt?[((new Date(e.startsAt.slice(0,10)+'T12:00:00').getDay()+6)%7)+1]:[]})):[]),room:(raw.room&&typeof raw.room==='object'&&!Array.isArray(raw.room))?{...safe.room,...raw.room}:safe.room};
  if(!raw.room?.antiperspirantInitialized){
   if(!normalized.activities.some(a=>a?.id==='hygiene_antiperspirant')){
@@ -1134,8 +1152,8 @@ function normalize(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.
  normalized.activities=normalized.activities.map(a=>a&&typeof a==='object'?{...a,difficulty:(Number.isInteger(Number(a.difficulty))&&Number(a.difficulty)>=1&&Number(a.difficulty)<=5?Number(a.difficulty):3)}:a);
  if(!normalized.activities.some(a=>a?.id==='coffee_habit'))normalized.activities.push({...safe.activities.find(a=>a.id==='coffee_habit'),createdDate:(raw.createdAt||'').slice(0,10)||today()});
  normalized.habitMeasurements=(raw.habitMeasurements&&typeof raw.habitMeasurements==='object'&&!Array.isArray(raw.habitMeasurements))?raw.habitMeasurements:{};
- const skillMap=new Map([...defs,...normalized.activities].filter(a=>a?.id).map(a=>[a.id,a.skill||null]));
- normalized.events=normalized.events.map(e=>e?.kind==='complete'&&!Object.prototype.hasOwnProperty.call(e,'skill')?{...e,skill:skillMap.get(e.activityId)||null}:e);
+ const skillMap=new Map([...defs,...normalized.activities].filter(a=>a?.id).map(a=>[a.id,skillsOf(a)]));
+ normalized.events=normalized.events.map(e=>e?.kind==='complete'&&!('skill'in e)&&!('skills'in e)?withSkills(e,skillMap.get(e.activityId)||[]):e);
  return normalized;
 }
 function migrate(old){const s=base();s.legacyCopy=old;s.legacySkills=(old.skills&&typeof old.skills==='object'&&!Array.isArray(old.skills))?old.skills:{};
@@ -1339,7 +1357,7 @@ function isNegativeSkillHabit(a){
 }
 function skillExperience(a){
  const points=Number(a?.xp);
- if(!a?.skill||!Number.isFinite(points))return 0;
+ if(!skillsOf(a).length||!Number.isFinite(points))return 0;
  const harmful=isNegativeSkillHabit(a);
  // A zero-resource-XP harmful habit still affects its linked skill.
  const magnitude=Math.abs(points)||(harmful?10:0);
@@ -2381,17 +2399,18 @@ function fadeSkill(x,start,end){return Math.max(0,x*Math.pow(0.999,skillDayDiff(
 function skillImpactHistory(day=today()){
  const activities=new Map(state.activities.map(a=>[a.id,a]));
  const original=new Map(defs.map(a=>[a.id,a]));
- const entries=(state.events||[]).filter(e=>e?.kind==='complete'&&/^\d{4}-\d{2}-\d{2}$/.test(e.date||'')&&e.date<=day).map(e=>{
+ const entries=(state.events||[]).filter(e=>e?.kind==='complete'&&/^\d{4}-\d{2}-\d{2}$/.test(e.date||'')&&e.date<=day).flatMap(e=>{
   const activity=activities.get(e.activityId)||original.get(e.activityId);
+  const names=('skills'in e||'skill'in e)?skillsOf(e):skillsOf(activity);
+  if(!names.length)return [];
   const raw=Object.prototype.hasOwnProperty.call(e,'skillXp')?Number(e.skillXp):Number(e.xp);
   const harmful=e.negative===true||(e.negative!==false&&isNegativeSkillHabit(activity));
   let points=Number.isFinite(raw)?raw:0;
-  // Repair old negative-habit completions which previously saved positive or zero skill XP.
-  if(harmful&&(e.skill||activity?.skill)){
-   const historicalDifficulty=Number.isInteger(Number(e.difficulty))&&Number(e.difficulty)>=1&&Number(e.difficulty)<=5?Number(e.difficulty):difficultyOf(activity);
-   points=-(Math.abs(points)||Math.round((Math.abs(Number(e.xp))||10)*historicalDifficulty/3));
+  if(harmful){
+   const difficulty=Number.isInteger(Number(e.difficulty))&&Number(e.difficulty)>=1&&Number(e.difficulty)<=5?Number(e.difficulty):difficultyOf(activity);
+   points=-(Math.abs(points)||Math.round((Math.abs(Number(e.xp))||10)*difficulty/3));
   }
-  return {...e,points};
+  return names.map(skill=>({...e,skill,skills:[skill],points}));
  });
  // The built-in coffee counter stores espresso events rather than ordinary completions.
  const coffee=activities.get('coffee_habit');
@@ -2403,18 +2422,18 @@ function skillImpactHistory(day=today()){
   for(const e of espresso){
    const ordinal=(seen.get(e.date)||0)+1;seen.set(e.date,ordinal);
    if(ordinal<=limit||ordinal>habitAmount('coffee_habit',e.date))continue;
-   const skill=Object.prototype.hasOwnProperty.call(e,'skill')?e.skill:coffee.skill;
-   if(!skill)continue;
+   const names=('skills'in e||'skill'in e)?skillsOf(e):skillsOf(coffee);
+   if(!names.length)continue;
    const magnitude=Math.abs(Number(e.skillXp))||Math.round((Math.abs(Number(coffee.xp))||10)*difficultyOf(coffee)/3);
-   entries.push({...e,kind:'complete',activityId:'coffee_habit',name:coffee.name,skill,negative:true,points:-magnitude});
+   for(const skill of names)entries.push({...e,kind:'complete',activityId:'coffee_habit',name:coffee.name,skill,skills:[skill],negative:true,points:-magnitude});
   }
   for(const [d,amountRaw] of Object.entries(state.habitMeasurements?.coffee_habit||{})){
-   if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||d>day||!coffee.skill)continue;
+   if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||d>day||!skillsOf(coffee).length)continue;
    const amount=Number(amountRaw),extras=Math.max(0,amount-Math.max(limit,seen.get(d)||0));
    if(!Number.isFinite(extras)||extras<=0)continue;
    const magnitude=Math.round((Math.abs(Number(coffee.xp))||10)*difficultyOf(coffee)/3);
-   entries.push({kind:'complete',activityId:'coffee_habit',name:coffee.name+' · превышение нормы',
-    date:d,at:d+'T23:59:59',skill:coffee.skill,negative:true,points:-magnitude*extras,manual:true});
+   for(const skill of skillsForDate(coffee,d))entries.push({kind:'complete',activityId:'coffee_habit',name:coffee.name+' · превышение нормы',
+    date:d,at:d+'T23:59:59',skill,skills:[skill],negative:true,points:-magnitude*extras,manual:true});
   }
  }
  const recorded=new Map();
@@ -2424,7 +2443,7 @@ function skillImpactHistory(day=today()){
   if(e.activityId==='coffee_habit'||!isNegativeSkillHabit(a))continue;
   const amount=manualHabitAmount(e.activityId,e.date);
   if(amount===null)continue;
-  const key=e.activityId+'|'+e.date,index=recorded.get(key)||0;
+  const key=e.activityId+'|'+e.date+'|'+e.skill,index=recorded.get(key)||0;
   recorded.set(key,index+1);
   // An entered daily quantity is authoritative, even if completion buttons were used earlier.
   e.points*=Math.max(0,Math.min(1,amount-index));
@@ -2437,11 +2456,12 @@ function skillImpactHistory(day=today()){
    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||date>day)continue;
    const amount=Number(amountRaw);
    if(!Number.isFinite(amount)||amount<=0)continue;
-   const count=entries.filter(e=>e.activityId===id&&e.date===date).length;
-   const remaining=Math.max(0,amount-count);
-   const skill=skillForDate(a,date);
-   if(remaining>0&&skill)entries.push({kind:'complete',activityId:id,name:a.name+' · количество',date,
-    at:date+'T23:59:59',skill,negative:true,points:skillExperience(a)*remaining,manual:true});
+   for(const skill of skillsForDate(a,date)){
+    const count=entries.filter(e=>e.activityId===id&&e.date===date&&e.skill===skill).length;
+    const remaining=Math.max(0,amount-count);
+    if(remaining>0)entries.push({kind:'complete',activityId:id,name:a.name+' · количество',date,
+     at:date+'T23:59:59',skill,skills:[skill],negative:true,points:skillExperience(a)*remaining,manual:true});
+   }
   }
  }
  // Manual skill edits are absolute, dated settings in the normal XP timeline.
@@ -2465,13 +2485,13 @@ function skillImpactHistory(day=today()){
    const key=occurrence.id+'|'+occurrence.occurrenceKey;
    if(seen.has(key))continue;
    seen.add(key);
-   if(!occurrence.skill||attended.has(key)||occurrence.endsAt>cutoff)continue;
+   if(!skillsOf(occurrence).length||attended.has(key)||occurrence.endsAt>cutoff)continue;
    const completed=dayStr(new Date(occurrence.endsAt-1));
    if(completed<anchor||completed>until)continue;
-   entries.push({kind:'complete',eventAttendance:true,automatic:true,
+   for(const skill of skillsOf(occurrence))entries.push({kind:'complete',eventAttendance:true,automatic:true,
     calendarEventId:occurrence.id,calendarOccurrenceKey:occurrence.occurrenceKey,
     name:'Мероприятие: '+occurrence.title,date:completed,
-    at:new Date(occurrence.endsAt).toISOString(),skill:occurrence.skill,points:2});
+    at:new Date(occurrence.endsAt).toISOString(),skill,skills:[skill],points:2});
   }
  }
  return entries.sort((a,b)=>a.date.localeCompare(b.date)||
@@ -2487,7 +2507,7 @@ function skillScores(day=today()){
   }
   return skills.get(n);
  }
- for(const n of [...DEFAULT_SKILLS,...defs.map(x=>x.skill),...state.activities.map(x=>x.skill),...(state.schedule||[]).map(x=>x.skill),...(state.customSkills||[]),...Object.keys(state.legacySkills||{}),...(state.events||[]).filter(e=>e?.kind==='skill_manual').map(e=>e.skill)])get(n);
+ for(const n of [...DEFAULT_SKILLS,...defs.map(x=>x.skill),...state.activities.flatMap(skillsOf),...(state.schedule||[]).flatMap(skillsOf),...(state.customSkills||[]),...Object.keys(state.legacySkills||{}),...(state.events||[]).filter(e=>e?.kind==='skill_manual').map(e=>e.skill)])get(n);
  const activities=new Map(state.activities.map(a=>[a.id,a])),original=new Map(defs.map(a=>[a.id,a]));
  function applyDecay(item,date,practised=false){
   if(date<=item.anchor)return;
@@ -2561,75 +2581,64 @@ function addCustomSkill(event){
 }
 // Resolve the skill effective on a historical date for derived habit measurements.
 // Recorded completions keep their original event.skill snapshot.
-function skillForDate(activity,date){
+function skillsForDate(activity,date){
  const timeline=Array.isArray(activity?.skillLinkTimeline)?activity.skillLinkTimeline:null;
- if(!timeline||!timeline.length)return activity?.skill||null;
- let result=timeline[0]?.skill||null;
- for(const item of timeline){if(item?.from<=date)result=item.skill||null}
- return result;
+ if(!timeline||!timeline.length)return skillsOf(activity);
+ let names=skillsOf(timeline[0]);
+ for(const entry of timeline)if(entry?.from<=date)names=skillsOf(entry);
+ return names;
 }
-function setActivitySkillLink(activity,skill,day){
- if(!Array.isArray(activity.skillLinkTimeline)||!activity.skillLinkTimeline.length)
-  activity.skillLinkTimeline=[{from:'0000-00-00',skill:activity.skill||null}];
- const timeline=activity.skillLinkTimeline,previous=timeline[timeline.length-1];
- if(previous.from===day)previous.skill=skill;
- else timeline.push({from:day,skill});
- activity.skill=skill;
+function skillForDate(activity,date){return skillsForDate(activity,date)[0]||null}
+function setActivitySkillLink(activity,values,date){
+ const names=skillNames(values);
+ if(!Array.isArray(activity.skillLinkTimeline)||!activity.skillLinkTimeline.length){
+  const before=skillsOf(activity);
+  activity.skillLinkTimeline=[{from:'0000-00-00',skill:before[0]||null,skills:before}];
+ }
+ const timeline=activity.skillLinkTimeline,last=timeline[timeline.length-1];
+ if(last.from===date){last.skill=names[0]||null;last.skills=names;}
+ else timeline.push({from:date,skill:names[0]||null,skills:names});
+ activity.skill=names[0]||null;activity.skills=names;
 }
 function saveExistingSkillLinks(name,request){
- if(storageBlocked||!storageOK)throw Error('Сохранение недоступно: сначала восстанови хранилище LifeSims.');
- if(typeof name!=='string'||!skillScores().some(item=>item.name===name))throw Error('Навык не найден.');
+ if(storageBlocked||!storageOK)throw Error('Сохранение недоступно.');
+ if(!skillScores().some(x=>x.name===name))throw Error('Навык не найден.');
  if(!request||!Array.isArray(request.activityIds)||!Array.isArray(request.eventIds)||
-    !request.expectedActivities||!request.expectedEvents)throw Error('Неправильный список связей.');
- const activityIds=new Set(request.activityIds),eventIds=new Set(request.eventIds);
- if(activityIds.size!==request.activityIds.length||eventIds.size!==request.eventIds.length)throw Error('Повторяющиеся идентификаторы.');
- const activities=(state.activities||[]).filter(item=>item&&item.id&&!item.legacyDone);
- const calendarEvents=(state.schedule||[]).filter(item=>item&&item.id);
- const activitiesById=new Map(activities.map(item=>[item.id,item]));
- const eventsById=new Map(calendarEvents.map(item=>[item.id,item]));
- if([...activityIds].some(id=>!activitiesById.has(id))||[...eventIds].some(id=>!eventsById.has(id)))
-  throw Error('Список дел или мероприятий изменился. Открой выбор заново.');
- for(const item of activities){
-  if(!Object.prototype.hasOwnProperty.call(request.expectedActivities,item.id)||
-     (request.expectedActivities[item.id]||null)!==(item.skill||null))
-   throw Error('Привязки дел изменились. Открой выбор заново.');
- }
- for(const item of calendarEvents){
-  if(!Object.prototype.hasOwnProperty.call(request.expectedEvents,item.id)||
-     (request.expectedEvents[item.id]||null)!==(item.skill||null))
-   throw Error('Привязки мероприятий изменились. Открой выбор заново.');
- }
- const changedActivities=activities.filter(item=>((activityIds.has(item.id)?name:
-   item.skill===name?null:item.skill||null)!==(item.skill||null)));
- const changedEvents=calendarEvents.filter(item=>((eventIds.has(item.id)?name:
-   item.skill===name?null:item.skill||null)!==(item.skill||null)));
- if(!changedActivities.length&&!changedEvents.length)return {changed:0};
- const beforeSkills=new Map(changedActivities.map(a=>[a.id,a.skill||null]));
- const changedIds=new Set(beforeSkills.keys()),day=today();
+  !request.expectedActivities||!request.expectedEvents)throw Error('Некорректные связи.');
+ const chosenActivities=new Set(request.activityIds),chosenEvents=new Set(request.eventIds);
+ if(chosenActivities.size!==request.activityIds.length||chosenEvents.size!==request.eventIds.length)
+  throw Error('Повторяющиеся идентификаторы.');
+ const activities=(state.activities||[]).filter(a=>a?.id&&!a.legacyDone),events=(state.schedule||[]).filter(e=>e?.id);
+ if([...chosenActivities].some(id=>!activities.some(a=>a.id===id))||
+  [...chosenEvents].some(id=>!events.some(e=>e.id===id)))throw Error('Список изменился. Открой выбор заново.');
+ for(const a of activities)
+  if(!Object.prototype.hasOwnProperty.call(request.expectedActivities,a.id)||
+   JSON.stringify(skillNames(request.expectedActivities[a.id]))!==JSON.stringify(skillsOf(a)))
+   throw Error('Связи дел изменились. Обнови выбор.');
+ for(const e of events)
+  if(!Object.prototype.hasOwnProperty.call(request.expectedEvents,e.id)||
+   JSON.stringify(skillNames(request.expectedEvents[e.id]))!==JSON.stringify(skillsOf(e)))
+   throw Error('Связи мероприятий изменились. Обнови выбор.');
+ const desired=(a,selected)=>selected?skillNames([...skillsOf(a),name]):skillsOf(a).filter(x=>x!==name);
+ const changedActs=activities.filter(a=>JSON.stringify(skillsOf(a))!==JSON.stringify(desired(a,chosenActivities.has(a.id))));
+ const changedEvents=events.filter(a=>JSON.stringify(skillsOf(a))!==JSON.stringify(desired(a,chosenEvents.has(a.id))));
+ if(!changedActs.length&&!changedEvents.length)return {changed:0,activities:0,events:0};
+ const before=new Map(changedActs.map(a=>[a.id,skillsOf(a)])),date=today();
  const ok=transact(()=>{
-  // Freeze past completions before modifying the current skill assignment.
-  // Do not change historical XP or participation records already linked explicitly.
-  for(const record of state.events||[]){
-   if(!changedIds.has(record.activityId)||!['complete','espresso'].includes(record.kind))continue;
-   if(!Object.prototype.hasOwnProperty.call(record,'skill'))
-    record.skill=beforeSkills.get(record.activityId)||null;
+  for(const e of state.events||[]){
+   if(!before.has(e.activityId)||!['complete','espresso'].includes(e.kind))continue;
+   if(!('skills'in e)&&!('skill'in e)){e.skills=before.get(e.activityId)||[];e.skill=e.skills[0]||null;}
   }
-  for(const item of changedActivities){
-   const next=activityIds.has(item.id)?name:null;
-   setActivitySkillLink(item,next,day);
-  }
-  for(const item of changedEvents){
-   const next=eventIds.has(item.id)?name:null;
-   item.skill=next;
-   // Google-imported calendar events may have no XP setting at all.
-   // Preserve explicit 0; newly linked events default to +10 only on confirmed attendance.
-   if(next&&item.skillXp==null)item.skillXp=10;
+  for(const a of changedActs)setActivitySkillLink(a,desired(a,chosenActivities.has(a.id)),date);
+  for(const e of changedEvents){
+   const names=desired(e,chosenEvents.has(e.id));
+   e.skills=names;e.skill=names[0]||null;
+   if(names.length&&e.skillXp==null)e.skillXp=10;
   }
  });
- if(!ok)throw Error('Не удалось сохранить связи. Состояние восстановлено.');
- renderAll();
- return {changed:changedActivities.length+changedEvents.length,
-  activities:changedActivities.length,events:changedEvents.length};
+ if(!ok)throw Error('Сохранение не удалось. Прежние записи оставлены.');
+ renderAll();return {changed:changedActs.length+changedEvents.length,
+  activities:changedActs.length,events:changedEvents.length};
 }
 function refreshSkillSuggestions(){
  const list=$('skillSuggestions');if(!list)return;list.replaceChildren();
