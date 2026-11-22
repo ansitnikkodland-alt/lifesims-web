@@ -794,7 +794,7 @@ body{background:#091428}
 #localDataReport .recovery-result small{display:block;color:#bed3e4;font-size:12px}
 #localDataReport button{min-height:44px}
 </style></head>
-<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v69</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
+<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v70</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
 <img id="sceneRugColor" class="rug-color-layer" alt="" aria-hidden="true">
 <span id="sceneCrystalTint" aria-hidden="true"></span>
@@ -2311,29 +2311,53 @@ function calorieValues(date){
  return {eaten:vals.length?Math.round(vals.reduce((n,m)=>n+Number(m.kcal),0)):null,
   spent:Number.isFinite(state.days[date]?.totalCalories)?state.days[date].totalCalories:null};
 }
-// Game mechanic (not measured hunger): 600 recorded kcal fills 100% initially,
-// every meal fades linearly over sixteen hours; manual value fades the same way.
+// Game-only satiety: each meal adds up to 100% (600 kcal corresponds to 100%),
+// with a 16-hour linear fade AFTER each event. Clamp before advancing time:
+// summing individual meal contributions without capping used to leave satiety
+// at 100% the next morning even when many hours had elapsed.
 function satietyAssessment(ref=today(),now=new Date()){
  const instant=ref===today()?now:new Date(ref+'T23:59:59');
- const ms=instant.getTime(),period=16*60*60*1000;
- const meals=(state.foodMeals||[]).filter(m=>m.date<=ref&&typeof m.time==='string'&&
-  /^\d\d:\d\d$/.test(m.time)&&Number.isFinite(m.kcal))
-  .map(m=>({...m,atMs:new Date(m.date+'T'+m.time+':00').getTime()}))
-  .filter(m=>Number.isFinite(m.atMs)&&m.atMs<=ms).sort((a,b)=>a.atMs-b.atMs);
- const r=currentRecord(ref),manualAt=typeof r.hungerSetAt==='string'?Date.parse(r.hungerSetAt):NaN;
- const manual=Number.isFinite(r.hunger)&&Number.isFinite(manualAt)&&manualAt<=ms&&manualAt>=asDay(ref).getTime();
- const fade=t=>Math.max(0,1-(ms-t)/period);
- let pct=manual?r.hunger*fade(manualAt):0;
- for(const m of meals){
-  if((manual&&m.atMs<manualAt)||ms-m.atMs>period)continue;
-  pct+=Math.min(100,Math.max(0,m.kcal/600*100))*fade(m.atMs);
+ const ms=instant.getTime(),period=16*60*60*1000,from=ms-period;
+ const events=[],sources=[];
+ for(const m of state.foodMeals||[]){
+  if(typeof m?.date!=='string'||m.date>ref||typeof m.time!=='string'||
+     !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(m.time)||!Number.isFinite(m.kcal))continue;
+  const at=Date.parse(m.date+'T'+m.time+':00');
+  if(!Number.isFinite(at)||at>ms)continue;
+  sources.push({at,date:m.date,kind:'meal'});
+  if(at>=from)events.push({at,mode:'delta',amount:Math.min(100,Math.max(0,Number(m.kcal)/600*100)),priority:1,kind:'meal'});
  }
- const newest=meals[meals.length-1];
- const source=manual&&(!newest||manualAt>=newest.atMs)?ref:newest?.date||null;
- const linked=latestResourceEffectDate('hunger',ref);
- const base=source?Math.round(Math.max(0,Math.min(100,pct))):null;
- return {value:actionAdjustedNeed('hunger',ref,base),date:[source,linked].filter(Boolean).sort().pop()||null,
-  detail:linked?'игровой эффект привычки / дела':manual?'ручная оценка · спад за 16 ч':'игровая сытость · спад за 16 ч'};
+ // The last manual adjustment is a point-in-time correction. It continues to
+ // decay across midnight; it must not reappear as a new 100% each morning.
+ for(const [date,r] of Object.entries(state.days||{})){
+  if(!r||date>ref||!Number.isFinite(r.hunger)||typeof r.hungerSetAt!=='string')continue;
+  const at=Date.parse(r.hungerSetAt);
+  if(!Number.isFinite(at)||at>ms||dayStr(new Date(at))!==date)continue;
+  sources.push({at,date,kind:'manual'});
+  if(at>=from)events.push({at,mode:'set',amount:Math.max(0,Math.min(100,r.hunger)),priority:2,kind:'manual'});
+ }
+ const linked=effectiveResourceEvents('hunger',ref);
+ for(const e of linked){
+  const effect=validatedResourceEffect(e.resourceEffect),at=resourceEventTimestamp(e);
+  if(!effect||!Number.isFinite(at)||at>ms)continue;
+  sources.push({at,date:e.date,kind:'effect'});
+  if(at>=from)events.push({at,mode:effect.mode,amount:effect.amount,priority:3,kind:'effect'});
+ }
+ events.sort((a,b)=>a.at-b.at||a.priority-b.priority);
+ let value=null,lastAt=null;
+ for(const event of events){
+  if(lastAt!==null)value*=Math.max(0,1-(event.at-lastAt)/period);
+  if(event.mode==='set')value=event.amount;
+  else value=Math.max(0,Math.min(100,(value==null?(event.kind==='effect'?50:0):value)+event.amount));
+  lastAt=event.at;
+ }
+ if(lastAt!==null)value=Math.max(0,Math.min(100,value*Math.max(0,1-(ms-lastAt)/period)));
+ else if(sources.length)value=0; // Data exists, but the last event has fully faded.
+ const newest=sources.sort((a,b)=>b.at-a.at)[0];
+ return {value:value==null?null:Math.round(value),date:newest?.date||null,
+  detail:newest?.kind==='effect'?'влияние дела / привычки · спад за 16 ч':
+   newest?.kind==='manual'?'ручная оценка · спад за 16 ч':'игровая сытость · спад за 16 ч',
+  sourceAt:newest?.at||null,asOf:ms};
 }
 function resourceSnapshot(ref=today()){
  const dates=new Set(Object.keys(state.days||{}).filter(d=>d<=ref&&
@@ -2532,7 +2556,11 @@ function renderHungerMeter(){
   fill.style.setProperty('--meter-color',meterColor(level));
   track.append(fill);
  }
- note.textContent=calc.date?freshnessLabel(calc.date)+' · сытость снижается за 16 часов':'Нет данных о еде · нажми «Поесть»';
+ const last=Number.isFinite(calc.sourceAt)?new Date(calc.sourceAt):null;
+ const time=new Date(calc.asOf||Date.now());
+ const clock=d=>d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+ note.textContent=calc.date?freshnessLabel(calc.date)+(last?' · запись '+clock(last):'')+
+  ' · расчёт на '+clock(time)+' · спад за 16 ч':'Нет данных о еде · нажми «Поесть»';
 }
 function removeFoodEntry(id){
  const entry=(state.foodMeals||[]).find(m=>m.id===id);
@@ -3748,8 +3776,27 @@ $('financeClose').onclick=()=>$('financeDialog').close();
 $('financeForm').onsubmit=saveFinanceControl;
 renderSeasonalWindow();renderMovie();
 setInterval(renderSeasonalWindow,5*60*1000);
-setInterval(()=>{if(!document.hidden)renderNeeds()},60*1000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden){renderSeasonalWindow();renderNeeds()}});
+// Refresh every time-based indicator in the foreground, including satiety,
+// hygiene, resource/crystal, entropy and the rolling calorie balance. Also
+// repaint on resume: mobile browsers suspend intervals while the screen sleeps.
+let lastLiveMetricsDay=today();
+function refreshLiveMetrics(){
+ if(document.hidden)return;
+ const currentDay=today();
+ if(currentDay!==lastLiveMetricsDay){
+  lastLiveMetricsDay=currentDay;
+  renderAll(); // Midnight changes due tasks, daily history and yesterday labels.
+ }else{
+  renderNeeds(); // Derive time-dependent values from records, without saving.
+ }
+}
+setInterval(refreshLiveMetrics,30*1000);
+document.addEventListener('visibilitychange',()=>{
+ if(!document.hidden){renderSeasonalWindow();refreshLiveMetrics()}
+});
+window.addEventListener('focus',refreshLiveMetrics);
+window.addEventListener('pageshow',refreshLiveMetrics);
+window.LifeSimsLiveMetrics={refresh:refreshLiveMetrics,inspect:()=>satietyAssessment(today())};
 $('entropyRange').onchange=()=>{
  const target=Number($('entropyRange').value);
  if(transact(()=>{state.room??={};state.room.entropyOffset=(Number(state.room.entropyOffset)||0)+(target-gameEntropy())})){renderAll();toast('Игровая энтропия изменена')}
@@ -3770,7 +3817,7 @@ window.LifeSims3DBridge={
 };
 window.addEventListener('resize',()=>{if(currentSheetAnchor)placeSheet(currentSheetAnchor)},{passive:true});
 window.addEventListener('scroll',()=>{if(currentSheetAnchor)placeSheet(currentSheetAnchor)},{passive:true});
-if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=69',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
+if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=70',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 window.LifeSimsCalendarBridge={
   getSchedule:()=>JSON.parse(JSON.stringify(state.schedule||[])),
   getHidden:()=>JSON.parse(JSON.stringify(state.googleHidden||[])),
