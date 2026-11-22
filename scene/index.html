@@ -3648,7 +3648,12 @@ function saveDiary(){
  if(setDay(d,next)){activeDay=d;toast('Дневник и теги сохранены за '+d);renderAll();diaryPaint()}
 }
 
-function updateDebt(){const d=$('stateDate').value||today(),s=sleepAssessment(d),r=currentRecord(d);$('sleepDebtNote').textContent='Сон за дату: '+(r.sleepHours==null?'не записан':r.sleepHours+' ч')+'. Недосып: '+(s.debt==null?'неизвестен (есть пропуски дат)':s.debt.toFixed(2)+' ч')+'. Потребность: '+(s.need==null?'неизвестна':s.need+'%'+(s.partial?' (только по последней ночи, без неизвестного долга)':'')) +'. Норма 7–8 ч, расчётный ориентир 7,5 ч. Процент — игровая оценка, не медицинская.'}
+function updateDebt(){
+ const d=$('stateDate').value||today(),value=sleepAssessment(d);
+ $('sleepDebtNote').textContent='Сон: '+(value.last==null?'нет записи':value.last+' ч · '+value.score+'%')+
+  ' (8 часов = 100%). Долг сна: '+(value.debt==null?'недостаточно данных':value.debt.toFixed(2)+' ч')+
+  ' · '+value.debtSource+'. Оценка по синхронизированным ночам Oura не равна точному значению Oura Sleep Debt.';
+}
 function getPeriod(){const d=$('historyDate').value||today();if(historyView==='day')return[d,d];if(historyView==='week')return[weekKey(d),plusDays(weekKey(d),6)];const a=asDay(d),b=new Date(a.getFullYear(),a.getMonth()+1,0);return [dayStr(new Date(a.getFullYear(),a.getMonth(),1)),dayStr(b)]}
 function addHistoryLine(parent,date,text){const e=document.createElement('div');e.className='logrow';const time=document.createElement('time');time.textContent=date+' · ';const span=document.createElement('span');span.textContent=text;e.append(time,span);parent.append(e)}
 
@@ -5287,6 +5292,7 @@ $('singleMetricDialog')?.addEventListener('close',()=>{
  const mount=$('lifesims-health-mount'),parking=$('health-parking');
  if(mount&&parking&&mount.parentNode!==parking)parking.append(mount);
 });
+// The Health module may be opened for a historical date via calendar.
 window.LifeSimsHealthBridge={
  read:()=>JSON.parse(JSON.stringify(state.health||base().health)),
  // Old medicine entries were saved as free text in state.days[YYYY-MM-DD].meds.
