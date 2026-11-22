@@ -15,14 +15,15 @@
  dialog.innerHTML='<div class="skill-detail-heading"><h3 id="skillDetailTitle"></h3><button id="skillDetailClose" type="button" aria-label="Закрыть">×</button></div><div id="skillDetailBody"></div>';
  document.body.append(dialog);
  let selected=null,linkDraft=null,keepPickerOpen=false;
+ const namesOf=obj=>Array.isArray(obj?.skills)?obj.skills.filter(Boolean):obj?.skill?[obj.skill]:[];
  function skillEvents(name,data){
   const activities=new Map(data.activities.filter(a=>a?.id).map(a=>[a.id,a]));
   const defaults=new Map((data.defaults||[]).filter(a=>a?.id).map(a=>[a.id,a]));
   return data.events.filter(event=>{
    if(event?.kind!=='complete'||!event.date||event.date>bridge.today?.())return false;
    // Preserve the skill recorded on completion; never rewrite history after editing an activity.
-   const savedSkill=Object.prototype.hasOwnProperty.call(event,'skill')?event.skill:(activities.get(event.activityId)?.skill||defaults.get(event.activityId)?.skill);
-   return savedSkill===name;
+   const names=('skills'in event||'skill'in event)?namesOf(event):namesOf(activities.get(event.activityId)||defaults.get(event.activityId));
+   return names.includes(name);
   }).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.at||'').localeCompare(String(a.at||'')));
  }
  function skillPoints(event){
@@ -40,10 +41,10 @@
   const activities=(data.activities||[]).filter(a=>a?.id&&!a.legacyDone);
   const events=(data.schedule||[]).filter(e=>e?.id);
   if(!linkDraft||linkDraft.skill!==name){
-   linkDraft={skill:name,activityIds:new Set(activities.filter(a=>a.skill===name).map(a=>a.id)),
-    eventIds:new Set(events.filter(e=>e.skill===name).map(e=>e.id)),
-    expectedActivities:Object.fromEntries(activities.map(a=>[a.id,a.skill||null])),
-    expectedEvents:Object.fromEntries(events.map(e=>[e.id,e.skill||null])),
+   linkDraft={skill:name,activityIds:new Set(activities.filter(a=>namesOf(a).includes(name)).map(a=>a.id)),
+    eventIds:new Set(events.filter(e=>namesOf(e).includes(name)).map(e=>e.id)),
+    expectedActivities:Object.fromEntries(activities.map(a=>[a.id,namesOf(a)])),
+    expectedEvents:Object.fromEntries(events.map(e=>[e.id,namesOf(e)])),
     query:'',open:keepPickerOpen};
   }
   keepPickerOpen=false;
@@ -52,7 +53,7 @@
   picker.append(make('summary','skill-existing-toggle','🔗 Связать существующие дела, привычки и мероприятия'));
   const content=make('div','skill-existing-content');
   content.append(make('p','skill-detail-note',
-   'Выбирай уже созданные записи. Одно дело, привычка или мероприятие может относиться к одному навыку: новый выбор перенесёт связь с другого навыка. История выполнений и прежние XP сохраняются.'));
+   'Выбирай уже созданные записи. Одно дело, привычка или мероприятие может быть связано с несколькими навыками одновременно. Новые связи не удаляют предыдущие, а старая история XP сохраняется.'));
   const query=make('input','skill-existing-search');query.type='search';query.id='skillExistingSearch';
   query.placeholder='Поиск по названию';query.autocomplete='off';query.value=linkDraft.query;
   query.setAttribute('aria-label','Найти существующее дело, привычку или мероприятие');
@@ -68,9 +69,8 @@
     const input=make('input');input.type='checkbox';
     input.checked=(key==='eventIds'?linkDraft.eventIds:linkDraft.activityIds).has(entry.id);
     const info=make('span','skill-existing-info'),titleText=make('strong','',entry.name||entry.title);
-    const current=entry.skill&&entry.skill!==name?'Сейчас: ↗ '+entry.skill:
-     entry.skill===name?'Сейчас связан с этим навыком':'Без навыка';
-    const extra=key==='eventIds'&&Object.values(entry.overrides||{}).some(o=>o?.skill===name)&&entry.skill!==name
+    const current=namesOf(entry).length?'Сейчас: ↗ '+namesOf(entry).join(', '):'Без навыка';
+    const extra=key==='eventIds'&&Object.values(entry.overrides||{}).some(o=>namesOf(o).includes(name))&&!namesOf(entry).includes(name)
      ?' · Отдельное повторение уже связано с этим навыком':'';
     const details=make('small','',current+extra);
     info.append(titleText,details);
@@ -107,16 +107,6 @@
   status.setAttribute('role','status');status.setAttribute('aria-live','polite');
   submit.addEventListener('click',()=>{
    const latest=bridge.read();
-   const chosenActivities=latest.activities.filter(a=>a&&!a.legacyDone&&linkDraft.activityIds.has(a.id));
-   const chosenEvents=(latest.schedule||[]).filter(e=>e&&linkDraft.eventIds.has(e.id));
-   const moved=[...chosenActivities,...chosenEvents].filter(a=>a.skill&&a.skill!==name);
-   if(moved.length){
-    const preview=moved.slice(0,4).map(a=>'«'+(a.name||a.title)+'» ('+a.skill+')').join(', ');
-    const warning='Перенести '+moved.length+' записей с других навыков на «'+name+'»? '+
-      preview+(moved.length>4?' и ещё '+(moved.length-4):'')+
-      '. Ранее полученный опыт останется за прежними навыками.';
-    if(!window.confirm(warning))return;
-   }
    try{
     const request={activityIds:[...linkDraft.activityIds],eventIds:[...linkDraft.eventIds],
      expectedActivities:linkDraft.expectedActivities,expectedEvents:linkDraft.expectedEvents};
@@ -196,14 +186,14 @@
   const skill=bridge.scores().find(s=>s.name===selected);
   if(!skill){dialog.close();return}
   const data=bridge.read();
-  const actions=data.activities.filter(a=>a?.skill===selected)
+  const actions=data.activities.filter(a=>namesOf(a).includes(selected))
    .sort((a,b)=>(a.kind==='habit'?1:0)-(b.kind==='habit'?1:0)||String(a.name).localeCompare(String(b.name),'ru'));
-  const linkedEvents=(data.schedule||[]).filter(e=>e?.skill===selected||Object.values(e?.overrides||{}).some(o=>o?.skill===selected));
+  const linkedEvents=(data.schedule||[]).filter(e=>namesOf(e).includes(selected)||Object.values(e?.overrides||{}).some(o=>namesOf(o).includes(selected)));
   const history=typeof bridge.history==='function'?bridge.history().filter(e=>{
    const activities=new Map(data.activities.filter(a=>a?.id).map(a=>[a.id,a]));
    const defaults=new Map((data.defaults||[]).filter(a=>a?.id).map(a=>[a.id,a]));
-   const savedSkill=Object.prototype.hasOwnProperty.call(e,'skill')?e.skill:(activities.get(e.activityId)?.skill||defaults.get(e.activityId)?.skill);
-   return savedSkill===selected;
+   const names=('skills'in e||'skill'in e)?namesOf(e):namesOf(activities.get(e.activityId)||defaults.get(e.activityId));
+   return names.includes(selected);
   }).sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.at||'').localeCompare(String(a.at||''))):skillEvents(selected,data);
   $('skillDetailTitle').textContent='↗ '+selected;
   const body=$('skillDetailBody');body.replaceChildren();
@@ -243,6 +233,7 @@
    const details=[repeatLabel(activity),'сложность '+difficulty+'/5','базовый XP '+xp,completed+' выполнений'];
    if(activity.legacyDone)details.push('архивное');
    if(activity.resourceEffect?.target)details.push('влияет на '+activity.resourceEffect.target);
+   if(namesOf(activity).length)details.push('навыки: '+namesOf(activity).join(', '));
    info.append(make('small','',details.join(' · ')));
    const btn=make('button','skill-detail-edit','Изменить');
    btn.type='button';btn.setAttribute('aria-label','Редактировать '+activity.name);
@@ -257,7 +248,7 @@
    const row=make('div','skill-detail-action'),info=make('div','skill-detail-action-info');
    info.append(make('strong','','📅 '+event.title));
    const labels=[event.repeat&&event.repeat!=='none'?'Повторяющееся':'Однократное',
-    event.location||'',event.skill===selected?'Навык: '+event.skill:'Навык указан в отдельном повторении'];
+    event.location||'',namesOf(event).includes(selected)?'Навыки: '+namesOf(event).join(', '):'Навык указан в отдельном повторении'];
    if(event.linkedTaskId)labels.push('Связано с делом');
    if(event.linkedHabitId)labels.push('Связано с привычкой');
    info.append(make('small','',labels.filter(Boolean).join(' · ')));
