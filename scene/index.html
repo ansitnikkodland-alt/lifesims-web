@@ -3021,7 +3021,7 @@ function scheduleHistoryOccurrences(from,to){
    const suppressed=event.google?.supersededRange;
    if(next>start&&!(suppressed&&date>=suppressed.from&&date<=suppressed.to)){
     entries.push({id:event.id,occurrenceKey:key,date,title:info.title,startsAt:start,endsAt:end,
-      google:!!event.google,repeat:event.repeat&&event.repeat!=='none',allDay:!!info.allDay,
+      google:!!event.google,googleIdentity:event.google?.id?(event.google.calendarId||'primary')+'::'+event.google.id:null,repeat:event.repeat&&event.repeat!=='none',allDay:!!info.allDay,
       sourceName:event.google?.sourceName||'LifeSims',color:info.color||event.google?.color||'#4285f4',
       location:info.location||'',description:info.description||'',skill:info.skill||null,
       linkedTaskId:info.linkedTaskId||null,linkedHabitId:info.linkedHabitId||null,
@@ -3059,7 +3059,13 @@ function scheduleHistoryOccurrences(from,to){
    addOccurrence(event,shiftedStart,shiftedEnd,key,override);
   }
  }
- return entries.sort((a,b)=>a.date.localeCompare(b.date)||a.startsAt-b.startsAt||a.title.localeCompare(b.title,'ru'));
+ const seenGoogle=new Set();
+  return entries.filter(entry=>{
+   if(!entry.googleIdentity)return true;
+   const key=entry.googleIdentity+'::'+entry.occurrenceKey+'::'+entry.date;
+   if(seenGoogle.has(key))return false;
+   seenGoogle.add(key);return true;
+  }).sort((a,b)=>a.date.localeCompare(b.date)||a.startsAt-b.startsAt||a.title.localeCompare(b.title,'ru'));
 }
 
 function safeEventColor(color){return /^#[0-9a-fA-F]{6}$/.test(color||'')?color:'#4285f4'}
@@ -4731,6 +4737,8 @@ window.LifeSimsFoodBridge={
     // Keep legacy timed-event signatures compatible with previously synced data.
     if(event.allDay)values.push('all-day');
     if(event.location||event.description)values.push([String(event.location||''),String(event.description||'')]);
+    if(Number(event.repeatInterval)>1||event.repeatEndMode==='count'||event.repeatEndMode==='until')
+     values.push([Number(event.repeatInterval)||1,event.repeatEndMode||'never',event.repeatEndMode==='count'?Number(event.repeatCount)||null:null,event.repeatEndMode==='until'?event.repeatUntil||null:null]);
     return JSON.stringify(values);
   }
   function project(event) {
@@ -4891,7 +4899,7 @@ window.LifeSimsFoodBridge={
   function makePlan(remoteData, mode, locals) {
     const changes = [], claimed = new Set(), remoteIds = new Set();
     const selectedIds=new Set(getChosen().map(c=>c.primary?'primary':c.id));
-    const migrated=new Set();
+    const migrated=new Set(),seenRemote=new Set();
     const hidden=new Set((bridge.getHidden?.()||[]).map(x=>eventKey(x.calendarId,x.id)));
     let conflicts = 0, orphaned = 0;
     const mapped=new Map(locals.filter(x=>x.google?.id).map(x=>[eventKey(x.google.calendarId||'primary',x.google.id),x]));
@@ -4899,7 +4907,8 @@ window.LifeSimsFoodBridge={
       .map(x=>[eventKey(x.google.calendarId||'primary',x.google.id),x]));
     for (const remote of remoteData.supported) {
       const key=eventKey(remote.calendarId,remote.id);
-      remoteIds.add(key);
+      if(seenRemote.has(key))continue;
+      seenRemote.add(key);remoteIds.add(key);
       if(hidden.has(key))continue; // User explicitly hid this event locally; don't re-import it.
       if(remote.seriesId){
         const prior=legacySeries.get(eventKey(remote.calendarId,remote.seriesId));
@@ -4919,7 +4928,12 @@ window.LifeSimsFoodBridge={
         if (remoteChanged) changes.push({ type: 'pull', title: remote.normalized.title, remote, local: linked });
         else if (localChanged && mode === 'both' && remote.calendarId==='primary') changes.push({ type: 'push', title: linked.title, local: linked, remote });
       } else {
-        const matches = locals.filter(x => !x.google?.id && !claimed.has(x.id) && signature(x) === sig);
+        // A unique time-and-title match can be linked rather than re-imported.
+        // Ambiguities remain conflicts to avoid modifying unrelated events.
+        const exact=locals.filter(x=>!x.google?.id&&!claimed.has(x.id)&&signature(x)===sig);
+        const comparable=x=>[String(x.title||'').trim().toLocaleLowerCase('ru'),String(x.startsAt||''),String(x.endsAt||''),!!x.allDay].join('|');
+        const loose=exact.length?[]:locals.filter(x=>!x.google?.id&&!claimed.has(x.id)&&comparable(x)===comparable(remote.normalized));
+        const matches=exact.length?exact:loose;
         if (matches.length === 1) {
           claimed.add(matches[0].id);
           changes.push({ type: 'link', title: matches[0].title, local: matches[0], remote });
@@ -5034,7 +5048,7 @@ window.LifeSimsFoodBridge={
       const remote = change.remote;
       if (['import', 'pull', 'link'].includes(change.type)) {
         const local = change.local || { id: 'google:'+encodeURIComponent(remote.calendarId)+':'+remote.id };
-        const normalized = change.type === 'link' ? local : remote.normalized;
+        const normalized=remote.normalized;
         pendingRecords.push({ ...local, ...normalized, google: calendarMeta(remote, signature(normalized)) });
       } else if(change.type==='supersede'){
         const updated=JSON.parse(JSON.stringify(change.local));
