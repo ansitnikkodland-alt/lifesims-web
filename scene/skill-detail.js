@@ -14,7 +14,7 @@
  dialog.setAttribute('aria-labelledby','skillDetailTitle');
  dialog.innerHTML='<div class="skill-detail-heading"><h3 id="skillDetailTitle"></h3><button id="skillDetailClose" type="button" aria-label="Закрыть">×</button></div><div id="skillDetailBody"></div>';
  document.body.append(dialog);
- let selected=null;
+ let selected=null,linkDraft=null,keepPickerOpen=false;
  function skillEvents(name,data){
   const activities=new Map(data.activities.filter(a=>a?.id).map(a=>[a.id,a]));
   const defaults=new Map((data.defaults||[]).filter(a=>a?.id).map(a=>[a.id,a]));
@@ -34,6 +34,109 @@
   if(a.repeat==='daily')return 'Ежедневно';
   if(a.repeat==='weekly')return 'По дням недели';
   return 'Однократно';
+ }
+ // The picker links existing records in one transaction; it does not recreate records.
+ function linkEditor(name,data){
+  const activities=(data.activities||[]).filter(a=>a?.id&&!a.legacyDone);
+  const events=(data.schedule||[]).filter(e=>e?.id);
+  if(!linkDraft||linkDraft.skill!==name){
+   linkDraft={skill:name,activityIds:new Set(activities.filter(a=>a.skill===name).map(a=>a.id)),
+    eventIds:new Set(events.filter(e=>e.skill===name).map(e=>e.id)),
+    expectedActivities:Object.fromEntries(activities.map(a=>[a.id,a.skill||null])),
+    expectedEvents:Object.fromEntries(events.map(e=>[e.id,e.skill||null])),
+    query:'',open:keepPickerOpen};
+  }
+  keepPickerOpen=false;
+  const picker=make('details','skill-existing-picker');picker.id='skillLinkPicker';
+  picker.open=linkDraft.open;
+  picker.append(make('summary','skill-existing-toggle','🔗 Связать существующие дела, привычки и мероприятия'));
+  const content=make('div','skill-existing-content');
+  content.append(make('p','skill-detail-note',
+   'Выбирай уже созданные записи. Одно дело, привычка или мероприятие может относиться к одному навыку: новый выбор перенесёт связь с другого навыка. История выполнений и прежние XP сохраняются.'));
+  const query=make('input','skill-existing-search');query.type='search';query.id='skillExistingSearch';
+  query.placeholder='Поиск по названию';query.autocomplete='off';query.value=linkDraft.query;
+  query.setAttribute('aria-label','Найти существующее дело, привычку или мероприятие');
+  content.append(query);
+  const allRows=[];
+  function renderGroup(title,items,key){
+   const section=make('section','skill-existing-group'),heading=make('h5','',title+' ('+items.length+')');
+   section.append(heading);
+   if(!items.length){section.append(make('p','skill-detail-note','Пока нет записей.'));content.append(section);return}
+   const list=make('div','skill-existing-options');
+   for(const entry of items.slice().sort((a,b)=>String(a.name||a.title).localeCompare(String(b.name||b.title),'ru'))){
+    const row=make('label','skill-existing-row');
+    const input=make('input');input.type='checkbox';
+    input.checked=(key==='eventIds'?linkDraft.eventIds:linkDraft.activityIds).has(entry.id);
+    const info=make('span','skill-existing-info'),titleText=make('strong','',entry.name||entry.title);
+    const current=entry.skill&&entry.skill!==name?'Сейчас: ↗ '+entry.skill:
+     entry.skill===name?'Сейчас связан с этим навыком':'Без навыка';
+    const extra=key==='eventIds'&&Object.values(entry.overrides||{}).some(o=>o?.skill===name)&&entry.skill!==name
+     ?' · Отдельное повторение уже связано с этим навыком':'';
+    const details=make('small','',current+extra);
+    info.append(titleText,details);
+    row.append(input,info);
+    input.addEventListener('change',()=>{
+     const chosen=key==='eventIds'?linkDraft.eventIds:linkDraft.activityIds;
+     if(input.checked)chosen.add(entry.id);else chosen.delete(entry.id);
+     updateCounter();
+    });
+    row.dataset.search=(entry.name||entry.title||'').toLocaleLowerCase('ru');
+    allRows.push(row);list.append(row);
+   }
+   section.append(list);content.append(section);
+  }
+  renderGroup('☑ Дела',activities.filter(a=>a.kind!=='habit'),'activityIds');
+  renderGroup('◇ Привычки',activities.filter(a=>a.kind==='habit'),'activityIds');
+  renderGroup('📅 Мероприятия',events,'eventIds');
+  const counter=make('p','skill-existing-count');
+  const actions=make('div','skill-existing-buttons');
+  const submit=make('button','skill-detail-edit','Сохранить связи'),reset=make('button','skill-detail-edit','Сбросить выбор');
+  submit.type='button';reset.type='button';
+  function updateCounter(){
+   counter.textContent='Выбрано: '+linkDraft.activityIds.size+' дел и привычек, '+linkDraft.eventIds.size+' мероприятий';
+  }
+  function filter(){
+   const q=linkDraft.query.trim().toLocaleLowerCase('ru');
+   for(const row of allRows)row.hidden=!!q&&!row.dataset.search.includes(q);
+  }
+  query.addEventListener('input',()=>{linkDraft.query=query.value;filter()});
+  reset.addEventListener('click',()=>{
+   linkDraft=null;keepPickerOpen=true;render();
+  });
+  const status=make('p','skill-existing-status');status.id='skillLinkStatus';
+  status.setAttribute('role','status');status.setAttribute('aria-live','polite');
+  submit.addEventListener('click',()=>{
+   const latest=bridge.read();
+   const chosenActivities=latest.activities.filter(a=>a&&!a.legacyDone&&linkDraft.activityIds.has(a.id));
+   const chosenEvents=(latest.schedule||[]).filter(e=>e&&linkDraft.eventIds.has(e.id));
+   const moved=[...chosenActivities,...chosenEvents].filter(a=>a.skill&&a.skill!==name);
+   if(moved.length){
+    const preview=moved.slice(0,4).map(a=>'«'+(a.name||a.title)+'» ('+a.skill+')').join(', ');
+    const warning='Перенести '+moved.length+' записей с других навыков на «'+name+'»? '+
+      preview+(moved.length>4?' и ещё '+(moved.length-4):'')+
+      '. Ранее полученный опыт останется за прежними навыками.';
+    if(!window.confirm(warning))return;
+   }
+   try{
+    const request={activityIds:[...linkDraft.activityIds],eventIds:[...linkDraft.eventIds],
+     expectedActivities:linkDraft.expectedActivities,expectedEvents:linkDraft.expectedEvents};
+    // Preserve the open picker when the main app re-renders its metrics and skills.
+    linkDraft=null;keepPickerOpen=true;
+    const result=bridge.linkExisting(name,request);
+    if(result.changed===0){render();$('skillLinkStatus').textContent='Изменений нет.'}
+    else $('skillLinkStatus').textContent='✓ Сохранено связей: '+result.changed+
+      ' (дел и привычек: '+result.activities+', мероприятий: '+result.events+').';
+   }catch(error){
+    // A changed calendar should never silently overwrite newer data.
+    linkDraft=null;keepPickerOpen=true;render();
+    $('skillLinkStatus').textContent='⚠ '+String(error?.message||'Не удалось сохранить связи');
+   }
+  });
+  actions.append(submit,reset);
+  content.append(counter,actions,status);picker.append(content);
+  picker.addEventListener('toggle',()=>{if(linkDraft&&linkDraft.skill===name)linkDraft.open=picker.open});
+  updateCounter();filter();
+  return picker;
  }
  function render(){
   if(!selected)return;
@@ -73,6 +176,7 @@
   fill.style.width=(skill.score%100)+'%';bar.append(fill);body.append(bar);
   body.append(make('p','skill-detail-note',
    'Начальные значения из прежних данных включены в итог. Положительные действия развивают навык, отрицательные привычки его снижают. Количество из таблицы привычек пересчитывает эффект без двойного учёта. После 14 дней без полезной практики действует снижение на 1% в неделю.'));
+  body.append(linkEditor(selected,data));
   body.append(make('h4','','Связанные дела и привычки'));
   const list=make('div','skill-detail-actions');
   for(const activity of actions){
@@ -136,11 +240,12 @@
  }
  function open(name){
   if(typeof name!=='string'||!name.trim())return;
+  if(selected!==name)linkDraft=null;
   selected=name;render();
   if(!dialog.open)dialog.showModal();
  }
  $('skillDetailClose').onclick=()=>dialog.close();
- dialog.addEventListener('close',()=>{selected=null});
+ dialog.addEventListener('close',()=>{selected=null;linkDraft=null;keepPickerOpen=false});
  dialog.addEventListener('click',event=>{
   if(event.target!==dialog)return;
   const r=dialog.getBoundingClientRect();
