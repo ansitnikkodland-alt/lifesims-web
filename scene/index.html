@@ -844,7 +844,7 @@ body{background:#091428}
 #liveEventDialog button{min-height:39px;padding:7px 10px;border-radius:9px}
 #liveEventDialog .live-event-actions button{flex-grow:1}
 </style></head>
-<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v111</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
+<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v112</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
 <img id="sceneRugColor" class="rug-color-layer" alt="" aria-hidden="true">
 <div id="scenePets" class="scene-pets" aria-label="Два питомца на ковре"></div>
@@ -5204,7 +5204,7 @@ window.LifeSims3DBridge={
 };
 window.addEventListener('resize',()=>{if(currentSheetAnchor)placeSheet(currentSheetAnchor)},{passive:true});
 window.addEventListener('scroll',()=>{if(currentSheetAnchor)placeSheet(currentSheetAnchor)},{passive:true});
-if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=111',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
+if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=112',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 window.LifeSimsCalendarBridge={
   getSchedule:()=>JSON.parse(JSON.stringify(state.schedule||[])),
   getHidden:()=>JSON.parse(JSON.stringify(state.googleHidden||[])),
@@ -5492,9 +5492,9 @@ window.LifeSimsFoodBridge={
 };
 })();
 </script>
-<script src="./task-premium.js?v=100"></script>
-<script src="./habit-grid.js?v=82"></script>
-<script src="./skill-detail.js?v=100"></script>
+<script src="./task-premium.js?v=112"></script>
+<script src="./habit-grid.js?v=112"></script>
+<script src="./skill-detail.js?v=112"></script>
 <script src="./focus-timer.js?v=65"></script>
 <script>
 /* LifeSims Google Calendar sync. OAuth tokens remain in memory; no background writes. */
@@ -6875,7 +6875,7 @@ window.LifeSimsOuraVersion='oura-v72-auto-on-open-midnight-15min-missing';
 })();
 </script>
 
-<script src="./health-cycle-medications.js?v=107"></script>
+<script src="./health-cycle-medications.js?v=112"></script>
 <script src="./mood-picker.js?v=107"></script>
 <script src="./pets.js?v=110"></script>
 </body></html>
