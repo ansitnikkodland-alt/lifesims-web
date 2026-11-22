@@ -2913,7 +2913,7 @@ window.LifeSimsScreenTimeBridge={
  saveLink(row,link,scope='default'){
   if(storageBlocked||!storageOK)return {ok:false,error:'Сохранение LifeSims недоступно'};
   const key=screenTimeAppKey(row),date=String(row?.date||'');
-  if(!key||!/^d{4}-dd-dd$/.test(date)||key.length>180)return {ok:false,error:'Неизвестное приложение или дата'};
+  if(!key||!/^\d{4}-\d\d-\d\d$/.test(date)||key.length>180)return {ok:false,error:'Неизвестное приложение или дата'};
   if(!['default','date','clear-date','clear-default'].includes(scope))return {ok:false,error:'Неизвестная область'};
   const entry=screenTimeLinkNormalize(link);
   const options=this.options(date);
