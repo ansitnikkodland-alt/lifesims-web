@@ -856,7 +856,7 @@ body{background:#091428}
 <div id="bathNiche" class="bath-niche" aria-hidden="true">
  <span class="bath-tile"></span><span class="bath-glass"></span><span class="bath-pipe"></span><span class="bath-water"></span>
 </div>
-<button id="sceneToilet" class="scene-toilet" type="button" aria-label="Туалет — помыть" title="Помыть туалет"><span class="toilet-cistern" aria-hidden="true"></span><span class="toilet-bowl" aria-hidden="true"></span></button>
+<button id="sceneToilet" class="scene-toilet" type="button" aria-label="Туалет — to poop и уборка" title="Действия в туалете"><span class="toilet-cistern" aria-hidden="true"></span><span class="toilet-bowl" aria-hidden="true"></span></button>
 <button id="sceneCatLitter" class="scene-cat-litter" type="button" aria-label="Туалет котиков — обновить" title="Обновить туалет котиков"><span aria-hidden="true">🐾</span></button>
 <button id="sceneFridge" class="scene-fridge" type="button" aria-label="Холодильник — поесть и записать еду" title="Холодильник"><span class="fridge-door" aria-hidden="true"><i></i></span></button>
 <button id="scenePhone" class="scene-phone" type="button" aria-label="Телефон — финансовый контроль" title="Финансовый контроль"><span class="phone-screen" aria-hidden="true"></span></button>
@@ -1464,7 +1464,7 @@ function makeCoffeeHabitItem(date){
  const title=document.createElement('strong');title.textContent='☕ '+(coffee?.name||'Кофе');
  const desc=document.createElement('small');const max=coffeeHealthLimit(coffee);
  desc.textContent=count+' '+(coffee?.habitUnit||'чаш.')+' · '+date+
-  ' · максимум '+max+' без штрафа'+(count>max?' · ⚠ −'+Math.min(12,(count-max)*3)+' п. п. за день':' · безопасно по игровому правилу');
+  ' · максимум '+max+' без штрафа'+(count>max?' · ⚠ −'+Math.min(12,(count-max)*3)+' п. п. за день':' · без игрового штрафа');
  info.append(title,desc);
  const add=document.createElement('button');add.className='secondary';add.type='button';
  add.textContent='+1 эспрессо';add.setAttribute('aria-label','Добавить эспрессо за '+date);
