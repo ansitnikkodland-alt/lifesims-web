@@ -63,16 +63,39 @@ function isScheduled(m,d){
  return days.includes(parse(d).getDay());
 }
 function slots(h,d){
- return h.medications.filter(m=>isScheduled(m,d)).flatMap(m=>(m.times||[]).map(time=>{
-  const entry=h.medicationLog.find(x=>x.medicationId===m.id&&x.date===d&&x.time===time);
-  return {m,time,entry};
- })).sort((a,b)=>a.time.localeCompare(b.time));
+ const map=new Map();
+ for(const m of h.medications.filter(m=>isScheduled(m,d)))for(const time of (m.times||[])){
+  map.set(m.id+'@'+time,{m,time,entry:null});
+ }
+ // Retain logged doses independently of later schedule edits.
+ for(const entry of h.medicationLog.filter(x=>x.date===d)){
+  const m=h.medications.find(x=>x.id===entry.medicationId)||
+   {id:entry.medicationId,name:entry.medicationName||'Препарат из архива',dose:entry.dose||'',archived:true};
+  const key=m.id+'@'+entry.time;
+  if(map.has(key))map.get(key).entry=entry;else map.set(key,{m,time:entry.time,entry});
+ }
+ return [...map.values()].sort((a,b)=>a.time.localeCompare(b.time)||a.m.name.localeCompare(b.m.name));
+}
+function copyYesterday(){
+ if(date>nowDay()){flash='Нельзя переносить приёмы на будущую дату.';renderMessage();return}
+ const d=date,prior=add(d,-1),old=slots(data(),prior);
+ if(!old.length){flash='На предыдущий день лекарств нет.';renderMessage();return}
+ let added=0;
+ const saved=change(h=>{
+  for(const s of old){
+   const m=h.medications.find(x=>x.id===s.m.id);
+   if(!m||!m.active||slots(h,d).some(x=>x.m.id===m.id&&x.time===s.time))continue;
+   h.medicationLog.push({id:uid(),medicationId:m.id,medicationName:m.name,dose:m.dose||'',date:d,time:s.time,status:'planned',recordedAt:new Date().toISOString()});
+   added++;
+  }
+ });
+ if(saved){flash=added?'Добавлено как вчера: '+added+'. Галочки не проставлены.':'Препараты уже есть в расписании.';renderMessage()}
 }
 function setMedicationStatus(m,d,time,status){
  if(d>nowDay()){flash='Нельзя заранее отмечать приём выполненным.';render();return}
  change(h=>{
   h.medicationLog=h.medicationLog.filter(x=>!(x.medicationId===m.id&&x.date===d&&x.time===time));
-  if(status)h.medicationLog.push({id:uid(),medicationId:m.id,date:d,time,status,recordedAt:new Date().toISOString()});
+  if(status)h.medicationLog.push({id:uid(),medicationId:m.id,medicationName:m.name,dose:m.dose||'',date:d,time,status,recordedAt:new Date().toISOString()});
  });
 }
 function fillUi(){
@@ -100,7 +123,7 @@ function fillUi(){
  '<form id="healthCycleSettings" class="health-panel"><h3>Параметры прогноза</h3><label>Окно ПМС, за дней до месячных<input id="healthPmsLead" type="number" min="1" max="14" required></label><div class="health-cols"><label>Длина цикла, дней<input id="healthCycleLength" type="number" min="15" max="90" required></label><label>Менструация, дней<input id="healthPeriodLength" type="number" min="1" max="15" required></label></div><label class="health-inline"><input id="healthPeriodReminder" type="checkbox"> Напомнить за 2 дня до ожидаемого начала</label><button type="submit" class="secondary">Сохранить</button></form>',
  '</div>',
  '<div id="healthPillsView" hidden>',
- '<div class="health-panel"><h3>Приёмы за выбранный день</h3><label>Дата<input id="healthPillsDate" type="date"></label><div id="healthTodaySlots"></div></div>',
+ '<div class="health-panel"><h3>💊 Таблетки по дням</h3><label>Дата<input id="healthPillsDate" type="date"></label><div class="health-actions"><button id="healthCopyYesterday" type="button" class="secondary">↺ Как вчера</button><button id="healthAddMedication" type="button" class="primary">+ Добавить лекарство</button></div><div id="healthTodaySlots" class="health-med-checklist"></div><p class="hint">Галочка означает фактический приём. Записи прошлых дней можно исправить.</p></div>',
  '<div class="health-panel"><h3>Схема приёма</h3><div id="healthMedicationList"></div></div>',
  '<form id="healthMedicationForm" class="health-panel"><h3 id="healthMedicationTitle">Добавить препарат</h3>',
  '<label>Название<input id="healthMedName" type="text" maxlength="100" required autocomplete="off"></label>',
@@ -141,6 +164,8 @@ function fillUi(){
  $('healthCycleSettings').onsubmit=e=>{e.preventDefault();change(h=>{h.settings.cycleLength=+$('healthCycleLength').value;h.settings.periodLength=+$('healthPeriodLength').value;h.settings.periodReminder=$('healthPeriodReminder').checked;h.settings.pmsLeadDays=+$('healthPmsLead').value})};
  $('healthMedRepeat').onchange=()=>{$('healthMedDays').hidden=$('healthMedRepeat').value!=='custom'};
  $('healthMedicationForm').onsubmit=saveMedication;
+ $('healthCopyYesterday').onclick=copyYesterday;
+ $('healthAddMedication').onclick=()=>{resetMedicationForm();$('healthMedicationForm').scrollIntoView({behavior:'smooth',block:'start'});$('healthMedName').focus()};
  $('healthMedCancel').onclick=resetMedicationForm;
  $('healthReminders').onchange=e=>change(h=>{h.settings.reminders=!!e.target.checked});
  $('healthContraception').onchange=e=>change(h=>{h.settings.contraceptionEnabled=!!e.target.checked});
@@ -263,25 +288,34 @@ function renderMedicationList(h){
  }
 }
 function medicationSlotLine(s,d,compact=false){
- const row=el('div','health-dose-row'),left=el('div','health-dose-main');
- const state=s.entry?.status||'';
- left.append(el('strong','',s.time+' · '+s.m.name+(s.m.dose?' · '+s.m.dose:'')));
- left.append(el('small','health-status'+(state?' '+state:''),state==='taken'?'✓ Принято':state==='skipped'?'× Пропущено':d>nowDay()?'Запланировано':'Ожидает отметки'));
- const controls=el('div','health-actions');
+ const row=el('div','health-dose-row health-dose-checkrow'),left=el('div','health-dose-main');
+ const status=s.entry?.status||'',taken=status==='taken';
+ const label=el('label','health-dose-checklabel'),cb=el('input','health-taken-check');
+ cb.type='checkbox';cb.checked=taken;cb.disabled=d>nowDay();
+ cb.setAttribute('aria-label','Принято: '+s.m.name+' '+s.time+' '+dayLabel(d));
+ cb.addEventListener('change',()=>setMedicationStatus(s.m,d,s.time,cb.checked?'taken':null));
+ label.append(cb);
+ const desc=el('span','health-dose-description');
+ desc.append(el('strong','',s.m.name+(s.m.dose?' · '+(s.entry?.dose||s.m.dose):'')));
+ desc.append(el('small','',s.time+' · '+(taken?'Принято':status==='skipped'?'Пропущено':status==='planned'?'Добавлено как вчера':'Не отмечено')));
+ label.append(desc);left.append(label);row.append(left);
  if(!compact){
-  controls.append(button('✓',()=>setMedicationStatus(s.m,d,s.time,'taken'),state==='taken'?'health-active':'secondary'));
-  controls.append(button('Пропущено',()=>setMedicationStatus(s.m,d,s.time,'skipped'),state==='skipped'?'health-active':'secondary'));
-  if(state)controls.append(button('↺',()=>setMedicationStatus(s.m,d,s.time,null)));
-  if(d>nowDay())for(const b of controls.querySelectorAll('button'))b.disabled=true;
+  const controls=el('div','health-dose-actions');
+  if(!s.m.archived){
+   const e=button('✎',()=>editMedication(s.m),'health-inline-edit');
+   e.setAttribute('aria-label','Редактировать лекарство и дозировку '+s.m.name);controls.append(e);
+  }
+  if(d<=nowDay()&&status!=='skipped')controls.append(button('Пропуск',()=>setMedicationStatus(s.m,d,s.time,'skipped'),'health-inline-edit'));
+  row.append(controls);
  }
- row.append(left,controls);return row;
+ return row;
 }
 function renderMedications(h){
  $('healthPillsDate').value=date;$('healthReminders').checked=!!h.settings.reminders;
  $('healthContraception').checked=!!h.settings.contraceptionEnabled;renderMedicationTypes(h);
  const slotPanel=$('healthTodaySlots');slotPanel.replaceChildren();
  const todaySlots=slots(h,date);
- if(!todaySlots.length)slotPanel.append(el('p','hint','На выбранную дату приёмов нет.'));
+ if(!todaySlots.length)slotPanel.append(el('p','hint','На эту дату приёмов нет. Добавь лекарство или перенеси список со вчера.'));
  for(const s of todaySlots)slotPanel.append(medicationSlotLine(s,date));
  renderMedicationList(h);
  const history=$('healthMedicationHistory');history.replaceChildren();
@@ -291,12 +325,14 @@ function renderMedications(h){
  const taken=scheduled.filter(x=>x.entry?.status==='taken').length;
  $('healthAdherence').textContent='По расписанию за 30 дней: '+taken+' принятых отметок из '+scheduled.length+' запланированных. Пропуски, которые не отмечены, не приравниваются к пропущенным дозам.';
  for(const entry of recent.slice(0,100)){
-  const m=h.medications.find(x=>x.id===entry.medicationId);
-  const item=el('div','health-history-row');
-  item.textContent=dayLabel(entry.date)+' · '+entry.time+' · '+(m?.name||'Удалённый препарат')+' · '+(entry.status==='taken'?'✓ принято':'× пропущено');
-  history.append(item);
- }
- if(!recent.length)history.append(el('p','hint','История появится после отметок приёма.'));
+   const m=h.medications.find(x=>x.id===entry.medicationId)||
+    {id:entry.medicationId,name:entry.medicationName||'Препарат из архива',dose:entry.dose||'',archived:true};
+   const item=el('div','health-history-row');
+   item.append(el('span','',dayLabel(entry.date)+' · '));
+   item.append(medicationSlotLine({m,time:entry.time,entry},entry.date,true));
+   history.append(item);
+  }
+  if(!recent.length)history.append(el('p','hint','История появится после отметок приёма.'));
  if(!('Notification' in window))$('healthNotifyStatus').textContent='Уведомления недоступны в этом браузере. Используй журнал приёмов.';
  else $('healthNotifyStatus').textContent='Разрешение браузера: '+(Notification.permission==='granted'?'предоставлено':Notification.permission==='denied'?'запрещено':'не запрашивалось')+'. Надёжной фоновой доставки нет.';
 }
