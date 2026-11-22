@@ -5680,6 +5680,8 @@ window.LifeSimsFoodBridge={
 /* LifeSims Google Calendar sync. OAuth tokens remain in memory; no background writes. */
 (function () {
   'use strict';
+  // Never reuse the parent's Google session inside a locally managed child profile.
+  if(window.LifeSimsFamily?.activeId?.()!=='primary')return;
   const bridge = window.LifeSimsCalendarBridge;
   const section = document.getElementById('googleCalendarMount');
   if (!bridge || !section) return;
@@ -6577,6 +6579,8 @@ render();
 /* LifeSims Oura OAuth V2 — browser-only, no client secret. */
 (function(){
 'use strict';
+// Do not import an adult's Oura data into another local profile.
+if(window.LifeSimsFamily?.activeId?.()!=='primary')return;
 const bridge=window.LifeSimsOuraBridge,root=document.getElementById('ouraMount');
 if(!bridge||!root)return;
 const AUTH='https://cloud.ouraring.com/oauth/authorize', API='https://lifesims-oura-bridge.onrender.com/v1/oura/';
