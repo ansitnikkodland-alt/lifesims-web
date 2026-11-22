@@ -129,3 +129,9 @@
 .meal-lookup-nutrition #mealLookupRawDetails{margin:8px 0 10px;font-size:12px;color:#d7e4e9}
 .meal-lookup-nutrition #mealLookupRawDetails summary{min-height:44px;display:flex;align-items:center;cursor:pointer}
 .meal-lookup-nutrition #mealLookupRawDetails pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#171e27;border-radius:10px;padding:10px;color:#f2f4f6;font:12px/1.45 system-ui}
+
+/* v89: single smart entry with accessible camera-or-gallery picker */
+.meal-smart-sources[hidden]{display:none!important}
+.meal-smart-sources{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:4px 0 7px}
+.meal-smart-sources button{min-height:52px;background:#344552;color:#f3f8fa;border:1px solid #91a7b5;border-radius:12px;font:600 13px system-ui;padding:10px 8px;cursor:pointer}
+.meal-smart-sources button:focus-visible{outline:3px solid #f7edbd;outline-offset:2px}
