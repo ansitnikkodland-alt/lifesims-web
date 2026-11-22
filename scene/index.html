@@ -2444,6 +2444,14 @@ function skillImpactHistory(day=today()){
     at:date+'T23:59:59',skill,negative:true,points:skillExperience(a)*remaining,manual:true});
   }
  }
+ // Manual skill edits are absolute, dated settings in the normal XP timeline.
+ for(const e of state.events||[]){
+  if(e?.kind!=='skill_manual'||typeof e.skill!=='string'||!e.skill.trim()||
+   !/^\d{4}-\d{2}-\d{2}$/.test(e.date||'')||e.date>day)continue;
+  const xp=Number(e.targetScore);
+  if(!Number.isFinite(xp)||xp<0||xp>1000000)continue;
+  entries.push({...e,points:0,manual:true});
+ }
  // Completed, non-cancelled calendar occurrences provide a small skill practice bonus.
  // Recalculate in memory to cover events that end while the app is closed.
  // Manually recorded attendance takes precedence, preventing double counting.
@@ -2466,7 +2474,8 @@ function skillImpactHistory(day=today()){
     at:new Date(occurrence.endsAt).toISOString(),skill:occurrence.skill,points:2});
   }
  }
- return entries.sort((a,b)=>a.date.localeCompare(b.date)||String(a.at||'').localeCompare(String(b.at||'')));
+ return entries.sort((a,b)=>a.date.localeCompare(b.date)||
+  String(a.at||'').localeCompare(String(b.at||''))||(Number(a.manualOrder)||0)-(Number(b.manualOrder)||0));
 }
 function skillScores(day=today()){
  const since=state.skillDecaySince||day,skills=new Map();
@@ -2474,11 +2483,11 @@ function skillScores(day=today()){
   if(typeof n!=='string'||!n.trim())return null;n=n.trim().slice(0,70);
   if(!skills.has(n)){
    const xp=Math.max(0,Number(state.legacySkills?.[n])||0);
-   skills.set(n,{name:n,score:xp,earned:xp,anchor:since,practiceAnchor:since,last:null,loss:0,harm:0});
+   skills.set(n,{name:n,score:xp,earned:xp,anchor:since,practiceAnchor:since,last:null,loss:0,harm:0,manual:0,lastManual:null});
   }
   return skills.get(n);
  }
- for(const n of [...DEFAULT_SKILLS,...defs.map(x=>x.skill),...state.activities.map(x=>x.skill),...(state.schedule||[]).map(x=>x.skill),...(state.customSkills||[]),...Object.keys(state.legacySkills||{})])get(n);
+ for(const n of [...DEFAULT_SKILLS,...defs.map(x=>x.skill),...state.activities.map(x=>x.skill),...(state.schedule||[]).map(x=>x.skill),...(state.customSkills||[]),...Object.keys(state.legacySkills||{}),...(state.events||[]).filter(e=>e?.kind==='skill_manual').map(e=>e.skill)])get(n);
  const activities=new Map(state.activities.map(a=>[a.id,a])),original=new Map(defs.map(a=>[a.id,a]));
  function applyDecay(item,date,practised=false){
   if(date<=item.anchor)return;
@@ -2491,7 +2500,15 @@ function skillScores(day=today()){
  for(const e of skillImpactHistory(day)){
   const skill=Object.prototype.hasOwnProperty.call(e,'skill')?e.skill:(activities.get(e.activityId)?.skill||original.get(e.activityId)?.skill);
   const item=get(skill),points=Number(e.points);
-  if(!item||!Number.isFinite(points)||points===0)continue;
+  if(!item)continue;
+  if(e.kind==='skill_manual'){
+   const target=Number(e.targetScore);
+   if(!Number.isFinite(target)||target<0||target>1000000)continue;
+   applyDecay(item,e.date);
+   item.manual+=target-item.score;item.score=target;item.lastManual=e.date;
+   continue;
+  }
+  if(!Number.isFinite(points)||points===0)continue;
   applyDecay(item,e.date,points>0);
   if(points>0){item.score+=points;item.earned+=points;item.last=e.date;if(e.date>=since)item.practiceAnchor=e.date;}
   else{const next=Math.max(0,item.score+points);item.harm+=item.score-next;item.score=next;}
@@ -2500,6 +2517,39 @@ function skillScores(day=today()){
   applyDecay(x,day);
   return {...x,days:x.last?skillDayDiff(x.last,day):null};
  }).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name,'ru'));
+}
+// Manually entered values are replayable events, not destructive XP edits.
+function setManualSkillScore(name,rawLevel,rawWithin){
+ if(storageBlocked||!storageOK)throw Error('Сохранение недоступно.');
+ const current=skillScores().find(x=>x.name===name);
+ if(!current)throw Error('Навык не найден.');
+ if(String(rawLevel).trim()===''||String(rawWithin).trim()==='')throw Error('Заполни оба поля.');
+ const level=Number(rawLevel),within=Number(rawWithin);
+ if(!Number.isInteger(level)||level<1||level>10001)throw Error('Уровень: целое число от 1 до 10001.');
+ if(!Number.isFinite(within)||within<0||within>99.9||
+  Math.abs(within*10-Math.round(within*10))>0.00001)
+  throw Error('Опыт: от 0 до 99,9 XP с точностью до 0,1.');
+ const target=Math.round(((level-1)*100+within)*10)/10;
+ if(target>1000000)throw Error('Максимальный общий опыт — 1 000 000 XP.');
+ if(Math.abs(target-current.score)<0.05)return {changed:false,score:current.score};
+ const date=today(),at=new Date().toISOString();
+ const manualOrder=1+Math.max(0,...(state.events||[]).filter(e=>e?.kind==='skill_manual'&&e.skill===name)
+  .map(e=>Number(e.manualOrder)||0));
+ const entry={id:uid(),kind:'skill_manual',name:'Ручная настройка навыка',
+  skill:name,date,at,targetScore:target,previousScore:Math.round(current.score*10)/10,manualOrder};
+ if(!transact(()=>{state.events??=[];state.events.push(entry)}))
+  throw Error('Сохранение не удалось. Прежние записи сохранены.');
+ renderAll();toast('✓ '+name+': уровень '+level+' · '+within+' XP');
+ return {changed:true,score:target};
+}
+function undoManualSkillScore(name){
+ if(storageBlocked||!storageOK)throw Error('Сохранение недоступно.');
+ const index=(state.events||[]).findLastIndex(e=>e?.kind==='skill_manual'&&e.skill===name);
+ if(index<0)return {changed:false};
+ if(!transact(()=>{state.events.splice(index,1)}))
+  throw Error('Не удалось отменить ручную корректировку.');
+ renderAll();toast('Последняя ручная корректировка отменена.');
+ return {changed:true};
 }
 function addCustomSkill(event){
  event.preventDefault();
@@ -2585,7 +2635,7 @@ function refreshSkillSuggestions(){
  const list=$('skillSuggestions');if(!list)return;list.replaceChildren();
  for(const v of skillScores()){const option=document.createElement('option');option.value=v.name;list.append(option)}
 }
-window.LifeSimsSkillBridge={today, scores:()=>skillScores(),history:()=>skillImpactHistory(),read:()=>({activities:state.activities||[],events:state.events||[],schedule:state.schedule||[],legacySkills:state.legacySkills||{},defaults:defs}),linkExisting:saveExistingSkillLinks,edit:id=>openActivityEditor(id),editEvent:id=>{openTab('history',true);openCalendarEventEditor(id)},create:kind=>openNewCalendarTask(kind)};
+window.LifeSimsSkillBridge={today, scores:()=>skillScores(),history:()=>skillImpactHistory(),read:()=>({activities:state.activities||[],events:state.events||[],schedule:state.schedule||[],legacySkills:state.legacySkills||{},defaults:defs}),setScore:setManualSkillScore,undoScore:undoManualSkillScore,linkExisting:saveExistingSkillLinks,edit:id=>openActivityEditor(id),editEvent:id=>{openTab('history',true);openCalendarEventEditor(id)},create:kind=>openNewCalendarTask(kind)};
 function renderSkills(){
  const list=$('skillsList');if(!list)return;list.replaceChildren();
  const f=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:1});
