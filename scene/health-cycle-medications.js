@@ -491,10 +491,10 @@ function renderIllnessHints(){
   'После сохранения предложу отметить болезнь в LifeSims — только с твоего согласия.':
   'Историческая запись сохранится, но игровой статус болезни меняется только за сегодня.');
 }
-function offerIllnessAfterSave(d,symptoms=[...draftSymptoms]){
- const result=B.illnessSuggestion?.(d,symptoms);
+function offerIllnessAfterSave(d,symptoms=[...draftSymptoms],moods=[]){
+ const result=B.illnessSuggestion?.(d,symptoms,moods);
  if(!result?.suggest||!result.canMark||!illnessDialog||illnessDialog.open)return;
- const key=d+'|'+[...symptoms].sort().join('|');
+ const key=d+'|'+[...symptoms].sort().join('|')+'|'+[...moods].sort().join('|');
  if(promptedIllness.has(key))return;
  promptedIllness.add(key);pendingIllnessDate=d;
  $('healthIllnessReason').textContent='Ты отметила: '+result.reasons.join('; ')+
@@ -863,7 +863,8 @@ function markCalendar(container){
   }
  }
 }
-window.LifeSimsHealth={render,openAt,appendAgenda,markCalendar,forecast,mountPhysicalSymptoms};
+window.LifeSimsHealth={render,openAt,appendAgenda,markCalendar,forecast,mountPhysicalSymptoms,
+ offerMoodIllness:(d,moods)=>offerIllnessAfterSave(d,[],moods)};
 fillUi();resetMedicationForm();render();
 window.setInterval(checkReminders,60000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden){checkReminders();render()}});
