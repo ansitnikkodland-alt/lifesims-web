@@ -179,6 +179,38 @@ jobs:
            const meal=await page.evaluate(()=>window.LifeSimsFoodBridge.list().find(x=>x.title==='Омлет'));
            if(!meal||meal.grams!==200)throw Error('Smart meal portion could not be edited and saved');
            console.log('ONE PHOTO BUTTON -> MEAL -> APPROXIMATE EDITABLE PORTION (STUBBED MODEL): PASS');
+
+           await page.evaluate(()=>window.LifeSimsMealChat.close());
+           const earlier=await page.evaluate(()=>{
+            const bridge=window.LifeSimsFoodBridge;
+            const today=bridge.today();
+            const d=new Date(today+'T12:00:00');d.setDate(d.getDate()-1);
+            const previous=[d.getFullYear(),String(d.getMonth()+1).padStart(2,'0'),String(d.getDate()).padStart(2,'0')].join('-');
+            bridge.upsert({date:previous,time:'08:30',title:'Вчерашний завтрак',kcal:210,protein:10,fat:8,carbs:24});
+            for(let n=0;n<14;n++)bridge.upsert({date:today,time:'10:'+String(n).padStart(2,'0'),
+             title:'Тестовый перекус '+n,kcal:35,protein:1,fat:1,carbs:5});
+            return previous;
+           });
+           const satietyButton=page.locator('#needsGrid button').filter({hasText:'Сытость'}).first();
+           await satietyButton.click();
+           await page.locator('#singleMetricDialog').waitFor({state:'visible'});
+           await page.locator('.satiety-food-history').waitFor({state:'visible'});
+           const firstBatch=await page.locator('.satiety-food-item').count();
+           if(firstBatch!==12)throw Error('Satiety did not show first 12 foods: '+firstBatch);
+           if(!await page.locator('.satiety-food-item-macros').first().isVisible())
+             throw Error('Satiety meal BJU details missing');
+           await page.locator('.satiety-food-more').click();
+           const remaining=await page.locator('.satiety-food-item').count();
+           if(remaining<=12)throw Error('Satiety load more foods failed: '+remaining);
+           const priorMeal=page.locator('.satiety-food-item').filter({hasText:'Вчерашний завтрак'});
+           await priorMeal.waitFor({state:'visible'});
+           await priorMeal.click();
+           await page.locator('#mealChat').waitFor({state:'visible'});
+           if(await page.locator('#mealChatDate').inputValue()!==earlier)
+             throw Error('Clicking satiety history did not open original meal date');
+           if(!await page.locator('#mealChatInput').inputValue().then(s=>s.includes('Вчерашний завтрак')))
+             throw Error('Clicking satiety history did not open editable meal');
+           console.log('SATIETY CLICK -> DATE-GROUPED FOOD HISTORY -> LOAD MORE -> EDIT EXISTING ENTRY: PASS');
            if(errors.length)throw Error('Unexpected JS page error: '+errors.join(' | '));
            await browser.close();
           })().catch(e=>{console.error(e);process.exit(1)});
