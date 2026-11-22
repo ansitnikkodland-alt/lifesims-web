@@ -119,7 +119,7 @@ public final class MainActivity extends Activity {
         });
         addButton(root, "4. Открыть LifeSims в браузере", v -> {
             Intent open = new Intent(Intent.ACTION_VIEW,
-                    Uri.parse("https://ansitnikkodland-alt.github.io/lifesims-web/scene/?v=116"));
+                    Uri.parse("https://ansitnikkodland-alt.github.io/lifesims-web/scene/?v=117"));
             startActivity(open);
         });
         addButton(root, "Остановить локальную передачу", v -> {
