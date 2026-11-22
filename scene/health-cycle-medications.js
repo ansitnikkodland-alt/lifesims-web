@@ -140,7 +140,7 @@ function setMedicationStatus(m,d,time,status){
 }
 function fillUi(){
  root.innerHTML=[
- '<div class="health-head"><div><h2>🌸 Цикл и 💊 лекарства</h2><p>Журнал здоровья в календаре LifeSims</p></div></div>',
+ '<div class="health-head"><div><h2>🌸 Дневник здоровья</h2><p>Цикл, лекарства, настроение и симптомы</p></div></div>',
  '<div class="health-switch"><button id="healthCycleTab" type="button">🌸 Цикл</button><button id="healthPillsTab" type="button">💊 Лекарства</button></div>',
  '<div id="healthNotice" class="health-notice" role="status" aria-live="polite"></div>',
  '<div id="healthCycleView">',
@@ -157,6 +157,8 @@ function fillUi(){
  '</div>',
  '<div id="healthPillsView" hidden>',
  '<div class="health-panel"><h3>💊 Таблетки по дням</h3><label>Дата<input id="healthPillsDate" type="date"></label><div class="health-actions"><button id="healthCopyYesterday" type="button" class="secondary">↺ Как вчера</button><button id="healthAddMedication" type="button" class="primary">+ Добавить лекарство</button></div><div id="healthTodaySlots" class="health-med-checklist"></div><p class="hint">Галочка означает фактический приём. Записи прошлых дней можно исправить.</p></div>',
+ '<div class="health-panel" id="healthOldMedsPanel" hidden><h3>🗂️ Прежние записи лекарств</h3><p class="hint">Найдены в старом дневнике LifeSims. Исходный текст сохранён. Отметь принятые таблетки галочкой.</p><div id="healthOldMedsList"></div><button id="healthLegacyMore" type="button" class="secondary">Показать все прежние записи</button></div>',
+ '<form id="healthLegacyEditor" class="health-panel health-legacy-form" hidden><h3>✎ Редактировать прежнее лекарство</h3><label>Название<input id="healthLegacyName" type="text" required maxlength="120"></label><label>Дозировка<input id="healthLegacyDose" type="text" maxlength="80" placeholder="Если известна"></label><div class="health-actions"><button type="submit" class="primary">Сохранить исправление</button><button id="healthLegacyCancel" type="button" class="secondary">Отмена</button></div></form>',
  '<div class="health-panel"><h3>Схема приёма</h3><div id="healthMedicationList"></div></div>',
  '<form id="healthMedicationForm" class="health-panel"><h3 id="healthMedicationTitle">Добавить препарат</h3>',
  '<label>Название<input id="healthMedName" type="text" maxlength="100" required autocomplete="off"></label>',
@@ -200,6 +202,9 @@ function fillUi(){
  $('healthMedRepeat').onchange=()=>{$('healthMedDays').hidden=$('healthMedRepeat').value!=='custom'};
  $('healthMedicationForm').onsubmit=saveMedication;
  $('healthCopyYesterday').onclick=copyYesterday;
+ $('healthLegacyEditor').onsubmit=saveLegacyMedication;
+ $('healthLegacyCancel').onclick=()=>{legacyEdit=null;$('healthLegacyEditor').hidden=true};
+ $('healthLegacyMore').onclick=()=>{showAllLegacy=!showAllLegacy;renderMedications(data())};
  $('healthAddMedication').onclick=()=>{resetMedicationForm();$('healthMedicationForm').scrollIntoView({behavior:'smooth',block:'start'});$('healthMedName').focus()};
  $('healthMedCancel').onclick=resetMedicationForm;
  $('healthReminders').onchange=e=>change(h=>{h.settings.reminders=!!e.target.checked});
@@ -347,12 +352,12 @@ function medicationSlotLine(s,d,compact=false){
  label.append(cb);
  const desc=el('span','health-dose-description');
  desc.append(el('strong','',s.m.name+((s.entry?.dose||s.m.dose)?' · '+(s.entry?.dose||s.m.dose):'')));
- desc.append(el('small','',s.time+' · '+(taken?'Принято':status==='skipped'?'Пропущено':status==='planned'?'Добавлено как вчера':'Не отмечено')));
+ desc.append(el('small','',(s.time==='--:--'?'время не записано':s.time)+' · '+(taken?'Принято':status==='skipped'?'Пропущено':status==='planned'?'Добавлено как вчера':'Не отмечено')));
  label.append(desc);left.append(label);row.append(left);
  if(!compact){
   const controls=el('div','health-dose-actions');
-  if(!s.m.archived){
-   const e=button('✎',()=>editMedication(s.m),'health-inline-edit');
+  if(!s.m.archived||s.m.legacy||s.m.id.startsWith('legacy-copy:')){
+   const e=button('✎',()=>s.m.archived?editLegacyMedication(s.m,d,s.time):editMedication(s.m),'health-inline-edit');
    e.setAttribute('aria-label','Редактировать лекарство и дозировку '+s.m.name);controls.append(e);
   }
   if(d<=nowDay()&&status!=='skipped')controls.append(button('Пропуск',()=>setMedicationStatus(s.m,d,s.time,'skipped'),'health-inline-edit'));
@@ -412,6 +417,7 @@ function checkReminders(){
  }
  if(!h.settings.reminders)return;
  for(const s of slots(h,d)){
+  if(s.m.archived||!/^(?:[01]\\d|2[0-3]):[0-5]\\d$/.test(s.time))continue;
   const [hh,mm]=s.time.split(':').map(Number),due=hh*60+mm;
   if(s.entry||minutes<due||minutes-due>119)continue;
   const key='lifesims-health-notified-'+s.m.id+'-'+d+'-'+s.time;
@@ -420,7 +426,7 @@ function checkReminders(){
  }
 }
 function openAt(d,tab='cycle'){
- date=validDay(d)?d:nowDay();month=date.slice(0,7);section=tab;render();B.openTab('health',true);
+ date=validDay(d)?d:nowDay();month=date.slice(0,7);section=tab;render();B.openHealthResource?.();
 }
 function appendAgenda(d,body){
  const h=data(),v=h.cycleDays[d],s=slots(h,d);
