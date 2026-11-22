@@ -191,7 +191,7 @@ async function loadOCR(){
 function extractNutrition(text){
  const full=String(text||'').replace(/\u00a0/g,' ').replace(/ё/g,'е').replace(/[ \t]+/g,' ');
  const lines=full.split(/[\n\r]+/).map(line=>line.trim()).filter(Boolean);
- const per100=/(?:на|в|per|\/)\s*100\s*(?:г|гр|g|мл|ml)\b/i.test(full)||
+ const per100=/(?:на|в|per|\/)\s*100\s*(?:г|гр|g|мл|ml)(?![a-zа-я])/i.test(full)||
   /(?:100\s*(?:г|гр|g|мл|ml))\s*[:/—–-]/i.test(full);
  const patterns={
   kcal:/(?:ккал|kcal|калорийность|калории|энергетическая\s+ценность)/i,
@@ -206,7 +206,7 @@ function extractNutrition(text){
    const line=raw.toLowerCase();
    if(!pattern.test(line))continue;
    if(type==='kcal'){
-    const endUnit=line.match(/(\d{1,5}(?:[.,]\d{1,2})?)\s*(?:ккал|kcal)\b/i);
+    const endUnit=line.match(/(\d{1,5}(?:[.,]\d{1,2})?)\s*(?:ккал|kcal)(?![a-zа-я])/i);
     if(endUnit)return number(endUnit[1].replace(',','.'));
    }
    const match=pattern.exec(line);
