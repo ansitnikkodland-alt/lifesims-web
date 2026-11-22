@@ -48,6 +48,12 @@ jobs:
             await page.clock.setFixedTime(new Date('2026-11-22T07:00:00+03:00'));
             await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
             const protectedValue=await value();
+            const antData=await page.evaluate(()=>({
+              date:new Date().toISOString(),
+              antEvents:window.LifeSimsTaskBridge.read().events.filter(e=>e.activityId==='hygiene_antiperspirant'),
+              hygiene:[...document.querySelectorAll('#needsGrid .meter')].find(e=>e.textContent.includes('Гигиена'))?.textContent
+            }));
+            console.log('ANTI DEBUG',JSON.stringify(antData));
             if(!(protectedValue>overnight&&protectedValue<100))
               throw Error('Antiperspirant did not slow, but continue decline: '+JSON.stringify({overnight,protectedValue}));
             console.log('ANTIPERSPIRANT SLOWS, DOES NOT FREEZE: PASS',JSON.stringify({overnight,protectedValue}));
