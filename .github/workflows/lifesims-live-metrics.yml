@@ -1,0 +1,79 @@
+name: LifeSims live metrics overnight regression
+on:
+  push:
+    paths:
+      - 'scene/index.html'
+      - 'scene/sw.js'
+      - '.github/workflows/lifesims-live-metrics.yml'
+  workflow_dispatch:
+jobs:
+  live-metrics:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright driver
+        run: npm install --no-save playwright-core@1.56.1
+      - name: Start local web app
+        run: |
+          python3 -m http.server 8765 > /tmp/lifesims-live-metrics-http.log 2>&1 &
+          sleep 2
+      - name: Validate live satiety, midnight and resume refresh
+        run: |
+          cat > /tmp/lifesims-live-metrics.cjs <<'JS'
+          const {chromium}=require(process.cwd()+'/node_modules/playwright-core');
+          (async()=>{
+            const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
+            const context=await browser.newContext({viewport:{width:390,height:844},deviceScaleFactor:2,timezoneId:'Europe/Moscow'});
+            const page=await context.newPage(), errors=[];
+            page.on('pageerror',error=>errors.push(error.message));
+            await page.clock.install({time:new Date('2026-11-21T23:00:00+03:00')});
+            await page.goto('http://127.0.0.1:8765/scene/?test=live-metrics',{waitUntil:'domcontentloaded'});
+            await page.locator('#hungerMeterValue').waitFor();
+            const initial=await page.evaluate(()=>{
+              const b=window.LifeSimsFoodBridge;
+              const d=b.today();
+              b.upsert({date:d,time:'17:00',title:'Ужин для проверки',grams:300,kcal:900});
+              b.upsert({date:d,time:'22:45',title:'Поздняя еда для проверки',grams:250,kcal:900});
+              return {day:d,value:window.LifeSimsLiveMetrics.inspect().value,
+                label:document.getElementById('hungerMeterValue').textContent};
+            });
+            if(initial.value<90||initial.label!==initial.value+'%')
+              throw Error('Initial meal entries not reflected in satiety: '+JSON.stringify(initial));
+            // Jump eight hours into the morning; an installed PWA must derive time
+            // from actual timestamps rather than keep a last-rendered 100%.
+            await page.clock.fastForward('08:00:00');
+            const morning=await page.evaluate(()=>{
+              const snapshot=window.LifeSimsLiveMetrics.inspect();
+              return {day:window.LifeSimsFoodBridge.today(),value:snapshot.value,
+                label:document.getElementById('hungerMeterValue').textContent,
+                source:document.getElementById('hungerMeterOrigin').textContent};
+            });
+            if(morning.day===initial.day||morning.value>=90||morning.value<=0||
+               morning.label!==morning.value+'%'||!morning.source.includes('вчера'))
+              throw Error('Satiety did not decay across midnight: '+JSON.stringify({initial,morning}));
+            console.log('OVERNIGHT MULTIPLE MEALS + MIDNIGHT UI: PASS',JSON.stringify({initial,morning}));
+            // A stale value must be repainted immediately on focus/pageshow,
+            // even if Android throttled all background intervals.
+            await page.evaluate(()=>{
+              document.getElementById('hungerMeterValue').textContent='100%';
+              window.dispatchEvent(new Event('focus'));
+            });
+            const refreshed=await page.locator('#hungerMeterValue').innerText();
+            if(refreshed!==morning.value+'%')throw Error('Focus did not repaint current hunger: '+refreshed);
+            console.log('FOCUS REFRESH: PASS');
+            await page.clock.fastForward('17:00:00');
+            const fullyFaded=await page.evaluate(()=>({value:window.LifeSimsLiveMetrics.inspect().value,
+              label:document.getElementById('hungerMeterValue').textContent}));
+            if(fullyFaded.value!==0||fullyFaded.label!=='0%')
+              throw Error('16-hour fade should reach zero: '+JSON.stringify(fullyFaded));
+            console.log('FULL DECAY 16H AFTER LAST MEAL: PASS');
+            if(errors.length)throw Error('Unexpected page errors: '+errors.join(' | '));
+            await context.close();
+            await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
+          node /tmp/lifesims-live-metrics.cjs
