@@ -1,0 +1,21 @@
+/* StayFree CSV importer: locally handled screen-time statistics, not scheduled events. */
+.sf-import{border:1px solid #6485a7;border-radius:16px;padding:12px 13px;margin:16px 0;background:linear-gradient(155deg,#263a56,#1e2c47);color:#f5f7ff}
+.sf-import summary{min-height:44px;display:flex;align-items:center;cursor:pointer;font-size:15px;font-weight:720;user-select:none}
+.sf-import p{margin:8px 0}
+.sf-import .sf-hint{font-size:12px;line-height:1.55;color:#d0def0}
+.sf-import .sf-label{display:flex;flex-direction:column;gap:6px;min-width:0;font-size:13px;color:#e2e8f4;margin:9px 0}
+.sf-import input[type=file],.sf-import select{width:100%;min-width:0;min-height:45px;background:#172743;color:#f5f7ff;border:1px solid #7798b8;padding:9px 10px;border-radius:9px}
+.sf-import input[type=file]::file-selector-button{min-height:36px;background:#3f5676;color:#fff;border:1px solid #8ba5bc;border-radius:7px;margin-right:9px}
+.sf-import-options{margin:12px 0}
+.sf-column-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:6px 12px}
+.sf-preview{border:1px solid #697f9f;background:#1a3049;padding:12px;border-radius:12px;margin:12px 0}
+.sf-preview strong{display:block;line-height:1.5}
+.sf-samples{padding-left:21px;margin:10px 0;display:grid;gap:5px;font-size:12px}
+.sf-actions{display:flex;gap:9px;margin:12px 0}
+.sf-actions button{min-height:44px;flex:1}
+.sf-actions button:disabled{opacity:.4;cursor:not-allowed}
+.sf-status{font-size:13px;line-height:1.5;min-height:19px}
+.sf-calendar-line .agenda-time{font-size:15px}
+.sf-summary-line{display:flex;align-items:center;justify-content:space-between;gap:10px}
+@media(max-width:480px){.sf-column-grid{grid-template-columns:1fr 1fr}.sf-import{padding:11px}}
+@media(max-width:340px){.sf-column-grid{grid-template-columns:1fr}}
