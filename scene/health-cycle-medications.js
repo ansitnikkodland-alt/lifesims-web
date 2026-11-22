@@ -487,7 +487,9 @@ function renderIllnessHints(){
  if(result.caution)safety.textContent='⚠ '+result.caution;
  hint.hidden=!result.suggest||result.active||result.declined;
  if(!hint.hidden)hint.textContent='🩺 Симптомы могут указывать на болезнь ('+
-  result.reasons.join('; ')+'). После сохранения предложу отметить болезнь в LifeSims — только с твоего согласия.';
+  result.reasons.join('; ')+'). '+(result.canMark?
+  'После сохранения предложу отметить болезнь в LifeSims — только с твоего согласия.':
+  'Историческая запись сохранится, но игровой статус болезни меняется только за сегодня.');
 }
 function offerIllnessAfterSave(d,symptoms=[...draftSymptoms]){
  const result=B.illnessSuggestion?.(d,symptoms);
@@ -575,7 +577,8 @@ function mountPhysicalSymptoms(host,d){
   if(assessment?.caution)caution.textContent='⚠ '+assessment.caution;
   hint.hidden=!assessment?.suggest||assessment.active||assessment.declined;
   if(!hint.hidden)hint.textContent='🩺 '+assessment.reasons.join('; ')+
-   '. После сохранения можно будет подтвердить игровой статус «Болезнь».';
+   (assessment.canMark?'. После сохранения можно будет подтвердить игровой статус «Болезнь».':
+    '. Историю симптомов можно сохранить, но болезнь в игре отмечается только за сегодняшний день.');
  }
  refresh();
 }
