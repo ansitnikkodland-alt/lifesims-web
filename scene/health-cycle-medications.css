@@ -111,3 +111,19 @@ dialog.health-illness-dialog .health-illness-reason{font-size:15px;line-height:1
 dialog.health-illness-dialog .hint{font-size:12px;line-height:1.5;color:#c9d5e6}
 dialog.health-illness-dialog .health-actions{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
 dialog.health-illness-dialog .health-actions button{flex:1;min-width:130px;min-height:44px}
+
+/* Physical Condition uses the same symptom chooser as resource Health (v106).
+   Scoped here because the condition editor lives outside the Health mount. */
+#singleMetricContent .physical-symptom-picker{margin:17px 0 12px;padding:12px 0;border-top:1px solid #607b9c;min-width:0}
+#singleMetricContent .physical-symptom-picker>h4{font-size:17px;line-height:1.4;margin:0 0 6px;color:#f7f8ff}
+#singleMetricContent .physical-symptom-picker>.hint{font-size:13px;line-height:1.4;color:#c6d8ed}
+#singleMetricContent .physical-symptom-picker .health-symptom-group{padding:12px 0;border-bottom:1px solid #456282}
+#singleMetricContent .physical-symptom-picker .health-symptom-group h4{font-size:14px;font-weight:750;margin:0 0 9px}
+#singleMetricContent .physical-symptom-picker .health-choice-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+#singleMetricContent .physical-symptom-picker .health-choice{display:flex;align-items:center;justify-content:center;flex-direction:column;gap:3px;min-height:70px;min-width:0;padding:8px 4px;border-radius:12px;background:#223a58;color:#f4f7ff;border:1px solid #5a759a;white-space:normal;overflow-wrap:anywhere;text-align:center;font-size:12px;line-height:1.25}
+#singleMetricContent .physical-symptom-picker .health-choice.chosen{background:#694c6d;border-color:#eab1da;box-shadow:inset 0 0 0 1px #edbbde}
+#singleMetricContent .physical-symptom-picker .health-illness-hint{padding:12px;margin:10px 0;background:#1b3c50;border:1px solid #668cad;border-radius:12px;font-size:13px;line-height:1.5}
+#singleMetricContent .physical-symptom-picker .health-safety-hint{padding:12px;margin:10px 0;background:#4b3335;color:#fff3e8;border:1px solid #ca847c;border-radius:12px;font-size:13px;line-height:1.5}
+#singleMetricContent .physical-symptom-picker .health-actions{display:flex;gap:8px;margin:14px 0}
+#singleMetricContent .physical-symptom-picker .health-actions button{min-height:44px;flex:1}
+@media(max-width:360px){#singleMetricContent .physical-symptom-picker .health-choice-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
