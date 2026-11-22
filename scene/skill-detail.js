@@ -135,11 +135,19 @@
    'Укажи общий XP навыка. Изменение сохранится в истории. Автоматические начисления и регресс без практики продолжат работать.'));
   const fields=make('div','skill-manual-fields');
   const total=Math.max(0,Math.round(skill.score*10)/10);
+  const scale=typeof bridge.displayScale==='function'?bridge.displayScale():Math.max(100,total*1.15);
   const experience=make('input');experience.type='number';experience.min='0';experience.max='1000000';
   experience.step='0.1';experience.inputMode='decimal';experience.id='manualSkillExperience';
   experience.value=String(total);
   const label=make('label','','Общий опыт, XP');label.htmlFor=experience.id;
   label.append(experience);fields.append(label);panel.append(fields);
+  const rangeLabel=make('label','skill-xp-slider-label','Изменить XP по шкале');
+  const range=make('input','skill-xp-slider');range.type='range';range.id='manualSkillXpSlider';
+  range.min='0';range.max=String(scale);range.step='0.1';range.value=String(Math.min(total,scale));
+  range.setAttribute('aria-label','Ручная настройка общего XP навыка');
+  const rangeHint=make('small','skill-xp-slider-hint',
+   'Шкала от 0 до '+fmt.format(scale)+' XP. Это масштаб отображения, а не уровень или предел опыта.');
+  rangeLabel.append(range,rangeHint);panel.append(rangeLabel);
   const preview=make('p','skill-manual-preview');preview.setAttribute('aria-live','polite');
   function previewValue(){
    const xp=Number(experience.value);
@@ -148,7 +156,15 @@
    preview.textContent=valid?'Текущий опыт: '+fmt.format(xp)+' XP':
     'Введи значение от 0 до 1 000 000 XP с точностью до 0,1.';
   }
-  experience.addEventListener('input',previewValue);
+  experience.addEventListener('input',()=>{
+   const xp=Number(experience.value);
+   if(experience.value.trim()&&Number.isFinite(xp)&&xp>=0)
+    range.value=String(Math.min(scale,xp));
+   previewValue();
+  });
+  range.addEventListener('input',()=>{
+   experience.value=range.value;previewValue();
+  });
   previewValue();panel.append(preview);
   const actions=make('div','skill-manual-buttons');
   const status=make('p','skill-manual-status');status.setAttribute('role','status');
@@ -209,6 +225,19 @@
    card.append(make('span','',label),make('strong','',value));summary.append(card);
   }
   body.append(summary);
+  const scale=typeof bridge.displayScale==='function'?bridge.displayScale():Math.max(100,skill.score*1.15);
+  const bar=make('div','skill-detail-progress skill-xp-track');
+  bar.setAttribute('role','progressbar');
+  bar.setAttribute('aria-label','Опыт '+selected+' на непрерывной шкале XP');
+  bar.setAttribute('aria-valuemin','0');
+  bar.setAttribute('aria-valuemax',String(scale));
+  bar.setAttribute('aria-valuenow',String(skill.score));
+  bar.setAttribute('aria-valuetext',fmt.format(skill.score)+' XP, диапазон шкалы 0–'+fmt.format(scale)+' XP');
+  bar.dataset.xpValue=String(skill.score);bar.dataset.xpScale=String(scale);
+  const fill=make('b');fill.style.width=Math.min(100,Math.max(0,skill.score)/scale*100)+'%';
+  bar.append(fill);body.append(bar);
+  const axis=make('small','skill-xp-axis','Шкала опыта: 0 — '+fmt.format(scale)+' XP (не уровень)');
+  body.append(axis);
   body.append(manualSkillEditor(selected,skill,data));
   body.append(make('p','skill-detail-note',
    'Начальные значения из прежних данных включены в итог. Ручная корректировка задаёт текущий опыт, не удаляя прежние записи. Положительные действия развивают навык, отрицательные привычки его снижают. Количество из таблицы привычек пересчитывает эффект без двойного учёта. После окончания неотменённого мероприятия связанный навык получает +2 XP; ручная отметка участия заменяет это начисление. Без полезной практики навык уменьшается на 0,1% каждый день.'));
