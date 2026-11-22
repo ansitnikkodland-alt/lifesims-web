@@ -182,6 +182,37 @@ jobs:
            const meal=await page.evaluate(()=>window.LifeSimsFoodBridge.list().find(x=>x.title==='Омлет'));
            if(!meal||meal.grams!==200)throw Error('Smart meal portion could not be edited and saved');
            console.log('ONE PHOTO BUTTON -> MEAL -> APPROXIMATE EDITABLE PORTION (STUBBED MODEL): PASS');
+           // A live camera frame is classified without tapping a photo shutter.
+           // Canvas captureStream supplies a camera substitute in headless Chrome.
+           await page.evaluate(()=>{
+            window.BarcodeDetector=undefined;
+            const canvas=document.createElement('canvas');canvas.width=320;canvas.height=240;
+            const context=canvas.getContext('2d');
+            context.fillStyle='#c7a56c';context.fillRect(0,0,320,240);
+            const stream=canvas.captureStream(10);
+            window.__testLiveStream=stream;
+            window.__testCanvasTick=setInterval(()=>{
+             context.fillStyle='#c7a56c';context.fillRect(0,0,320,240);
+            },180);
+            Object.defineProperty(navigator.mediaDevices,'getUserMedia',{configurable:true,
+             value:async()=>stream});
+            window.LifeSimsMealPhoto.analyzeSmart=async()=>({kind:'meal',
+             source:'Камера: тест',title:'Омлет',gramsEstimate:180,
+             candidates:[{title:'Омлет',score:.97}],confidence:'Типичная порция'});
+           });
+           await page.locator('#mealSmartCapture').click();
+           await page.waitForFunction(()=>!document.getElementById('mealLiveUse').disabled,{timeout:15000});
+           await page.locator('#mealLiveUse').click();
+           await page.locator('#mealChatPhotoPanel').waitFor({state:'visible'});
+           if(await page.locator('#mealChatPhotoGrams').inputValue()!=='180'||
+              !await page.locator('#mealChatInput').inputValue().then(x=>x.includes('Омлет')))
+            throw Error('Live camera result did not populate meal editor');
+           const cameraStopped=await page.evaluate(()=>{
+            clearInterval(window.__testCanvasTick);
+            return window.__testLiveStream.getTracks().every(t=>t.readyState==='ended');
+           });
+           if(!cameraStopped)throw Error('Live camera kept running after result confirmation');
+           console.log('LIVE CAMERA -> AUTO CLASSIFY -> CONFIRM -> EDITABLE PORTION: PASS');
 
            await page.evaluate(()=>window.LifeSimsMealChat.close());
            const earlier=await page.evaluate(()=>{
