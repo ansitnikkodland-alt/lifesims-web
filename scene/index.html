@@ -62,7 +62,15 @@
 .needs-editor[open]>summary{margin-bottom:10px}
 .needs-editor .heading{margin:10px 0}
 .needs-editor #stateForm{margin-top:12px}
-</style><link rel="stylesheet" href="./calendar-style.css">
+</style><link rel="stylesheet" href="./calendar-style.css"><style id="lifesims-calendar-controls">
+.agenda-day-arrow{border:1px solid #81a3ca;border-radius:14px;background:#2d4767;color:#fff;font-size:34px;min-width:44px;min-height:48px;padding:0 8px}
+.agenda-top>div{flex:1;min-width:0}
+.agenda-swipe-hint{text-align:center;font-size:12px;margin:8px 0}
+#skillCreationForm{display:flex;align-items:end;gap:9px;flex-wrap:wrap;margin:10px 0 18px}
+#skillCreationForm label{flex:1;min-width:175px}
+#skillCreationForm input{width:100%;min-height:44px}
+#skillCreationForm button{min-height:44px}
+</style>
 <link rel="stylesheet" href="./task-premium.css?v=69">
 <style id="lifesims-weight-measurements">
 #weightMeasurementDialog{color:#eef7ff;background:linear-gradient(145deg,#2b3d61,#17253f);border:1px solid #7da8c8;border-radius:18px;width:min(93vw,470px);max-height:88dvh;overflow:auto;padding:18px;box-shadow:0 15px 65px #000b}
@@ -926,7 +934,7 @@ body{background:#091428}
 </section>
 <section class="section activities-page" id="tasks"><div class="heading"><h2>☑ Дела</h2><input id="topTasksDate" type="date" aria-label="Дата дел"></div><div class="card"><div id="topTasksList" class="activity-list"></div><button class="secondary activity-add" type="button" id="topTasksAdd">+ Добавить дело</button></div></section>
 <section class="section activities-page" id="habits"><div class="heading"><h2>◇ Привычки</h2><input id="topHabitsDate" type="date" aria-label="Дата привычек"></div><div class="card"><div id="topHabitsList" class="activity-list"></div><div class="row"><button class="secondary activity-add" type="button" id="topHabitsAdd">+ Добавить привычку</button><button class="secondary" type="button" id="habitBackdateOpen">📅 Записать задним числом</button></div></div></section>
-<section class="section" id="skills"><div class="heading"><h2>↗ Навыки</h2></div><p class="hint">Полезные действия повышают навык, отрицательные привычки снижают его. Сила влияния зависит от сложности. После 14 дней без практики опыт постепенно снижается на 1% в неделю. История и общий XP сохраняются.</p><div id="skillsList" class="skills-list" aria-live="polite"></div></section><section class="section" id="history">
+<section class="section" id="skills"><div class="heading"><h2>↗ Навыки</h2></div><p class="hint">Полезные действия повышают навык, отрицательные привычки снижают его. Сила влияния зависит от сложности. После 14 дней без практики опыт постепенно снижается на 1% в неделю. История и общий XP сохраняются.</p><form id="skillCreationForm"><label class="field">Новый навык<input id="newSkillName" type="text" maxlength="70" placeholder="Например, Английский" required></label><button type="submit" class="primary">+ Добавить навык</button></form><div id="skillsList" class="skills-list" aria-live="polite"></div></section><section class="section" id="history">
 <div class="heading"><h2>Календарь жизни</h2><input type="date" id="historyDate" aria-label="Выбранная дата"></div>
 <div class="history-controls"><button data-view="day">День</button><button data-view="week">Неделя</button><button data-view="month">Месяц</button><button type="button" id="todayPeriod">Сегодня</button><button id="prevPeriod" aria-label="Предыдущий период">◀</button><button id="nextPeriod" aria-label="Следующий период">▶</button></div>
 <div id="historyRange" class="hint"></div><div id="calendar"></div>
@@ -974,9 +982,9 @@ body{background:#091428}
 </section>
 <div id="dayAgendaOverlay" class="agenda-overlay" hidden>
 <div class="agenda-dialog" role="dialog" aria-modal="true" aria-labelledby="agendaTitle">
-<div class="agenda-top"><div><div class="agenda-eyebrow">РАСПИСАНИЕ ДНЯ</div><h3 id="agendaTitle"></h3><p id="agendaSubtitle"></p></div>
+<div class="agenda-top"><button type="button" id="agendaPrevDay" class="agenda-day-arrow" aria-label="Предыдущий день">‹</button><div><div class="agenda-eyebrow">РАСПИСАНИЕ ДНЯ</div><h3 id="agendaTitle"></h3><p id="agendaSubtitle"></p></div><button type="button" id="agendaNextDay" class="agenda-day-arrow" aria-label="Следующий день">›</button>
 <button type="button" id="agendaClose" class="agenda-close" aria-label="Закрыть расписание">×</button></div>
-<div id="agendaBody" class="agenda-body"></div>
+<div id="agendaBody" class="agenda-body"></div><p class="hint agenda-swipe-hint">Листай вправо или влево, чтобы перейти к соседнему дню.</p>
 <div class="agenda-actions"><button type="button" id="agendaAddEvent" class="primary">+ Мероприятие</button><button type="button" id="agendaAddTask" class="secondary">+ Дело</button><button type="button" id="agendaHabitBackdate" class="secondary">◇ Отметить привычку</button><button type="button" id="agendaAddMeal" class="secondary">+ Питание</button></div>
 </div></div>
 <section class="section" id="data"><div class="heading"><h2>Резервная копия</h2></div>
@@ -1075,7 +1083,7 @@ const defs=[
 const labels={window:'🪟 Окно · мероприятия',bed:'🛏 Кровать',books:'📚 Книжная полка',desk:'💻 Компьютер',phone:'📱 Телефон',tableBook:'📖 Книга на столике',fridge:'🧊 Холодильник',coffee:'☕ Кофе',clutter:'🧹 Уборка',sink:'🚰 Раковина',sim:'👤 Персонаж',sofa:'🛋 Диван',shower:'🚿 Ванная',toilet:'🚽 Туалет',catLitter:'🐈 Туалет котиков'};
 const base=()=>({schema:VERSION,createdAt:new Date().toISOString(),days:{},activities:[...defs.filter(a=>a.xp>0).map(a=>({...a,kind:'habit',difficulty:3,completions:[]})),{id:'coffee_habit',kind:'habit',name:'Кофе',xp:0,skill:null,repeat:'daily',difficulty:3,habitUnit:'чаш.',completions:[]}],events:[],schedule:[],googleHidden:[],foodMeals:[],foodTemplates:[],financeChecks:[],room:{work:null,lastShowerDateReported:'2026-11-18',antiperspirantInitialized:true},legacySkills:{},legacyCopy:null,skillDecaySince:today(),
  taskProjects:[],taskTags:[{id:'tp-family',name:'Семья'},{id:'tp-work',name:'Работа'}],
- habitMeasurements:{},focusSettings:{focus:25,short:5,long:15},focusTimer:{mode:'focus',running:false,remainingSec:1500,elapsedSec:0,endAt:null,startAt:null,taskId:''}});
+ habitMeasurements:{},customSkills:[],focusSettings:{focus:25,short:5,long:15},focusTimer:{mode:'focus',running:false,remainingSec:1500,elapsedSec:0,endAt:null,startAt:null,taskId:''}});
 let state,storageOK=true,storageBlocked=false,activeDay=today(),historyView='month',selectedTab='needs';
 function normalize(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.schema!==VERSION||!raw.days||typeof raw.days!=='object'||Array.isArray(raw.days)||!Array.isArray(raw.activities)||!Array.isArray(raw.events))throw Error('Неизвестный или повреждённый формат');const safe=base();const normalized={...safe,...raw,foodMeals:Array.isArray(raw.foodMeals)?raw.foodMeals.filter(x=>x&&typeof x==='object'&&typeof x.id==='string'&&typeof x.date==='string'):[],foodTemplates:Array.isArray(raw.foodTemplates)?raw.foodTemplates.filter(x=>x&&typeof x==='object'&&typeof x.title==='string'&&x.title.trim().length>0):[],googleHidden:Array.isArray(raw.googleHidden)?raw.googleHidden.filter(x=>x&&typeof x.calendarId==='string'&&typeof x.id==='string').map(x=>({calendarId:x.calendarId,id:x.id,title:typeof x.title==='string'?x.title:'',hiddenAt:typeof x.hiddenAt==='string'?x.hiddenAt:''})):[],schedule:Array.isArray(raw.schedule)?raw.schedule:(Array.isArray(raw.legacyCopy?.events)?raw.legacyCopy.events.map((e,i)=>({id:'legacy-schedule-'+i,title:e.title||'Мероприятие',startsAt:e.startsAt,endsAt:e.endsAt,repeat:e.repeat==='weekly'?'weekly':'none',weekdays:e.repeat==='weekly'&&e.startsAt?[((new Date(e.startsAt.slice(0,10)+'T12:00:00').getDay()+6)%7)+1]:[]})):[]),room:(raw.room&&typeof raw.room==='object'&&!Array.isArray(raw.room))?{...safe.room,...raw.room}:safe.room};
  if(!raw.room?.antiperspirantInitialized){
@@ -1085,6 +1093,7 @@ function normalize(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.
   }
   normalized.room.antiperspirantInitialized=true;
  }
+ normalized.customSkills=Array.isArray(raw.customSkills)?[...new Set(raw.customSkills.filter(x=>typeof x==='string'&&x.trim()).map(x=>x.trim().slice(0,70)))]:[];
  normalized.taskProjects=Array.isArray(raw.taskProjects)?raw.taskProjects.filter(x=>x&&typeof x.id==='string'&&typeof x.name==='string'):safe.taskProjects;
  normalized.taskTags=Array.isArray(raw.taskTags)?raw.taskTags.filter(x=>x&&typeof x.id==='string'&&typeof x.name==='string'):safe.taskTags;
  normalized.focusSettings=raw.focusSettings&&typeof raw.focusSettings==='object'?{...safe.focusSettings,...raw.focusSettings}:safe.focusSettings;
@@ -2369,7 +2378,7 @@ function skillScores(day=today()){
   }
   return skills.get(n);
  }
- for(const n of [...DEFAULT_SKILLS,...defs.map(x=>x.skill),...state.activities.map(x=>x.skill),...Object.keys(state.legacySkills||{})])get(n);
+ for(const n of [...DEFAULT_SKILLS,...defs.map(x=>x.skill),...state.activities.map(x=>x.skill),...(state.schedule||[]).map(x=>x.skill),...(state.customSkills||[]),...Object.keys(state.legacySkills||{})])get(n);
  const activities=new Map(state.activities.map(a=>[a.id,a])),original=new Map(defs.map(a=>[a.id,a]));
  function applyDecay(item,date){
   if(date<=item.anchor)return;
@@ -2391,6 +2400,14 @@ function skillScores(day=today()){
   applyDecay(x,day);
   return {...x,days:x.last?skillDayDiff(x.last,day):null};
  }).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name,'ru'));
+}
+function addCustomSkill(event){
+ event.preventDefault();
+ const input=$('newSkillName'),name=input.value.trim().slice(0,70);
+ if(!name)return toast('Укажи название навыка');
+ if(skillScores().some(x=>x.name.toLocaleLowerCase('ru')===name.toLocaleLowerCase('ru')))return toast('Такой навык уже существует');
+ if(!transact(()=>{state.customSkills??=[];state.customSkills.push(name)}))return toast('Не удалось сохранить навык');
+ input.value='';renderSkills();toast('Навык добавлен. Его можно выбрать в мероприятиях, делах и привычках.');
 }
 function refreshSkillSuggestions(){
  const list=$('skillSuggestions');if(!list)return;list.replaceChildren();
@@ -3023,6 +3040,26 @@ function scheduleHistoryOccurrences(from,to){
 function safeEventColor(color){return /^#[0-9a-fA-F]{6}$/.test(color||'')?color:'#4285f4'}
 function timeOf(when){return new Date(when).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'})}
 function closeDayAgenda(){$('dayAgendaOverlay').hidden=true}
+function shiftDayAgenda(delta){
+ if($('dayAgendaOverlay').hidden)return;
+ $('historyDate').value=plusDays($('historyDate').value||today(),delta);
+ renderHistory();$('agendaBody').scrollTop=0;
+}
+function bindAgendaDaySwipe(){
+ const surface=$('dayAgendaOverlay').querySelector('.agenda-dialog');let start=null;
+ surface.addEventListener('touchstart',event=>{
+  if(event.touches.length!==1||event.target.closest('input,select,textarea,button,a,[role=button]')){start=null;return}
+  const t=event.touches[0];start={x:t.clientX,y:t.clientY};
+ },{passive:true});
+ surface.addEventListener('touchend',event=>{
+  if(!start||!event.changedTouches.length)return;
+  const p=event.changedTouches[0],dx=p.clientX-start.x,dy=p.clientY-start.y;
+  start=null;if(Math.abs(dx)>55&&Math.abs(dx)>Math.abs(dy)*1.4)shiftDayAgenda(dx<0?1:-1);
+ },{passive:true});
+ surface.addEventListener('touchcancel',()=>{start=null},{passive:true});
+ $('agendaPrevDay').onclick=()=>shiftDayAgenda(-1);
+ $('agendaNextDay').onclick=()=>shiftDayAgenda(1);
+}
 function openDayAgenda(date){
   $('historyDate').value=date;
   renderHistory();
@@ -3849,7 +3886,7 @@ document.addEventListener('click',event=>{
 document.addEventListener('pointerdown',e=>{if($('sheetWrap').classList.contains('open')&&!e.target.closest('.sheet')&&!e.target.closest('.hot')&&!e.target.closest('#scenePhone,#sceneFridge,#sceneToilet,#sceneCatLitter,#showerCabin'))closeSheet()});document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSheet();closeDayAgenda()}});for(const b of document.querySelectorAll('[data-tab]'))b.onclick=()=>openTab(b.dataset.tab,true);$('openNeedsEditor').onclick=()=>{
  try{showNeedsEditor('',today())}
  catch(error){console.error('Open all metrics:',error);toast('Не удалось открыть показатели: '+String(error?.message||error))}
-};$('weightMeasurementForm').onsubmit=saveWeightMeasurement;$('weightMeasurementClose').onclick=()=>$('weightMeasurementDialog').close();$('weightMeasurementCancel').onclick=()=>$('weightMeasurementDialog').close();$('stateForm').onsubmit=saveFieldState;$('taskForm').onsubmit=addActivity;$('saveDiary').onclick=saveDiary;for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>{historyView=b.dataset.view;renderHistory()};$('historyDate').onchange=renderHistory;$('prevPeriod').onclick=()=>changePeriod(-1);$('nextPeriod').onclick=()=>changePeriod(1);$('todayPeriod').onclick=()=>{$('historyDate').value=today();renderHistory()};$('editSelectedDay').onclick=()=>{activeDay=$('historyDate').value;showNeedsEditor('',activeDay)};$('stateDate').onchange=()=>fillState($('stateDate').value);$('addCalendarEvent').onclick=openNewCalendarEvent;$('addCalendarTask').onclick=()=>openNewCalendarTask('task');
+};$('weightMeasurementForm').onsubmit=saveWeightMeasurement;$('weightMeasurementClose').onclick=()=>$('weightMeasurementDialog').close();$('weightMeasurementCancel').onclick=()=>$('weightMeasurementDialog').close();$('skillCreationForm').onsubmit=addCustomSkill;$('stateForm').onsubmit=saveFieldState;$('taskForm').onsubmit=addActivity;$('saveDiary').onclick=saveDiary;for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>{historyView=b.dataset.view;renderHistory()};$('historyDate').onchange=renderHistory;$('prevPeriod').onclick=()=>changePeriod(-1);$('nextPeriod').onclick=()=>changePeriod(1);$('todayPeriod').onclick=()=>{$('historyDate').value=today();renderHistory()};$('editSelectedDay').onclick=()=>{activeDay=$('historyDate').value;showNeedsEditor('',activeDay)};$('stateDate').onchange=()=>fillState($('stateDate').value);$('addCalendarEvent').onclick=openNewCalendarEvent;$('addCalendarTask').onclick=()=>openNewCalendarTask('task');
 $('addCalendarHabit').onclick=()=>openNewCalendarTask('habit');
 for(const id of ['topTasksDate','topHabitsDate'])$(id).addEventListener('change',renderTopActivities);
 $('topTasksAdd').onclick=()=>{$('historyDate').value=$('topTasksDate').value||today();openNewCalendarTask('task')};
@@ -3948,7 +3985,7 @@ function bindCriticalActions(){
   $('needsEditor').open=false;syncLifeModalMask();
  };
 }
-bindCriticalActions();
+bindCriticalActions();bindAgendaDaySwipe();
 document.addEventListener('visibilitychange',()=>{
  if(!document.hidden)render24CalorieCard();
 });
