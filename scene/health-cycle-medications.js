@@ -16,6 +16,7 @@ const uid=()=>String(Date.now())+'-'+Math.random().toString(36).slice(2);
 const SYMPTOMS=['Боль внизу живота','Боль в груди','Головная боль','Вздутие','Тошнота','Усталость','Акне','Перепады настроения','Боль в пояснице','Отёчность','Повышенный аппетит','Раздражительность','Сонливость'];
 const MOODS=['','Спокойствие','Радость','Грусть','Тревога','Раздражение','Энергичность','Апатия'];
 const FLOWS={none:'Нет кровотечения',spotting:'Мажущие выделения',light:'Слабые',medium:'Умеренные',heavy:'Обильные'};
+const CONTRACEPTIVE_TYPES=[['pill','Противозачаточные таблетки'],['ring','Контрацептивное кольцо'],['patch','Контрацептивный пластырь'],['injection','Контрацептивная инъекция']];
 let date=nowDay(), month=date.slice(0,7), editingMed='', section='cycle', flash='';
 function data(){
  const h=B.read()||{};
@@ -23,7 +24,7 @@ function data(){
   cycleDays:h.cycleDays&&typeof h.cycleDays==='object'&&!Array.isArray(h.cycleDays)?h.cycleDays:{},
   medications:Array.isArray(h.medications)?h.medications:[],
   medicationLog:Array.isArray(h.medicationLog)?h.medicationLog:[],
-  settings:{cycleLength:28,periodLength:5,reminders:false,periodReminder:false,...(h.settings||{})}
+  settings:{cycleLength:28,periodLength:5,reminders:false,periodReminder:false,contraceptionEnabled:false,...(h.settings||{})}
  };
 }
 function change(fn){
@@ -104,10 +105,11 @@ function fillUi(){
  '<div class="health-cols"><label>Доза (как назначено)<input id="healthMedDose" type="text" maxlength="65" placeholder="Например, 1 таблетка"></label><label>Время через запятую<input id="healthMedTimes" type="text" required placeholder="09:00, 21:00"></label></div>',
  '<label>Дни приёма<select id="healthMedRepeat"><option value="daily">Ежедневно</option><option value="weekdays">По будням</option><option value="custom">Выбранные дни недели</option></select></label>',
  '<fieldset id="healthMedDays" hidden><legend>Дни недели</legend><div class="health-chips"><label><input type="checkbox" value="1">Пн</label><label><input type="checkbox" value="2">Вт</label><label><input type="checkbox" value="3">Ср</label><label><input type="checkbox" value="4">Чт</label><label><input type="checkbox" value="5">Пт</label><label><input type="checkbox" value="6">Сб</label><label><input type="checkbox" value="0">Вс</label></div></fieldset>',
- '<label>Тип<select id="healthMedType"><option value="medication">Лекарство</option><option value="pill">Противозачаточные таблетки</option><option value="ring">Контрацептивное кольцо</option><option value="patch">Пластырь</option><option value="injection">Инъекция</option><option value="supplement">Витамины / добавки</option></select></label>',
+ '<label>Тип<select id="healthMedType"><option value="medication">Лекарство</option><option value="supplement">Витамины / добавки</option></select></label>',
  '<div class="health-cols"><label>Начало<input id="healthMedStart" type="date" required></label><label>Окончание (необязательно)<input id="healthMedEnd" type="date"></label></div>',
  '<label>Примечание<textarea id="healthMedNote" rows="2" maxlength="400"></textarea></label>',
  '<div class="health-actions"><button type="submit" class="primary">Сохранить препарат</button><button id="healthMedCancel" type="button" class="secondary">Очистить форму</button></div></form>',
+ '<details class="health-panel health-advanced"><summary>Дополнительные настройки лекарств</summary><label class="health-inline"><input id="healthContraception" type="checkbox"> Показывать способы контрацепции</label><p class="hint">По умолчанию скрыты. При включении появятся дополнительные варианты в поле «Тип».</p></details>',
  '<div class="health-panel"><h3>Напоминания</h3><label class="health-inline"><input type="checkbox" id="healthReminders"> Напоминать о приёме таблеток</label><button id="healthNotifyPermission" type="button" class="secondary">Разрешить уведомления</button><p id="healthNotifyStatus" class="hint"></p><p class="hint">Веб-версия проверяет время только пока страница открыта. Для надёжных фоновых уведомлений потребуется Android-приложение или серверная push-система. Не меняй схему лечения на основании этого журнала.</p></div>',
  '<div class="health-panel"><h3>История приёма · 30 дней</h3><div id="healthAdherence"></div><div id="healthMedicationHistory"></div></div>',
  '</div>',
@@ -128,6 +130,7 @@ function fillUi(){
  $('healthMedicationForm').onsubmit=saveMedication;
  $('healthMedCancel').onclick=resetMedicationForm;
  $('healthReminders').onchange=e=>change(h=>{h.settings.reminders=!!e.target.checked});
+ $('healthContraception').onchange=e=>change(h=>{h.settings.contraceptionEnabled=!!e.target.checked});
  $('healthNotifyPermission').onclick=requestPermission;
 }
 function saveCycle(e){
@@ -180,12 +183,22 @@ function renderCycle(h){
  }
  setCycleFields(h);
 }
+function renderMedicationTypes(h){
+ const select=$('healthMedType'),current=select.value;
+ for(const opt of [...select.options])if(opt.dataset.optional==='contraception')opt.remove();
+ const edited=h.medications.find(m=>m.id===editingMed);
+ const allow=!!h.settings.contraceptionEnabled||CONTRACEPTIVE_TYPES.some(([type])=>type===edited?.type);
+ if(allow)for(const [value,label] of CONTRACEPTIVE_TYPES){
+  const option=document.createElement('option');option.value=value;option.textContent=label;option.dataset.optional='contraception';select.append(option);
+ }
+ select.value=[...select.options].some(o=>o.value===current)?current:'medication';
+}
 function resetMedicationForm(){
- editingMed='';$('healthMedicationForm').reset();$('healthMedStart').value=nowDay();
+ editingMed='';$('healthMedicationForm').reset();renderMedicationTypes(data());$('healthMedStart').value=nowDay();
  $('healthMedDays').hidden=true;$('healthMedicationTitle').textContent='Добавить препарат';
 }
 function editMedication(m){
- editingMed=m.id;$('healthMedicationTitle').textContent='Изменить: '+m.name;
+ editingMed=m.id;renderMedicationTypes(data());$('healthMedicationTitle').textContent='Изменить: '+m.name;
  $('healthMedName').value=m.name||'';$('healthMedDose').value=m.dose||'';
  $('healthMedType').value=m.type||'medication';
  $('healthMedTimes').value=(m.times||[]).join(', ');
@@ -215,7 +228,7 @@ function saveMedication(e){
 }
 function renderMedicationList(h){
  const panel=$('healthMedicationList');panel.replaceChildren();
- if(!h.medications.length)panel.append(el('p','hint','Препараты пока не добавлены. Здесь можно записывать лекарства и контрацепцию.'));
+ if(!h.medications.length)panel.append(el('p','hint','Препараты пока не добавлены. Добавь название, дозу и расписание приёма.'));
  for(const m of h.medications){
   const item=el('div','health-med-row'),desc=el('div','health-med-info');
   desc.append(el('strong','',m.name+(m.dose?' · '+m.dose:'')));
@@ -246,6 +259,7 @@ function medicationSlotLine(s,d,compact=false){
 }
 function renderMedications(h){
  $('healthPillsDate').value=date;$('healthReminders').checked=!!h.settings.reminders;
+ $('healthContraception').checked=!!h.settings.contraceptionEnabled;renderMedicationTypes(h);
  const slotPanel=$('healthTodaySlots');slotPanel.replaceChildren();
  const todaySlots=slots(h,date);
  if(!todaySlots.length)slotPanel.append(el('p','hint','На выбранную дату приёмов нет.'));
