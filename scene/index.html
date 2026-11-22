@@ -1405,7 +1405,7 @@ function appendActivityCompletion(a,date){
  if(a.id==='hygiene_antiperspirant'){state.room??={};state.room.lastAntiperspirantAt=stamp}
  if(a.object==='shower'&&/принят.*душ|принять душ|помытьс|приняла душ/i.test(a.name)){state.room??={};state.room.lastShowerAt=stamp}
  if(/уборк|помыть|убрать|постират|мыть посуд|разобрать|пропылесос/i.test(a.name)){state.room??={};state.room.lastCleanAt=stamp;state.room.entropyOffset=Math.min(0,(state.room.entropyOffset||0)-4)}
- state.events.push({id:uid(),kind:'complete',activityId:a.id,name:a.name,date,at:stamp,xp,skillXp,difficulty,negative:isNegativeSkillHabit(a),skill:a.skill||null,resourceEffect:effectSnapshot(a)});
+ state.events.push({id:uid(),kind:'complete',activityId:a.id,name:a.name,date,at:stamp,xp,skillXp,difficulty,negative:isNegativeSkillHabit(a),skill:skillsOf(a)[0]||null,skills:skillsOf(a),resourceEffect:effectSnapshot(a)});
  return xp;
 }
 function showCompletion(a,xp){
@@ -1688,7 +1688,7 @@ function recordEspresso(date=today()){
  const stamp=new Date().toISOString();
  const coffee=state.activities.find(a=>a.id==='coffee_habit');
  if(!transact(()=>{state.events.push({id:uid(),kind:'espresso',name:'☕ Эспрессо',date,at:stamp,xp:0,
-  skill:coffee?.skill||null,negative:isNegativeSkillHabit(coffee),skillXp:skillExperience(coffee),difficulty:difficultyOf(coffee)});
+  skill:skillsOf(coffee)[0]||null,skills:skillsOf(coffee),negative:isNegativeSkillHabit(coffee),skillXp:skillExperience(coffee),difficulty:difficultyOf(coffee)});
   adjustHabitMeasurement('coffee_habit',date,1)}))
   return toast('Не удалось сохранить эспрессо');
  renderAll();toast('☕ Эспрессо записан · '+espressoCount(date)+' за '+(date===today()?'сегодня':date));
@@ -1777,7 +1777,7 @@ function saveHabitBackdate(e){
     activity.completions??=[];
     activity.completions.push({date,at,xp,performedAt:performedAt||null,recordedAt});
     state.events.push({id:uid(),kind:'complete',activityId:activity.id,name:activity.name,
-     date,at,performedAt:performedAt||null,recordedAt,xp,skill:activity.skill||null,resourceEffect:effectSnapshot(activity)});
+     date,at,performedAt:performedAt||null,recordedAt,xp,skill:skillsOf(activity)[0]||null,skills:skillsOf(activity),resourceEffect:effectSnapshot(activity)});
     if(activity.id==='hygiene_antiperspirant'&&performedAt){
      state.room??={};const previous=Date.parse(state.room.lastAntiperspirantAt||'');
      if(!Number.isFinite(previous)||previous<Date.parse(performedAt))state.room.lastAntiperspirantAt=performedAt;
@@ -1848,7 +1848,7 @@ function makeBed(){
    habit.completions??=[];
    const at=new Date().toISOString();
    habit.completions.push({date:today(),at,xp:habit.xp||0});
-   state.events.push({id:uid(),kind:'complete',activityId:habit.id,name:habit.name,date:today(),at,xp:habit.xp||0,skill:habit.skill||null});
+   state.events.push({id:uid(),kind:'complete',activityId:habit.id,name:habit.name,date:today(),at,xp:habit.xp||0,skill:skillsOf(habit)[0]||null,skills:skillsOf(habit)});
   }
   state.events.push({id:uid(),kind:'bed',name:'Заправила кровать',date:today(),at:new Date().toISOString(),xp:0});
  })){return toast('Не удалось записать заправление кровати')}
@@ -3695,7 +3695,7 @@ function renderDayAgenda(){
       (allDay?'':' · '+timeOf(item.startsAt)+'–'+timeOf(item.endsAt))+
       (item.location?' · 📍 '+item.location:'')+
       (item.description?' · '+item.description:'')+
-      (item.skill?' · ↗ '+item.skill:'')+
+      (skillsOf(item).length?' · ↗ '+skillsOf(item).join(', '):'')+
       (eventLinkName(item.linkedTaskId,'task')?' · ☑ '+eventLinkName(item.linkedTaskId,'task'):'')+
       (eventLinkName(item.linkedHabitId,'habit')?' · ◇ '+eventLinkName(item.linkedHabitId,'habit'):'');
     main.append(name,meta);row.append(time,color,main);
@@ -3765,7 +3765,7 @@ function renderDayAgenda(){
       const line=document.createElement('div');line.className='agenda-entry';
       const icon=document.createElement('span');icon.className='agenda-time';icon.textContent='✓';
       const info=document.createElement('div');info.className='agenda-event-main';
-      info.textContent=(e.name||'Выполненное действие')+(e.eventAttendance&&e.skill?' · ↗ '+e.skill+' +'+(Number(e.skillXp)||0)+' XP':'')+
+      info.textContent=(e.name||'Выполненное действие')+(e.eventAttendance&&skillsOf(e).length?' · ↗ '+skillsOf(e).join(', ')+' +'+(Number(e.skillXp)||0)+' XP каждому':'')+
        (resourceEffectLabel(e.resourceEffect)?' · '+resourceEffectLabel(e.resourceEffect):'');
       const edit=document.createElement('button');edit.type='button';edit.className='agenda-edit';
       edit.textContent='✎';edit.setAttribute('aria-label','Редактировать запись: '+(e.name||'Событие'));
@@ -3881,7 +3881,7 @@ function renderHistory(){
   }
   for(const ev of state.events.filter(x=>x.date===chosen)){
     const text=ev.kind==='legacy'?'↩ '+ev.name+' · '+ev.legacyXP+' XP (старая версия)':
-      ev.eventAttendance?'📅 '+ev.name+(ev.skill?' · ↗ '+ev.skill+' +'+(Number(ev.skillXp)||0)+' XP':' · участие отмечено'):
+      ev.eventAttendance?'📅 '+ev.name+(skillsOf(ev).length?' · ↗ '+skillsOf(ev).join(', ')+' +'+(Number(ev.skillXp)||0)+' XP каждому':' · участие отмечено'):
       ev.kind==='complete'?'✓ '+ev.name+' · '+(ev.xp>0?'+':'')+ev.xp+' XP':
       '↗ '+ev.name;
     addHistoryLine(panel,chosen,text);
@@ -3894,7 +3894,7 @@ function renderHistory(){
     const endTime=new Date(event.endsAt).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
     const when=event.allDay?'весь день':(chosen===startDay?startTime+'–'+endTime:'продолжение до '+endTime);
     const info=(event.google?'📅 Google':'📆 Мероприятие')+' · '+when+' · '+event.title+
-      (event.repeat?' · повторяется':'')+(event.skill?' · ↗ '+event.skill:'')+' · запланировано';
+      (event.repeat?' · повторяется':'')+(skillsOf(event).length?' · ↗ '+skillsOf(event).join(', '):'')+' · запланировано';
     const row=document.createElement('div');
     row.className='history-activity-line';
     const text=document.createElement('div');
@@ -3972,7 +3972,7 @@ function renderSchedule(){
     desc.textContent=(e.google?'Google · '+(e.google.sourceName||'Календарь')+' · ':'LifeSims · ')+
       (e.allDay?'Весь день · ':'')+(e.startsAt||'')+' — '+(e.endsAt||'')+
       (e.repeat&&e.repeat!=='none'?' · '+(eventRepeatLabels[e.repeat]||e.repeat):'')+
-      (e.skill?' · ↗ '+e.skill:'');
+      (skillsOf(e).length?' · ↗ '+skillsOf(e).join(', '):'');
     info.append(title,desc);
     const edit=document.createElement('button');edit.className='secondary';edit.type='button';
     edit.textContent='Открыть / изменить';edit.onclick=()=>openCalendarEventEditor(e.id);
@@ -4267,16 +4267,16 @@ function markLiveEventAttendance(entry){
  const current=activeCalendarOccurrences().find(x=>x.id===entry.id&&x.occurrenceKey===entry.occurrenceKey);
  if(!current)return toast('Мероприятие сейчас не идёт');
  if(eventAttendanceRecorded(current))return toast('Участие уже отмечено');
- const skill=current.skill||null;
- const skillXp=skill?Math.max(0,Math.min(40,Number(current.skillXp)||0)):0;
+ const skills=skillsOf(current),skill=skills[0]||null;
+ const skillXp=skills.length?Math.max(0,Math.min(40,Number(current.skillXp)||0)):0;
  if(!transact(()=>{state.events.push({
   id:uid(),kind:'complete',eventAttendance:true,calendarEventId:current.id,
   calendarOccurrenceKey:current.occurrenceKey,name:'Участие: '+current.title,
-  date:today(),at:new Date().toISOString(),xp:0,skill,skillXp,
+  date:today(),at:new Date().toISOString(),xp:0,skill,skills,skillXp,
   difficulty:3,linkedTaskId:current.linkedTaskId||null,linkedHabitId:current.linkedHabitId||null
  })}))return toast('Не удалось сохранить участие');
  renderAll();
- toast('Участие записано'+(skillXp?' · '+skill+' +'+skillXp+' XP':''));
+ toast('Участие записано'+(skillXp?' · '+skills.join(', ')+' +'+skillXp+' XP каждому':''));
  showLiveCalendarEventDialog();
 }
 function showLiveCalendarEventDialog(){
@@ -4291,7 +4291,7 @@ function showLiveCalendarEventDialog(){
   const entry=make('div','live-event-entry');
   entry.append(make('strong','',event.title));
   entry.append(make('small','',event.allDay?'Весь день':timeOf(event.startsAt)+' — '+timeOf(event.endsAt)));
-  if(event.skill)entry.append(make('small','','↗ Навык: '+event.skill+
+  if(skillsOf(event).length)entry.append(make('small','','↗ Навыки: '+skillsOf(event).join(', ')+
    ' · автоматически +2 XP после окончания'+
    (Number(event.skillXp)>0?' · +'+event.skillXp+' XP при ручной отметке вместо +2':'')));
   for(const [key,kind,label] of [['linkedTaskId','task','☑ Дело'],['linkedHabitId','habit','◇ Привычка']]){
@@ -4673,7 +4673,7 @@ window.LifeSimsTaskBridge={
    a.completions.push({date,at:stamp,xp,skillXp,difficulty,negative:isNegativeSkillHabit(a),recordedAt:stamp,performedAt:null});
    adjustHabitMeasurement(a.id,date,1);
    state.events.push({id:uid(),kind:'complete',activityId:a.id,name:a.name,date,at:stamp,
-    recordedAt:stamp,performedAt:null,xp,skillXp,difficulty,negative:isNegativeSkillHabit(a),skill:a.skill||null,resourceEffect:effectSnapshot(a)});
+    recordedAt:stamp,performedAt:null,xp,skillXp,difficulty,negative:isNegativeSkillHabit(a),skill:skillsOf(a)[0]||null,skills:skillsOf(a),resourceEffect:effectSnapshot(a)});
   }))return false;
   renderAll();return true;
  },
