@@ -25,10 +25,10 @@
  '<div class="meal-chat-photo-panel" id="mealChatPhotoPanel" hidden>',
  '<div class="meal-chat-photo-top"><img id="mealChatPhotoPreview" alt="Прикреплённая еда или упаковка">',
  '<div><strong>Фото прикреплено</strong><button type="button" id="mealChatPhotoRemove">× Убрать</button>',
- '<p>Что сфотографировано?</p><div class="meal-chat-photo-mode">',
+ '<p>Распознавание автоматически</p><div class="meal-chat-photo-mode">',
  '<button type="button" id="mealChatAnalyzeFood">🍽 Готовое блюдо</button>',
  '<button type="button" id="mealChatAnalyzePackage">📦 Упаковка / этикетка</button></div></div></div>',
- '<div id="mealChatPhotoFeedback" class="meal-chat-photo-feedback" role="status">Выбери тип фото для распознавания.</div>',
+ '<div id="mealChatPhotoFeedback" class="meal-chat-photo-feedback" role="status">Проверяю содержимое снимка.</div>',
  '<div id="mealChatPhotoCandidates" class="meal-chat-photo-candidates" hidden></div>',
  '<label class="meal-chat-photo-portion">Сколько съела, г <input id="mealChatPhotoGrams" type="number" min="1" max="10000" step="1" value="200"></label>',
  '<div id="mealChatPhotoBarcode" hidden><label>Штрихкод (если не удалось считать с фото) <input id="mealChatBarcodeValue" type="text" inputmode="numeric" maxlength="14" placeholder="8–14 цифр"></label>',
@@ -191,7 +191,10 @@
    $('mealChatPhotoGrams').value=100;
    $('mealChatPhotoBarcode').hidden=false;
   }
-  const n=result.per100||{};
+  if(!mode&&result.kind==='meal'&&Number.isFinite(result.gramsEstimate)){
+    $('mealChatPhotoGrams').value=result.gramsEstimate;
+   }
+   const n=result.per100||{};
   const per100=Object.values(n).some(v=>v!=null)
    ?' На 100 г: '+(n.kcal??'—')+' ккал · Б '+(n.protein??'—')+' · Ж '+(n.fat??'—')+' · У '+(n.carbs??'—')+' г.':'';
   photoFeedback((result.title?'Предложено: '+result.title+'. ':'Название не удалось определить. ')+
@@ -214,7 +217,7 @@
   const revision=photoRevision;
   photoPreviewURL=URL.createObjectURL(file);$('mealChatPhotoPreview').src=photoPreviewURL;
   $('mealChatPhotoPanel').hidden=false;$('mealChatPhotoGrams').value=200;
-  photoFeedback('Фото прикреплено. Выбери «Готовое блюдо» или «Упаковка / этикетка».');
+  photoFeedback('Фото прикреплено. Начинаю распознавание…');
   try{
    const small=await window.LifeSimsMealPhoto?.compressedThumbnail(file);
    if(photoRevision===revision)photoThumbnail=small||null;
@@ -230,8 +233,9 @@
   const revision=photoRevision;
   try{
    const onProgress=message=>{if(revision===photoRevision)photoFeedback(message)};
-   const result=mode==='package'
-    ?await window.LifeSimsMealPhoto.analyzePackage(photoFile,onProgress)
+   const result=mode==='smart'
+    ?await window.LifeSimsMealPhoto.analyzeSmart(photoFile,onProgress)
+    :mode==='package'?await window.LifeSimsMealPhoto.analyzePackage(photoFile,onProgress)
     :await window.LifeSimsMealPhoto.analyzeFood(photoFile,onProgress);
    if(revision===photoRevision)showPhotoResult(result);
   }catch(e){
@@ -242,6 +246,12 @@
    }
   }
  }
+ async function recognizeSmartPhoto(file){
+   if(!file)return;
+   if(!editingId){$('mealChatInput').value='';renderSuggestions()}
+   await attachPhoto(file);
+   if(photoFile===file)await analyzePhoto('smart');
+  }
  async function findBarcode(){
   if(photoBusy)return;
   const code=$('mealChatBarcodeValue').value.replace(/[^0-9]/g,'');
@@ -339,5 +349,5 @@
  window.LifeSimsFood={...legacy,open:openChat,close:()=>{
   closeChat();if(typeof originalClose==='function')originalClose();
  },openDetailed};
- window.LifeSimsMealChat={open:openChat,close:closeChat,setProduct:showPhotoResult};
+ window.LifeSimsMealChat={open:openChat,close:closeChat,setProduct:showPhotoResult,recognizeSmartPhoto};
 })();
