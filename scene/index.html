@@ -905,7 +905,7 @@ body{background:#091428}
 </div>
 <div class="grid" id="needsGrid"></div><div id="ouraMount" class="oura-mount" aria-label="Синхронизация Oura"><p class="hint">Загрузка панели Oura…</p></div>
 <p class="hint">Нажми на любую потребность, чтобы изменить её показатель. Ресурс автоматически рассчитывается по доступным оценкам: сон, восстановление Oura и записанные настроение, физическое состояние, гигиена и питание. Неизвестные показатели остаются пустыми. Если записана еда, питание оценивается только по времени после последнего приёма пищи (игровая сытость, не качество рациона). Ручное значение питания имеет приоритет. Сон — игровая шкала по фактическому сну и накопленному недосыпу. Подключение Oura доступно ниже.</p><hr class="separator"><div class="card"><h3>Сегодня</h3><div id="todaySummary" class="muted">Нет записей</div></div><details id="needsEditor" class="card needs-editor"><summary>✎ Показатели дня</summary><button type="button" id="needsClose" class="secondary needs-popup-close">× Закрыть</button><div class="heading"><h3>Показатели и состояние</h3><input type="date" id="stateDate" aria-label="Дата записи"></div><p class="hint">Нажми на потребность выше, чтобы открыть нужное поле. Здесь также доступны сон, шаги, вес, лекарства и питание.</p><form id="stateForm"><div class="cols"><label class="field">Фактический сон, часов <input id="sleepHours" type="number" min="0" max="24" step="0.01" placeholder="Не записано"></label><label class="field">Недосып (ручная корректировка, ч) <input id="sleepDebtAdjustment" type="number" min="0" max="500" step="0.01" placeholder="Автоматический расчёт"></label><p class="hint">◆ Ресурс — игровая оценка по имеющимся данным. Физическое состояние автоматически использует Oura Readiness за сегодня (или вчера при отсутствии сегодняшнего); это не медицинская оценка. Ручное значение физического состояния используется только при отсутствии Oura.</p><label class="field">Настроение: <output id="moodValue">—</output>% <input id="mood" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="moodUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Физическое состояние: <output id="conditionValue">—</output>% <input id="condition" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="conditionUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Гигиена: <output id="hygieneValue">—</output>% <input id="hygiene" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="hygieneUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Питание: <output id="nutritionValue">—</output>% <input id="nutrition" class="color-slider" type="range" min="0" max="100" step="5" value="50"><label class="unset"><input id="nutritionUnknown" type="checkbox" checked> Не записано</label></label><label class="field">Шаги <input id="steps" type="number" min="0" max="100000" step="1" placeholder="Не записано"></label><label class="field">Общий расход, ккал <input id="totalCalories" type="number" min="0" max="20000" step="1" placeholder="Не записано"></label><label class="field">Вес, кг <input id="weight" type="number" min="20" max="350" step="0.1" placeholder="Не записано"></label><label class="field">Талия, см <input id="waist" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label><label class="field">Бёдра, см <input id="hips" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label><label class="field">Грудь, см <input id="chest" type="number" min="25" max="250" step="0.1" placeholder="Не записано"></label></div><label class="field">Лекарства <button class="secondary" type="button" id="medsYesterday">Как вчера</button><textarea id="meds" placeholder="Только реально принятые лекарства"></textarea></label><label class="field">Питание <button class="secondary" type="button" id="foodYesterday">Как вчера</button><textarea id="foodLegacy" placeholder="Прежняя текстовая запись еды"></textarea></label><label class="field">Цикл <input id="cycle" maxlength="200" placeholder="Заметка о цикле"></label><button class="primary" type="submit">Сохранить запись за дату</button></form><div class="notice" id="sleepDebtNote">Долг сна рассчитывается по записанным дням.</div>
-<div class="card"><h3>🌀 Энтропия в комнате</h3><label class="field">Уровень игрового беспорядка: <output id="entropyValue">—</output><input id="entropyRange" class="color-slider" type="range" min="0" max="100" step="5"></label><p class="hint">Ползунок корректирует игровую оценку. Уборка уменьшает энтропию, время постепенно повышает. Это не измерение реального дома.</p></div></details></section><div id="lifeModalMask" class="life-modal-mask" hidden></div>
+<div class="card"><h3>🧹 Порядок в комнате</h3><label class="field">Чистота и порядок (100% — идеально): <output id="entropyValue">—</output><input id="entropyRange" class="color-slider" type="range" min="0" max="100" step="5"></label><p class="hint">Ползунок корректирует игровой порядок: 100% — чистота. Уборка повышает показатель, время без уборки снижает. Это не измерение реального дома.</p></div></details></section><div id="lifeModalMask" class="life-modal-mask" hidden></div>
 
 
 <section class="section food-popup" id="food" aria-label="Журнал питания" role="dialog" aria-modal="true">
@@ -1365,7 +1365,7 @@ function resourceEffectLabel(raw){
  if(!effect)return '';
  const names={resource:'ресурс',mood:'настроение',condition:'физическое состояние',
   hygiene:'гигиена',nutrition:'питание',hunger:'сытость',sleepNeed:'сон',
-  entropy:'энтропия',activity:'активность'};
+  entropy:'порядок',activity:'активность'};
  return '⚡ '+(names[effect.target]||effect.target)+' '+
   (effect.mode==='set'?'→ '+effect.amount+'%':(effect.amount>=0?'+':'')+effect.amount+' п. п.')+
   (effect.hours===0?' · на день':' · '+(effect.hours===24?'24 ч':effect.hours===72?'72 ч':'7 дней'));
@@ -1510,7 +1510,7 @@ function makeActivityItem(a,date){
   ' · '+((Number(a.xp)||0)>0?'+':'')+(Number(a.xp)||0)+' XP'+(repeatable?' · за дату: '+count+' раз':'')+
   (validatedResourceEffect(a.resourceEffect)?' · ⚡ '+({
    mood:'Настроение',condition:'Физическое состояние',hygiene:'Гигиена',nutrition:'Питание',
-   hunger:'Сытость',sleepNeed:'Сон',entropy:'Энтропия',activity:'Активность',resource:'Ресурс'
+   hunger:'Сытость',sleepNeed:'Сон',entropy:'Порядок',activity:'Активность',resource:'Ресурс'
   }[a.resourceEffect.target]||'Показатель')+' '+(a.resourceEffect.mode==='set'?'→ '+a.resourceEffect.amount+'%':(a.resourceEffect.amount>=0?'+':'')+a.resourceEffect.amount+' п. п.'):'');
  text.append(title,description);el.append(mark,text);
  if(a.object){const badge=document.createElement('span');badge.className='pill';badge.textContent='Комната';el.append(badge)}
@@ -1731,7 +1731,7 @@ function cleanFridge(kind){
   state.room[wash?'lastFridgeWashedAt':'lastFridgeOrganizedAt']=stamp;
   state.events.push({id:uid(),kind:'clean',name,date:today(),at:stamp,xp:0});
  }))return toast('Не удалось записать действие');
- renderAll();toast('✓ '+name+' · энтропия снижена');
+ renderAll();toast('✓ '+name+' · порядок повышен');
 }
 function recordAntiperspirant(){
  const activity=state.activities.find(a=>a?.id==='hygiene_antiperspirant');
@@ -1849,7 +1849,7 @@ function cleanRoom(itemId=null){
   if(itemId)state.room.cleanedItems[itemId]=today();
   state.events.push({id:uid(),kind:'clean',name,date:today(),at:stamp,xp:0});
  })){toast('Не удалось записать уборку');return}
- renderAll();toast('✓ '+name+' · энтропия снижена');
+ renderAll();toast('✓ '+name+' · порядок повышен');
 }
 function isBedMade(){
  const room=state.room||{},day=today();
@@ -1902,11 +1902,15 @@ function rawGameEntropy(){
  const origin=Date.parse(state.room?.lastCleanAt||state.createdAt||new Date().toISOString());
  const days=Number.isFinite(origin)?Math.max(0,(Date.now()-origin)/86400000):0;
  const offset=Number(state.room?.entropyOffset)||0;
- return Math.max(0,Math.min(100,Math.round(12+days*7+offset)));
+ // A room with no confirmed cleaning or manually set mess is considered untidy
+ // initially. Existing explicit cleaning and calibrated offsets take priority.
+ const start=!state.room?.lastCleanAt&&offset===0?78:12;
+ return Math.max(0,Math.min(100,Math.round(start+days*7+offset)));
 }
 function gameEntropy(){
  return actionAdjustedNeed('entropy',today(),rawGameEntropy());
 }
+function gameOrder(){return Math.max(0,100-gameEntropy())}
 function renderRoomMess(){
  const value=gameEntropy(),layer=$('sceneMess');
  if(!layer)return;
@@ -1917,7 +1921,7 @@ function renderRoomMess(){
   el.disabled=!visible;el.style.pointerEvents=visible?'auto':'none';
  }
  $('sceneDust').style.opacity=String(Math.max(0,Math.min(.65,(value-40)/95)));
- const gauge=$('entropyRange');if(gauge){gauge.value=value;$('entropyValue').textContent=value+'%';paintSlider(gauge,value,true)}refreshBed();
+ const gauge=$('entropyRange');if(gauge){const order=100-value;gauge.value=order;$('entropyValue').textContent=order+'%';paintSlider(gauge,order)}refreshBed();
 }
 function renderWork(){const work=state.room?.work||null;$('scene').classList.toggle('at-work',!!work);$('workIndicator').hidden=!work;$('workName').textContent=work?work.name:'';renderMovie()}
 function openFinanceControl(date=today()){
@@ -2292,7 +2296,7 @@ function openSingleMetric(field,date=today()){
  if(field==='nutrition'){closeOtherMetricPopups();window.LifeSimsFood?.open?.();return}
  const titles={
   resource:'◆ Ресурс',sleepHours:'💤 Сон',mood:'☺ Настроение',
-  hygiene:'♨ Гигиена',condition:'♥ Физическое состояние',entropy:'🌀 Энтропия',
+  hygiene:'♨ Гигиена',condition:'♥ Физическое состояние',entropy:'🧹 Порядок',
   hunger:'🍽 Сытость',steps:'🚶 Активность',totalCalories:'🔥 Расход калорий'
  };
  if(!titles[field])return;
@@ -2338,21 +2342,24 @@ function openSingleMetric(field,date=today()){
   for(const [name,value] of data)addNumber(name,value==null?null:value+'%');
   note('Ресурс — игровое среднее доступных показателей с учётом связанных дел и привычек. XP учитываются отдельно только у действий без собственной привязки, чтобы не начислять один эффект дважды. Если измерений нет, действие рассчитывается от условной игровой базы 50%. Исходные данные Oura не меняются.');
  }else if(field==='entropy'){
-  addNumber('Игровая энтропия',gameEntropy()+'%');
-  const input=document.createElement('input');input.type='range';input.min='0';input.max='100';input.step='5';input.value=gameEntropy();input.className='color-slider';
-  const output=document.createElement('output');output.textContent=input.value+'%';paintSlider(input,input.value,true);input.oninput=()=>{output.textContent=input.value+'%';paintSlider(input,input.value,true)};
-  root.append(input,output);note('Уборка уменьшает энтропию, а время повышает. Это игровая оценка комнаты.');
-  addButton('Сохранить энтропию',()=>{
+  addNumber('Порядок · 100% — чисто',gameOrder()+'%');
+  const input=document.createElement('input');input.type='range';input.min='0';input.max='100';input.step='5';input.value=gameOrder();input.className='color-slider';
+  const output=document.createElement('output');output.textContent=input.value+'%';paintSlider(input,input.value);
+  input.setAttribute('aria-label','Уровень чистоты и порядка');
+  input.oninput=()=>{output.textContent=input.value+'%';paintSlider(input,input.value)};
+  root.append(input,output);
+  note('100% — чистота и порядок, 0% — максимальный беспорядок. Уборка повышает порядок, без уборки со временем он снижается.');
+  addButton('Сохранить порядок',()=>{
    const target=Number(input.value);
    if(transact(()=>{
     state.room??={};
-    state.room.entropyOffset=(Number(state.room.entropyOffset)||0)+(target-rawGameEntropy());
+    state.room.entropyOffset=(Number(state.room.entropyOffset)||0)+(100-target-gameEntropy());
     const prior=currentRecord(today()),updated={...prior};
     setResourceManualMarkers(updated,prior,today(),['entropy']);
     state.days[today()]=updated;
    })){
-    renderAll();dialog.close();toast('Энтропия сохранена');
-   }else message.textContent='Не удалось сохранить энтропию.';
+    renderAll();dialog.close();toast('Порядок сохранён');
+   }else message.textContent='Не удалось сохранить порядок.';
   });
  }else if(field==='hunger'){
   const calc=satietyAssessment(date);
@@ -3507,7 +3514,7 @@ function renderNeeds(){
  metric(g,'♥ Физическое состояние',physical.value,'%',null,'condition',physical.date);
  const cleaned=state.room?.lastCleanAt||state.createdAt||'';
  const cleanedDay=/^\d{4}-\d\d-\d\d/.test(cleaned)?cleaned.slice(0,10):null;
- metric(g,'🌀 Энтропия · хаос',gameEntropy(),'%',null,'entropy',cleanedDay,'расчёт сейчас');
+ metric(g,'🧹 Порядок',gameOrder(),'%',null,'entropy',cleanedDay,'100% — чистота и порядок · расчёт сейчас');
  const activityFromSteps=steps.value!=null;
  const baseActivity=activityFromSteps?Math.min(100,Math.round(steps.value/10000*100)):ouraActivity.value;
  const activityValue=actionAdjustedNeed('activity',d,baseActivity);
@@ -3872,8 +3879,8 @@ function renderDayMetrics(date,body,heading){
  for(const e of money)items.push(['💰 Финансовый контроль','Баланс '+number(e.balance,' ₽')+', долги '+number(e.debt,' ₽')+
   ', доходы '+number(e.income,' ₽')+', расходы '+number(e.expenses,' ₽')+(e.notes?' · '+e.notes:''),'finance']);
  if(!money.length)items.push(['💰 Финансовый контроль','—','finance']);
- if(date===today())items.push(['🌀 Энтропия сейчас',number(gameEntropy(),'%'),'entropy']);
- else items.push(['🌀 Энтропия','Нет исторического снимка',null]);
+ if(date===today())items.push(['🧹 Порядок сейчас',number(gameOrder(),'%'),'entropy']);
+ else items.push(['🧹 Порядок','Нет исторического снимка',null]);
  heading('📊 Все показатели');
  const explanation=document.createElement('p');explanation.className='hint';
  explanation.textContent='«—» означает отсутствие записи. Расчётные значения являются игровыми оценками. Исходные данные Oura доступны для просмотра; можно изменить ручные показатели, но не подменять данные кольца.';
@@ -5120,8 +5127,8 @@ window.addEventListener('focus',refreshLiveMetrics);
 window.addEventListener('pageshow',refreshLiveMetrics);
 window.LifeSimsLiveMetrics={refresh:refreshLiveMetrics,inspect:()=>satietyAssessment(today())};
 $('entropyRange').onchange=()=>{
- const target=Number($('entropyRange').value);
- if(transact(()=>{state.room??={};state.room.entropyOffset=(Number(state.room.entropyOffset)||0)+(target-gameEntropy())})){renderAll();toast('Игровая энтропия изменена')}
+ const order=Number($('entropyRange').value);
+ if(transact(()=>{state.room??={};state.room.entropyOffset=(Number(state.room.entropyOffset)||0)+(100-order-gameEntropy())})){renderAll();toast('Порядок изменён')}
 };
 // Keep popup containers out of hidden tab sections and stacking contexts.
 document.body.append($('lifeModalMask'),$('needsEditor'),$('food'),$('diary'),$('sheetWrap'));
