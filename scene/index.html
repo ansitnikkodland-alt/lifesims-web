@@ -2520,8 +2520,11 @@ function healthImpactHistory(day=today()){
  }
  for(const [d,v] of Object.entries(h.cycleDays||{})){
   if(!v||typeof v!=='object'||d>day)continue;
-  for(const label of [...new Set(Array.isArray(v.symptoms)?v.symptoms.filter(x=>typeof x==='string'):[])].slice(0,20))
+  for(const label of [...new Set(Array.isArray(v.symptoms)?v.symptoms.filter(x=>typeof x==='string'):[])].slice(0,30)){
+   // Normal physiology and appetite preferences are not automatically illnesses.
+   if(['Менструация','Мажущие выделения','ПМС','Голод','Хочется сладкого','Набрала вес'].includes(label))continue;
    push(d,'Симптом: '+label,-1);
+  }
   if(Number(v.pain)>0&&Number.isFinite(Number(v.pain)))push(d,'Записанная боль: '+v.pain+'/10',-Math.min(3,Math.ceil(Number(v.pain)/4)));
   const tone=noteTone(v.note);
   if(tone)push(d,'Заметка: '+String(v.note).slice(0,80)+' · предварительная оценка',tone);
