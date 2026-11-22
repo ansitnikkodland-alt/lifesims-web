@@ -794,7 +794,7 @@ body{background:#091428}
 #localDataReport .recovery-result small{display:block;color:#bed3e4;font-size:12px}
 #localDataReport button{min-height:44px}
 </style></head>
-<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v70</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
+<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v71</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
 <img id="sceneRugColor" class="rug-color-layer" alt="" aria-hidden="true">
 <span id="sceneCrystalTint" aria-hidden="true"></span>
@@ -1143,7 +1143,7 @@ function setResourceManualMarkers(record,old,date,updatedFields){
  record.manualResourceOverrides=markers;
  return record;
 }
-function saveFieldState(e){e.preventDefault();const d=$('stateDate').value||today();if(!/^\d{4}-\d\d-\d\d$/.test(d))return toast('Выбери дату');let patch={};try{for(const k of fields)patch[k]=parseField(k)}catch(e){toast(e.message);return}const old=currentRecord(d);const changed=fields.some(k=>old[k]!==patch[k]);if(!changed)return toast('Нечего обновлять');const fromOura=Array.isArray(old.ouraFields)?old.ouraFields.filter(k=>old[k]===patch[k]):[];const r={...old,...patch,ouraFields:fromOura,updatedAt:new Date().toISOString()};setResourceManualMarkers(r,old,d,fields.filter(k=>old[k]!==patch[k]));if(old.mood!==patch.mood)r.moodSource='manual';if(old.condition!==patch.condition)r.conditionManual=patch.condition!=null;if(setDay(d,r)){activeDay=d;toast('Показатели сохранены за '+d);renderAll()}}
+function saveFieldState(e){e.preventDefault();const d=$('stateDate').value||today();if(!/^\d{4}-\d\d-\d\d$/.test(d))return toast('Выбери дату');let patch={};try{for(const k of fields)patch[k]=parseField(k)}catch(e){toast(e.message);return}const old=currentRecord(d);const changed=fields.some(k=>old[k]!==patch[k]);if(!changed)return toast('Нечего обновлять');const fromOura=Array.isArray(old.ouraFields)?old.ouraFields.filter(k=>old[k]===patch[k]):[];const r={...old,...patch,ouraFields:fromOura,updatedAt:new Date().toISOString()};if(old.hygiene!==patch.hygiene)r.hygieneSetAt=r.updatedAt;setResourceManualMarkers(r,old,d,fields.filter(k=>old[k]!==patch[k]));if(old.mood!==patch.mood)r.moodSource='manual';if(old.condition!==patch.condition)r.conditionManual=patch.condition!=null;if(setDay(d,r)){activeDay=d;toast('Показатели сохранены за '+d);renderAll()}}
 // Game-only effects from tasks/habits. Never write into Oura measurements,
 // sleep hours or the user's manually entered daily baseline.
 const RESOURCE_EFFECT_TARGETS=new Set(['resource','mood','condition','hygiene','nutrition','hunger','sleepNeed','entropy','activity']);
@@ -1986,6 +1986,7 @@ function openSingleMetric(field,date=today()){
    records[k]=value;
   }
   const old=currentRecord(date),updated={...old,...records,updatedAt:new Date().toISOString()};
+  if(Object.prototype.hasOwnProperty.call(records,'hygiene')&&old.hygiene!==records.hygiene)updated.hygieneSetAt=records.hygiene==null?null:updated.updatedAt;
   if(sourceField==='mood')updated.moodSource='manual';
   const changes=Object.keys(records).filter(k=>old[k]!==records[k]);
   setResourceManualMarkers(updated,old,date,changes);
@@ -2271,7 +2272,9 @@ function hygieneSnapshot(ref=today()){
  const dates=[direct.date,shower?.day,hairDate,effectDate].filter(d=>d&&d<=ref).sort();
  const date=dates.pop()||null;
  return {value:date?hygieneCondition(currentRecord(ref),ref):null,date,
-  detail:date?(hygieneActivityMultiplier(ref)>1?'ускоренный спад · активность':'включая гигиену головы'):''};
+  detail:date?'расчёт по времени'+(hygieneActivityMultiplier(ref)>1?' · быстрее из-за активности':'')+
+   (Number.isFinite(Date.parse(state.room?.lastAntiperspirantAt||''))?' · антиперспирант замедляет спад':'')+
+   (hairDate?' · с учётом гигиены головы':''):''};
 }
 function lastCalorieDay(ref=today()){
  const dates=new Set(Object.keys(state.days||{}).filter(d=>d<=ref&&Number.isFinite(state.days[d]?.totalCalories)));
@@ -2423,46 +2426,61 @@ function hygieneActivityMultiplier(date){
 }
 // Integrate time-weighted hygiene decay by the steps recorded for each
 // calendar day, including when the shower was yesterday.
-function hygieneDecayPoints(fromMs,toMs){
+// Continuous game-only hygiene decay. Unlike the former 12/24-hour grace
+// period, antiperspirant reduces the decay rate but never freezes the gauge.
+function hygieneDecayPoints(fromMs,toMs,antiperspirantAt=NaN){
  if(!Number.isFinite(fromMs)||!Number.isFinite(toMs)||toMs<=fromMs)return 0;
  if(toMs-fromMs>=5*86400000)return 100;
  let loss=0,at=fromMs;
+ const until=Number.isFinite(antiperspirantAt)?antiperspirantAt+24*3600000:NaN;
  while(at<toMs&&loss<100){
   const day=dayStr(new Date(at)),next=asDay(plusDays(day,1)).getTime();
-  const end=Math.min(toMs,next);
+  let end=Math.min(toMs,next);
+  if(Number.isFinite(antiperspirantAt)){
+   if(at<antiperspirantAt)end=Math.min(end,antiperspirantAt);
+   else if(at<until)end=Math.min(end,until);
+  }
   if(end<=at)break;
-  loss+=(end-at)/3600000*1.6*hygieneActivityMultiplier(day);
+  const protectedNow=Number.isFinite(until)&&at>=antiperspirantAt&&at<until;
+  const protection=protectedNow?0.6:1;
+  loss+=(end-at)/3600000*1.6*hygieneActivityMultiplier(day)*protection;
   at=end;
  }
  return loss;
 }
-function hygieneCondition(r,date){
- const last=showerReference(),head=hairHygieneValue(date);
- let body=null;
- if(last&&date>=last.day){
-  const end=date===today()?Date.now():asDay(plusDays(date,1)).getTime();
-  const ap=state.room?.lastAntiperspirantAt,apAt=typeof ap==='string'?Date.parse(ap):NaN;
-  if(last.source==='reported'){
-   const elapsedDays=Math.max(0,Math.round((asDay(date)-asDay(last.day))/86400000));
-   const apDay=Number.isFinite(apAt)?dayStr(new Date(apAt)):null;
-   const protectedFirstDay=apDay&&(apDay===last.day||apDay===plusDays(last.day,1))&&apAt<=end;
-   let loss=0;
-   for(let i=1;i<=elapsedDays&&loss<100;i++){
-    if(i===1&&protectedFirstDay)continue;
-    loss+=32*hygieneActivityMultiplier(plusDays(last.day,i));
-   }
-   body=Math.max(0,Math.round(100-loss));
-  }else{
-   const applied=Number.isFinite(apAt)&&apAt>=last.at&&apAt<=end;
-   body=Math.max(0,Math.min(100,Math.round(100-hygieneDecayPoints(last.at+(applied?24:12)*3600000,end))));
-  }
+function hygieneManualReference(date){
+ const entries=Object.entries(state.days||{}).filter(([day,entry])=>
+  day<=date&&Number.isFinite(entry?.hygiene)).sort((a,b)=>b[0].localeCompare(a[0]));
+ if(!entries.length)return null;
+ const [day,record]=entries[0];
+ let at=typeof record.hygieneSetAt==='string'?Date.parse(record.hygieneSetAt):NaN;
+ if(!Number.isFinite(at)||dayStr(new Date(at))!==day){
+  // Older records have a date but no reliable time. Conservatively count
+  // decline from midnight after that date, without inventing a shower hour.
+  at=day===today()?asDay(day).getTime():asDay(plusDays(day,1)).getTime();
  }
- // Hair cleanliness independently declines over 72 hours and contributes
- // 25% to the overall hygiene score where the body baseline is known.
+ return {at,day,value:Math.max(0,Math.min(100,record.hygiene))};
+}
+function hygieneCondition(r,date){
+ const last=showerReference(),manual=hygieneManualReference(date),head=hairHygieneValue(date);
+ const end=date===today()?Date.now():asDay(plusDays(date,1)).getTime();
+ const reportedShower=last?.source==='reported';
+ // A date-only shower cannot specify a time. Show full hygiene for that date
+ // and begin the decline at the following midnight.
+ const showerAt=last?(reportedShower?asDay(plusDays(last.day,1)).getTime():last.at):NaN;
+ const validShower=last&&last.day<=date&&Number.isFinite(showerAt);
+ const useManual=manual&&(!validShower||manual.at>showerAt);
+ const source=useManual?{at:manual.at,value:manual.value}:validShower?{at:showerAt,value:100}:null;
+ let body=null;
+ if(source){
+  const antAt=Date.parse(state.room?.lastAntiperspirantAt||'');
+  const guard=validShower? (reportedShower?asDay(last.day).getTime():showerAt) : source.at;
+  const anti=Number.isFinite(antAt)&&antAt>=guard&&antAt<=end?antAt:NaN;
+  body=Math.max(0,Math.min(100,Math.round(source.value-hygieneDecayPoints(source.at,end,anti))));
+ }
+ // Hair freshness is an independent factor; retain its established 25% weight.
  const combined=body!=null&&head!=null?Math.round(body*0.75+head*0.25):body;
- const manual=Number.isFinite(r.hygiene)?r.hygiene:null;
- if(combined==null)return actionAdjustedNeed('hygiene',date,manual);
- return actionAdjustedNeed('hygiene',date,manual==null?combined:Math.min(manual,combined));
+ return actionAdjustedNeed('hygiene',date,combined);
 }
 function resourceActivityImpact(date){
  // Recorded completion XP is a signed, once-per-activity contribution.
@@ -3817,7 +3835,7 @@ window.LifeSims3DBridge={
 };
 window.addEventListener('resize',()=>{if(currentSheetAnchor)placeSheet(currentSheetAnchor)},{passive:true});
 window.addEventListener('scroll',()=>{if(currentSheetAnchor)placeSheet(currentSheetAnchor)},{passive:true});
-if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=70',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
+if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=71',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 window.LifeSimsCalendarBridge={
   getSchedule:()=>JSON.parse(JSON.stringify(state.schedule||[])),
   getHidden:()=>JSON.parse(JSON.stringify(state.googleHidden||[])),
