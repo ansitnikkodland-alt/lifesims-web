@@ -73,7 +73,7 @@
     const info=make('span','skill-existing-info'),titleText=make('strong','',entry.name||entry.title);
     const current=namesOf(entry).length?'Сейчас: ↗ '+namesOf(entry).join(', '):'Без ресурса';
     const extra=key==='eventIds'&&Object.values(entry.overrides||{}).some(o=>namesOf(o).includes(name))&&!namesOf(entry).includes(name)
-     ?' · Отдельное повторение уже связано с этим навыком':'';
+     ?' · Отдельное повторение уже связано с этим ресурсом':'';
     const details=make('small','',current+extra);
     info.append(titleText,details);
     row.append(input,info);
@@ -134,7 +134,7 @@
   const panel=make('section','skill-manual-editor');
   panel.append(make('h4','','✎ Изменить опыт'));
   panel.append(make('p','skill-detail-note',
-   'Укажи общий XP навыка. Изменение сохранится в истории. Автоматические начисления и регресс без практики продолжат работать.'));
+   'Укажи общий XP ресурса. Изменение сохранится в истории. Автоматические начисления и регресс без практики продолжат работать.'));
   const fields=make('div','skill-manual-fields');
   const total=Math.max(0,Math.round(skill.score*10)/10);
   const scale=typeof bridge.displayScale==='function'?bridge.displayScale():Math.max(100,total*1.15);
@@ -146,7 +146,7 @@
   const rangeLabel=make('label','skill-xp-slider-label','Изменить XP по шкале');
   const range=make('input','skill-xp-slider');range.type='range';range.id='manualSkillXpSlider';
   range.min='0';range.max=String(scale);range.step='0.1';range.value=String(Math.min(total,scale));
-  range.setAttribute('aria-label','Ручная настройка общего XP навыка');
+  range.setAttribute('aria-label','Ручная настройка общего XP ресурса');
   const rangeHint=make('small','skill-xp-slider-hint',
    'Шкала от 0 до '+fmt.format(scale)+' XP. Это масштаб отображения, а не уровень или предел опыта.');
   rangeLabel.append(range,rangeHint);panel.append(rangeLabel);
@@ -184,7 +184,7 @@
   if((data.events||[]).some(e=>e?.kind==='skill_manual'&&e.skill===name)){
    const undo=make('button','skill-detail-edit skill-manual-undo','Отменить последнюю правку');
    undo.type='button';undo.onclick=()=>{
-    if(!window.confirm('Отменить последнюю ручную правку навыка «'+name+'»? Выполнения и другие записи останутся.'))return;
+    if(!window.confirm('Отменить последнюю ручную правку ресурса «'+name+'»? Выполнения и другие записи останутся.'))return;
     try{bridge.undoScore(name)}catch(error){
      status.textContent='⚠ '+String(error?.message||'Не удалось отменить');
     }
@@ -250,7 +250,7 @@
   body.append(axis);
   body.append(manualSkillEditor(selected,skill,data));
   body.append(make('p','skill-detail-note',
-   'Начальные значения из прежних данных включены в итог. Ручная корректировка задаёт текущий опыт, не удаляя прежние записи. Положительные действия развивают ресурс, отрицательные привычки его снижают. Количество из таблицы привычек пересчитывает эффект без двойного учёта. После окончания неотменённого мероприятия связанный навык получает +2 XP; ручная отметка участия заменяет это начисление. Без полезной практики навык уменьшается на 0,1% каждый день.'));
+   'Начальные значения из прежних данных включены в итог. Ручная корректировка задаёт текущий опыт, не удаляя прежние записи. Положительные действия развивают ресурс, отрицательные привычки его снижают. Количество из таблицы привычек пересчитывает эффект без двойного учёта. После окончания неотменённого мероприятия связанный ресурс получает +2 XP; ручная отметка участия заменяет это начисление. Без полезной практики ресурс уменьшается на 0,1% каждый день.'));
   body.append(linkEditor(selected,data));
   body.append(make('h4','','Связанные дела и привычки'));
   const list=make('div','skill-detail-actions');
@@ -263,14 +263,14 @@
    const details=[repeatLabel(activity),'сложность '+difficulty+'/5','базовый XP '+xp,completed+' выполнений'];
    if(activity.legacyDone)details.push('архивное');
    if(activity.resourceEffect?.target)details.push('влияет на '+activity.resourceEffect.target);
-   if(namesOf(activity).length)details.push('навыки: '+namesOf(activity).join(', '));
+   if(namesOf(activity).length)details.push('ресурсы: '+namesOf(activity).join(', '));
    info.append(make('small','',details.join(' · ')));
    const btn=make('button','skill-detail-edit','Изменить');
    btn.type='button';btn.setAttribute('aria-label','Редактировать '+activity.name);
    btn.onclick=()=>{dialog.close();bridge.edit(activity.id)};
    row.append(info,btn);list.append(row);
   }
-  if(!actions.length)list.append(make('p','skill-detail-note','Нет дел или привычек, привязанных к этому навыку.'));
+  if(!actions.length)list.append(make('p','skill-detail-note','Нет дел или привычек, привязанных к этому ресурсу.'));
   body.append(list);
   body.append(make('h4','','Связанные мероприятия'));
   const eventsList=make('div','skill-detail-actions');
@@ -278,7 +278,7 @@
    const row=make('div','skill-detail-action'),info=make('div','skill-detail-action-info');
    info.append(make('strong','','📅 '+event.title));
    const labels=[event.repeat&&event.repeat!=='none'?'Повторяющееся':'Однократное',
-    event.location||'',namesOf(event).includes(selected)?'Навыки: '+namesOf(event).join(', '):'Навык указан в отдельном повторении'];
+    event.location||'',namesOf(event).includes(selected)?'Ресурсы: '+namesOf(event).join(', '):'Ресурс указан в отдельном повторении'];
    if(event.linkedTaskId)labels.push('Связано с делом');
    if(event.linkedHabitId)labels.push('Связано с привычкой');
    info.append(make('small','',labels.filter(Boolean).join(' · ')));
@@ -286,7 +286,7 @@
    button.type='button';button.onclick=()=>{dialog.close();bridge.editEvent?.(event.id)};
    row.append(info,button);eventsList.append(row);
   }
-  if(!linkedEvents.length)eventsList.append(make('p','skill-detail-note','Нет мероприятий, привязанных к этому навыку.'));
+  if(!linkedEvents.length)eventsList.append(make('p','skill-detail-note','Нет мероприятий, привязанных к этому ресурсу.'));
   body.append(eventsList);
   const controls=make('div','skill-detail-create');
   for(const kind of ['task','habit']){
