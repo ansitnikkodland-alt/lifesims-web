@@ -66,6 +66,11 @@
 .event-repeat-options{border:1px solid #526a91;border-radius:13px;margin:10px 0;padding:10px}
 .event-repeat-options .row label{display:flex;align-items:center;gap:6px}
 .event-repeat-options input[type=number],.event-repeat-options input[type=date]{min-height:44px}
+.event-series-scope-dialog{background:#1d2b49;color:#edf5ff;border:1px solid #84a8c5;border-radius:19px;width:min(94vw,490px);padding:18px;max-height:86dvh;overflow:auto}
+.event-series-scope-dialog::backdrop{background:#060d20d9}
+.event-series-scope-choices{display:grid;gap:10px;margin:18px 0}
+.event-series-scope-choices button{min-height:56px;text-align:left;padding:12px 15px}
+.event-series-scope-dialog #eventSeriesScopeCancel{min-height:44px;width:100%}
 .agenda-day-arrow{border:1px solid #81a3ca;border-radius:14px;background:#2d4767;color:#fff;font-size:34px;min-width:44px;min-height:48px;padding:0 8px}
 .agenda-top>div{flex:1;min-width:0}
 .agenda-swipe-hint{text-align:center;font-size:12px;margin:8px 0}
@@ -983,6 +988,13 @@ body{background:#091428}
 <details id="calendarAllEvents" class="card calendar-editor"><summary>Управление всеми мероприятиями</summary><div id="eventList"></div></details>
 <details id="calendarGoogleEditor" class="card calendar-editor"><summary>🔄 Синхронизация с Google Календарём</summary><div id="googleCalendarMount"></div></details>
 </section>
+<dialog id="eventSeriesScopeDialog" class="event-series-scope-dialog" aria-labelledby="eventSeriesScopeTitle">
+<div class="single-metric-head"><h3 id="eventSeriesScopeTitle">Сохранить изменения</h3><button id="eventSeriesScopeClose" type="button" class="secondary" aria-label="Закрыть">×</button></div>
+<p id="eventSeriesScopeExplanation" class="hint"></p><div class="event-series-scope-choices">
+<button class="secondary" type="button" data-series-scope="one">Только это событие</button>
+<button class="secondary" type="button" data-series-scope="future">Это и будущие события</button>
+<button class="secondary" type="button" data-series-scope="all">Все события серии</button>
+</div><button id="eventSeriesScopeCancel" type="button" class="secondary">Отмена</button></dialog>
 <div id="dayAgendaOverlay" class="agenda-overlay" hidden>
 <div class="agenda-dialog" role="dialog" aria-modal="true" aria-labelledby="agendaTitle">
 <div class="agenda-top"><button type="button" id="agendaPrevDay" class="agenda-day-arrow" aria-label="Предыдущий день">‹</button><div><div class="agenda-eyebrow">РАСПИСАНИЕ ДНЯ</div><h3 id="agendaTitle"></h3><p id="agendaSubtitle"></p></div><button type="button" id="agendaNextDay" class="agenda-day-arrow" aria-label="Следующий день">›</button>
@@ -3301,7 +3313,7 @@ function renderDayAgenda(){
       edit.onclick=()=>{closeDayAgenda();openCalendarEventEditor(item.id,item.occurrenceKey||item.date)};
       const remove=document.createElement('button');remove.type='button';remove.className='agenda-delete';remove.textContent='🗑';
       remove.setAttribute('aria-label','Удалить мероприятие '+item.title);
-      remove.onclick=()=>deleteEventLocal(item.id);
+      remove.onclick=()=>deleteEventLocal(item.id,item.occurrenceKey||item.date);
       row.append(edit,remove);
     }
     body.append(row);
@@ -3586,7 +3598,7 @@ function openCalendarEventEditor(id,occurrenceDate){
  const occurrence=recurring?scheduleHistoryOccurrences(chosen,chosen).find(x=>x.id===id&&x.occurrenceKey===chosen):null;
  const override=event.overrides?.[chosen];
  $('eventEditId').value=event.id;$('eventOccurrenceDate').value=recurring?chosen:'';
- $('eventScopeField').hidden=!recurring;$('eventScope').value=recurring?'one':'all';
+ $('eventScopeField').hidden=true;$('eventScope').value=recurring?'one':'all';
  $('eventName').value=override?.title||event.title||'';
  const startsAt=override?.startsAt||(occurrence?dayStr(new Date(occurrence.startsAt))+'T'+event.startsAt.slice(11):event.startsAt);
  const endsAt=override?.endsAt||(occurrence?new Date(occurrence.endsAt).getFullYear()+'-'+String(new Date(occurrence.endsAt).getMonth()+1).padStart(2,'0')+'-'+String(new Date(occurrence.endsAt).getDate()).padStart(2,'0')+'T'+String(new Date(occurrence.endsAt).getHours()).padStart(2,'0')+':'+String(new Date(occurrence.endsAt).getMinutes()).padStart(2,'0'):event.endsAt);
@@ -3651,6 +3663,28 @@ function openNewCalendarTask(kind='task',object=null){
  $('taskEditorHeading').textContent=kind==='habit'?'Добавить привычку':'Добавить дело';
  if(!popup.open)popup.showModal();$('taskTitle').focus({preventScroll:true});
 }
+let pendingCalendarScope=null,approvedCalendarSaveScope=null;
+function chooseCalendarSeriesScope(action,id,date){
+ const record=state.schedule.find(item=>item.id===id);
+ if(!record)return toast('Мероприятие не найдено');
+ pendingCalendarScope={action,id,date};
+ const deleting=action==='delete',dialog=$('eventSeriesScopeDialog');
+ $('eventSeriesScopeTitle').textContent=deleting?'Удалить повторяющееся мероприятие?':'Сохранить изменения повторения';
+ $('eventSeriesScopeExplanation').textContent='Выбери область действия для «'+record.title+'». '+
+  (record.google?'Выбор относится к LifeSims. Для изменения самой серии Google нужно воспользоваться Google Calendar.':'');
+ const names=deleting?['Удалить только это событие','Удалить это и будущие события','Удалить всю серию']:
+  ['Только это событие','Это и последующие события','Все события в последовательности'];
+ dialog.querySelectorAll('[data-series-scope]').forEach((button,i)=>button.textContent=names[i]);
+ if(!dialog.open)dialog.showModal();
+}
+function commitCalendarSeriesScope(scope){
+ const pending=pendingCalendarScope;pendingCalendarScope=null;
+ $('eventSeriesScopeDialog').close();
+ if(!pending)return;
+ if(pending.action==='delete')return deleteEventLocal(pending.id,pending.date,scope);
+ approvedCalendarSaveScope=scope;$('eventScope').value=scope;
+ try{saveEvent({preventDefault(){}})}finally{approvedCalendarSaveScope=null}
+}
 function saveEvent(e){
  e.preventDefault();
  const title=$('eventName').value.trim(),allDay=$('eventAllDay').checked;
@@ -3665,7 +3699,9 @@ function saveEvent(e){
   if(endMode==='count'&&(!Number.isInteger(repeatCount)||repeatCount<1||repeatCount>3650))return toast('Повторений: от 1 до 3650');
   if(endMode==='until'&&(!/^\d{4}-\d{2}-\d{2}$/.test(repeatUntil)||repeatUntil<startsAt.slice(0,10)))return toast('Неверная дата окончания');
  const id=$('eventEditId').value||uid(),old=(state.schedule||[]).find(x=>x.id===id),occurrenceKey=$('eventOccurrenceDate').value;
- const scope=old&&old.repeat&&old.repeat!=='none'?$('eventScope').value:'all';
+ if(old&&old.repeat&&old.repeat!=='none'&&!approvedCalendarSaveScope)
+   return chooseCalendarSeriesScope('save',old.id,occurrenceKey||old.startsAt.slice(0,10));
+  const scope=old&&old.repeat&&old.repeat!=='none'?(approvedCalendarSaveScope||$('eventScope').value):'all';
  const skill=$('eventSkill').value.trim().slice(0,70)||null;
  const linkedTaskId=$('eventTaskLink').value||null,linkedHabitId=$('eventHabitLink').value||null;
  const skillXp=Number($('eventSkillXP').value);
@@ -3727,13 +3763,14 @@ function removeLocalCalendarEvent(id,hideGoogle=true){
   window.LifeSimsGoogleCalendarActions?.refreshHidden?.();
   return event;
 }
-function deleteEventLocal(id,instanceDate){
+function deleteEventLocal(id,instanceDate,approvedScope=null){
  const event=(state.schedule||[]).find(x=>x.id===id);
  if(!event)return toast('Мероприятие уже отсутствует');
  const recurring=event.repeat&&event.repeat!=='none';
  const currentlyEditing=$('eventEditId').value===id;
- const key=instanceDate|| (currentlyEditing?$('eventOccurrenceDate').value:'');
- const scope=recurring&&key?(currentlyEditing?$('eventScope').value:'one'):'all';
+ const key=instanceDate||(currentlyEditing?$('eventOccurrenceDate').value:'')||event.startsAt.slice(0,10);
+ if(recurring&&!approvedScope)return chooseCalendarSeriesScope('delete',id,key);
+ const scope=approvedScope||'all';
  const message=scope==='one'?'Убрать только экземпляр «'+event.title+'» за '+key+'?':
    scope==='future'?'Убрать «'+event.title+'» с '+key+' и все будущие повторения?':
    'Удалить всю серию «'+event.title+'» из LifeSims?'+(event.google?' В Google событие останется.':'');
@@ -4030,6 +4067,11 @@ function bindCriticalActions(){
  };
 }
 bindCriticalActions();bindAgendaDaySwipe();
+ $('eventSeriesScopeClose').onclick=()=>$('eventSeriesScopeDialog').close();
+ $('eventSeriesScopeCancel').onclick=()=>$('eventSeriesScopeDialog').close();
+ $('eventSeriesScopeDialog').addEventListener('close',()=>{pendingCalendarScope=null});
+ for(const button of $('eventSeriesScopeDialog').querySelectorAll('[data-series-scope]'))
+  button.onclick=()=>commitCalendarSeriesScope(button.dataset.seriesScope);
 document.addEventListener('visibilitychange',()=>{
  if(!document.hidden)render24CalorieCard();
 });
