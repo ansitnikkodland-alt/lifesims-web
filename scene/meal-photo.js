@@ -64,6 +64,8 @@ async function barcodeFromPhoto(file){
     const result=await new BarcodeDetector({formats:allowed}).detect(bitmap);
     const matched=result.find(r=>/^\d{8,14}$/.test(r.rawValue));
     if(matched)return matched.rawValue;
+    // No barcode in a supported native scan: avoid loading ZXing for every food photo.
+    return null;
    }
   }catch(_){}
   finally{bitmap?.close?.()}
