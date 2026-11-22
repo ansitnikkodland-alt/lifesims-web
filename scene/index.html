@@ -2637,18 +2637,16 @@ function skillScores(day=today()){
  }).sort((a,b)=>b.score-a.score||a.name.localeCompare(b.name,'ru'));
 }
 // Manually entered values are replayable events, not destructive XP edits.
-function setManualSkillScore(name,rawLevel,rawWithin){
+function setManualSkillScore(name,rawExperience){
  if(storageBlocked||!storageOK)throw Error('Сохранение недоступно.');
  const current=skillScores().find(x=>x.name===name);
  if(!current)throw Error('Навык не найден.');
- if(String(rawLevel).trim()===''||String(rawWithin).trim()==='')throw Error('Заполни оба поля.');
- const level=Number(rawLevel),within=Number(rawWithin);
- if(!Number.isInteger(level)||level<1||level>10001)throw Error('Уровень: целое число от 1 до 10001.');
- if(!Number.isFinite(within)||within<0||within>99.9||
-  Math.abs(within*10-Math.round(within*10))>0.00001)
-  throw Error('Опыт: от 0 до 99,9 XP с точностью до 0,1.');
- const target=Math.round(((level-1)*100+within)*10)/10;
- if(target>1000000)throw Error('Максимальный общий опыт — 1 000 000 XP.');
+ if(rawExperience==null||String(rawExperience).trim()==='')throw Error('Укажи общий опыт, XP.');
+ const xp=Number(rawExperience);
+ if(!Number.isFinite(xp)||xp<0||xp>1000000||
+  Math.abs(xp*10-Math.round(xp*10))>0.00001)
+  throw Error('Опыт: от 0 до 1 000 000 XP с точностью до 0,1.');
+ const target=Math.round(xp*10)/10;
  if(Math.abs(target-current.score)<0.05)return {changed:false,score:current.score};
  const date=today(),at=new Date().toISOString();
  const manualOrder=1+Math.max(0,...(state.events||[]).filter(e=>e?.kind==='skill_manual'&&e.skill===name)
@@ -2657,7 +2655,7 @@ function setManualSkillScore(name,rawLevel,rawWithin){
   skill:name,date,at,targetScore:target,previousScore:Math.round(current.score*10)/10,manualOrder};
  if(!transact(()=>{state.events??=[];state.events.push(entry)}))
   throw Error('Сохранение не удалось. Прежние записи сохранены.');
- renderAll();toast('✓ '+name+': уровень '+level+' · '+within+' XP');
+ renderAll();toast('✓ '+name+': '+target.toLocaleString('ru-RU')+' XP');
  return {changed:true,score:target};
 }
 function undoManualSkillScore(name){
@@ -2763,11 +2761,8 @@ function renderSkills(){
   const header=document.createElement('div');header.className='skill-item-head';
   const title=document.createElement('strong');title.textContent=skill.name;
   const value=document.createElement('b');value.textContent=f.format(skill.score)+' XP';header.append(title,value);
-  const bar=document.createElement('div');bar.className='skill-track';
-  const fill=document.createElement('div');fill.style.width=(skill.score%100)+'%';bar.append(fill);
-  const lvl=document.createElement('small');lvl.textContent='Уровень '+(Math.floor(skill.score/100)+1)+' · '+f.format(skill.score%100)+' / 100 XP';
   const last=document.createElement('small');last.textContent=skill.last?'Последняя практика: '+skill.last+(skill.days===0?' (сегодня)':' · '+skill.days+' дн. назад'):'Практика ещё не записана';
-  card.append(header,bar,lvl,last);
+  card.append(header,last);
   card.classList.add('skill-clickable');card.tabIndex=0;card.setAttribute('role','button');
   card.setAttribute('aria-label','Подробнее о навыке '+skill.name);
   card.onclick=()=>window.LifeSimsSkillDetail?.open?.(skill.name);
