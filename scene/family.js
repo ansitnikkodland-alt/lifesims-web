@@ -84,6 +84,15 @@ function database(){
   req.onsuccess=()=>resolve(req.result);req.onerror=()=>reject(req.error||Error('Ошибка хранилища'));
  });
 }
+async function removeRoomData(cid){
+ const db=await database();
+ try{
+  return await new Promise((resolve,reject)=>{
+   const tx=db.transaction('rooms','readwrite'),req=tx.objectStore('rooms').delete(cid);
+   req.onsuccess=()=>resolve(true);req.onerror=()=>reject(req.error||Error('Не удалось удалить фото комнаты'));
+  });
+ }finally{db.close()}
+}
 async function roomData(cid,value){
  const db=await database();
  try{
@@ -141,6 +150,11 @@ function drawPeople(body){
     }catch(e){toast('Фото: '+e.message)}
    });
    lab.append(input);card.append(lab);
+   if(p.avatar)card.append(button('Удалить портрет',()=>{
+    if(!confirm('Удалить фотографию этого персонажа с устройства?'))return;
+    const next=catalog();next.people.find(x=>x.id===p.id).avatar='';
+    if(save(next)){const portrait=document.getElementById('portraitBtn');if(portrait)portrait.style.removeProperty('background-image');draw()}
+   }));
   }
   body.append(card);
  }
@@ -189,6 +203,15 @@ function drawRoom(body){
   if(!target.roomActive && !(await roomData(p.id).catch(()=>null)))return toast('Сначала загрузи фото комнаты.');
   target.roomActive=!target.roomActive;
   if(save(next)){await refreshRoom();draw()}
+ }));
+ buttons.append(button('Удалить фото комнаты',async()=>{
+  if(!confirm('Удалить фотографию комнаты и расположение интерактивных предметов?'))return;
+  try{
+   await removeRoomData(p.id);
+   const next=catalog(),target=next.people.find(x=>x.id===p.id);
+   target.roomActive=false;target.markers={};
+   if(save(next)){placing=null;await refreshRoom();draw();toast('Фотография комнаты удалена с устройства.')}
+  }catch(e){toast('Удаление: '+e.message)}
  }));
  body.append(buttons);
  const select=field('select','family-text');select.setAttribute('aria-label','Предмет для размещения');
