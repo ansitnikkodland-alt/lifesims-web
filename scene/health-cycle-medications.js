@@ -23,7 +23,7 @@ function data(){
   cycleDays:h.cycleDays&&typeof h.cycleDays==='object'&&!Array.isArray(h.cycleDays)?h.cycleDays:{},
   medications:Array.isArray(h.medications)?h.medications:[],
   medicationLog:Array.isArray(h.medicationLog)?h.medicationLog:[],
-  settings:{cycleLength:28,periodLength:5,reminders:false,...(h.settings||{})}
+  settings:{cycleLength:28,periodLength:5,reminders:false,periodReminder:false,...(h.settings||{})}
  };
 }
 function change(fn){
@@ -94,7 +94,7 @@ function fillUi(){
  '<div><strong>Симптомы</strong><div id="healthSymptoms" class="health-chips"></div></div>',
  '<label>Заметка<textarea id="healthCycleNote" rows="2" maxlength="1000"></textarea></label>',
  '<div class="health-actions"><button type="submit" class="primary">Сохранить день</button><button id="healthDeleteCycle" type="button" class="secondary">Очистить запись дня</button></div></form>',
- '<form id="healthCycleSettings" class="health-panel"><h3>Параметры прогноза</h3><div class="health-cols"><label>Длина цикла, дней<input id="healthCycleLength" type="number" min="15" max="90" required></label><label>Менструация, дней<input id="healthPeriodLength" type="number" min="1" max="15" required></label></div><button type="submit" class="secondary">Сохранить</button></form>',
+ '<form id="healthCycleSettings" class="health-panel"><h3>Параметры прогноза</h3><div class="health-cols"><label>Длина цикла, дней<input id="healthCycleLength" type="number" min="15" max="90" required></label><label>Менструация, дней<input id="healthPeriodLength" type="number" min="1" max="15" required></label></div><label class="health-inline"><input id="healthPeriodReminder" type="checkbox"> Напомнить за 2 дня до ожидаемого начала</label><button type="submit" class="secondary">Сохранить</button></form>',
  '</div>',
  '<div id="healthPillsView" hidden>',
  '<div class="health-panel"><h3>Приёмы за выбранный день</h3><label>Дата<input id="healthPillsDate" type="date"></label><div id="healthTodaySlots"></div></div>',
@@ -104,6 +104,7 @@ function fillUi(){
  '<div class="health-cols"><label>Доза (как назначено)<input id="healthMedDose" type="text" maxlength="65" placeholder="Например, 1 таблетка"></label><label>Время через запятую<input id="healthMedTimes" type="text" required placeholder="09:00, 21:00"></label></div>',
  '<label>Дни приёма<select id="healthMedRepeat"><option value="daily">Ежедневно</option><option value="weekdays">По будням</option><option value="custom">Выбранные дни недели</option></select></label>',
  '<fieldset id="healthMedDays" hidden><legend>Дни недели</legend><div class="health-chips"><label><input type="checkbox" value="1">Пн</label><label><input type="checkbox" value="2">Вт</label><label><input type="checkbox" value="3">Ср</label><label><input type="checkbox" value="4">Чт</label><label><input type="checkbox" value="5">Пт</label><label><input type="checkbox" value="6">Сб</label><label><input type="checkbox" value="0">Вс</label></div></fieldset>',
+ '<label>Тип<select id="healthMedType"><option value="medication">Лекарство</option><option value="pill">Противозачаточные таблетки</option><option value="ring">Контрацептивное кольцо</option><option value="patch">Пластырь</option><option value="injection">Инъекция</option><option value="supplement">Витамины / добавки</option></select></label>',
  '<div class="health-cols"><label>Начало<input id="healthMedStart" type="date" required></label><label>Окончание (необязательно)<input id="healthMedEnd" type="date"></label></div>',
  '<label>Примечание<textarea id="healthMedNote" rows="2" maxlength="400"></textarea></label>',
  '<div class="health-actions"><button type="submit" class="primary">Сохранить препарат</button><button id="healthMedCancel" type="button" class="secondary">Очистить форму</button></div></form>',
@@ -122,7 +123,7 @@ function fillUi(){
  $('healthPillsDate').onchange=()=>{if(validDay($('healthPillsDate').value)){date=$('healthPillsDate').value;month=date.slice(0,7);render()}};
  $('healthCycleForm').onsubmit=saveCycle;
  $('healthDeleteCycle').onclick=()=>change(h=>{delete h.cycleDays[date]});
- $('healthCycleSettings').onsubmit=e=>{e.preventDefault();change(h=>{h.settings.cycleLength=+$('healthCycleLength').value;h.settings.periodLength=+$('healthPeriodLength').value})};
+ $('healthCycleSettings').onsubmit=e=>{e.preventDefault();change(h=>{h.settings.cycleLength=+$('healthCycleLength').value;h.settings.periodLength=+$('healthPeriodLength').value;h.settings.periodReminder=$('healthPeriodReminder').checked})};
  $('healthMedRepeat').onchange=()=>{$('healthMedDays').hidden=$('healthMedRepeat').value!=='custom'};
  $('healthMedicationForm').onsubmit=saveMedication;
  $('healthMedCancel').onclick=resetMedicationForm;
@@ -155,10 +156,11 @@ function renderCycle(h){
  $('healthCycleSummary').textContent=p.starts.length?
   'Начало последней менструации: '+dayLabel(p.starts[p.starts.length-1]):'Начни отмечать менструацию в календаре';
  $('healthForecastInfo').textContent=p.expected?
-  'Следующее предполагаемое начало: '+dayLabel(p.expected)+' · средний цикл '+p.mean+' дн. · '+p.confidence:
+  (p.expected<nowDay()?'Предполагаемое начало ожидалось: ':'Следующее предполагаемое начало: ')+dayLabel(p.expected)+' · средний цикл '+p.mean+' дн. · '+p.confidence:
   'Появится прогноз после записи хотя бы одной менструации';
  $('healthCycleLength').value=h.settings.cycleLength;
  $('healthPeriodLength').value=h.settings.periodLength;
+ $('healthPeriodReminder').checked=!!h.settings.periodReminder;
  const first=month+'-01',start=parse(first),length=new Date(start.getFullYear(),start.getMonth()+1,0).getDate();
  const grid=$('healthMonthGrid');grid.replaceChildren();
  $('healthMonthLabel').textContent=start.toLocaleDateString('ru-RU',{month:'long',year:'numeric'});
@@ -185,6 +187,7 @@ function resetMedicationForm(){
 function editMedication(m){
  editingMed=m.id;$('healthMedicationTitle').textContent='Изменить: '+m.name;
  $('healthMedName').value=m.name||'';$('healthMedDose').value=m.dose||'';
+ $('healthMedType').value=m.type||'medication';
  $('healthMedTimes').value=(m.times||[]).join(', ');
  const w=Array.isArray(m.weekdays)?m.weekdays:[0,1,2,3,4,5,6];
  const all=w.length===7,weekday=w.length===5&&[1,2,3,4,5].every(d=>w.includes(d));
@@ -203,7 +206,7 @@ function saveMedication(e){
  if(!name||!times.length||times.length>8||times.some(t=>!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(t))||!weekdays.length||!validDay(startDate)||endDate&&( !validDay(endDate)||endDate<startDate)){
   flash='Проверь время в формате ЧЧ:ММ, дни недели и даты лечения.';renderMessage();return;
  }
- const med={id:editingMed||uid(),name,dose:$('healthMedDose').value.trim(),times,weekdays,
+ const med={id:editingMed||uid(),name,type:$('healthMedType').value,dose:$('healthMedDose').value.trim(),times,weekdays,
  startDate,endDate:endDate||null,note:$('healthMedNote').value.trim(),active:true};
  if(change(h=>{
   const i=h.medications.findIndex(x=>x.id===med.id);
@@ -278,8 +281,19 @@ async function requestPermission(){
 }
 function checkReminders(){
  if(document.hidden||!('Notification' in window)||Notification.permission!=='granted')return;
- const h=data();if(!h.settings.reminders)return;
+ const h=data();if(!h.settings.reminders&&!h.settings.periodReminder)return;
  const d=nowDay(),now=new Date(),minutes=now.getHours()*60+now.getMinutes();
+ if(h.settings.periodReminder){
+  const next=forecast(h).expected;
+  if(next&&diff(d,next)===2&&minutes>=9*60){
+   const periodKey='lifesims-period-reminder-'+d;
+   try{if(!sessionStorage.getItem(periodKey)){
+    sessionStorage.setItem(periodKey,'1');
+    new Notification('LifeSims · напоминание',{body:'Скоро запланированное событие календаря',tag:periodKey});
+   }}catch(_){}
+  }
+ }
+ if(!h.settings.reminders)return;
  for(const s of slots(h,d)){
   const [hh,mm]=s.time.split(':').map(Number),due=hh*60+mm;
   if(s.entry||minutes<due||minutes-due>119)continue;
