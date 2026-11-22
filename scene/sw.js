@@ -1,8 +1,11 @@
 const CACHE='lifesims-scene-v103';
 const FILES=['./','./index.html','./room-illustrated-v42.jpg','./calendar-style.css?v=76','./task-premium.css?v=92','./task-premium.js?v=100','./habit-grid.js?v=82','./skill-detail.js?v=100','./focus-timer.js?v=65','./oura-style.css','./food-log.css','./food-log.js','./meal-chat.css?v=90','./meal-live-camera.css?v=93','./meal-photo.js?v=93','./meal-chat.js?v=93','./meal-lookup.js?v=89','./meal-live-camera.js?v=93','./health-cycle-medications.css?v=100','./health-cycle-medications.js?v=103','./oura-sync.js','./privacy.html','./terms.html','./manifest.webmanifest','../icon.svg'];
 self.addEventListener('install',event=>{
+ // One obsolete/missing asset must not block a new service worker and leave
+ // the entire installed PWA stuck on an older application version.
  event.waitUntil(caches.open(CACHE)
-  .then(cache=>cache.addAll(FILES.map(path=>new Request(path,{cache:'reload'}))))
+  .then(cache=>Promise.all(FILES.map(path=>
+   cache.add(new Request(path,{cache:'reload'})).catch(()=>null))))
   .then(()=>self.skipWaiting()));
 });
 self.addEventListener('activate',event=>{
