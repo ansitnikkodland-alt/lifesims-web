@@ -149,7 +149,7 @@ function slots(h,d){
   const old=distinct.get(key);
   if(!old||(!old.entry&&slot.entry))distinct.set(key,slot);
  }
- return [...distinct.values()].sort((a,b)=>a.time.localeCompare(b.time)||a.m.name.localeCompare(b.m.name,'ru'));
+ return [...distinct.values()].sort((a,b)=>a.time.localeCompare(b.time));
 }
 function copyYesterday(){
  if(date>nowDay()){flash='Нельзя переносить приёмы на будущую дату.';renderMessage();return}
