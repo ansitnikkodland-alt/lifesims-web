@@ -1190,13 +1190,16 @@ if(Array.isArray(old.log))for(const l of old.log){if(!l||typeof l.at!=='string'|
 return s}
 const RECOVERY_KEY='lifesims-visual-v1-recovery';
 function lifeDataCounts(obj){
- const fields=['days','activities','events','foodMeals','foodTemplates','taskProjects','taskTags','schedule','financeChecks'];
- const count=k=>k==='days'?Object.keys(obj?.days||{}).length:(Array.isArray(obj?.[k])?obj[k].length:0);
+ const fields=['days','activities','events','foodMeals','foodTemplates','taskProjects','taskTags','schedule','financeChecks','health'];
+ const count=k=>k==='days'?Object.keys(obj?.days||{}).length:k==='health'?(Object.keys(obj?.health?.cycleDays||{}).length+
+  (Array.isArray(obj?.health?.medications)?obj.health.medications.length:0)+
+  (Array.isArray(obj?.health?.medicationLog)?obj.health.medicationLog.length:0)+
+  Object.keys(obj?.health?.legacyMedicationEdits||{}).length):(Array.isArray(obj?.[k])?obj[k].length:0);
  return Object.fromEntries(fields.map(k=>[k,count(k)]));
 }
 function lifeDataScore(obj){
  const v=lifeDataCounts(obj);
- return v.days*2+v.events+v.foodMeals*3+v.foodTemplates*2+v.schedule+v.financeChecks+
+ return v.days*2+v.events+v.foodMeals*3+v.foodTemplates*2+v.schedule+v.financeChecks+v.health*2+
  Math.max(0,v.activities-defs.filter(a=>a.xp>0).length)+v.taskProjects+Math.max(0,v.taskTags-2);
 }
 function rememberPreviousLifeSimsSave(previousRaw){
