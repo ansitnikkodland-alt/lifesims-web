@@ -68,6 +68,7 @@ async function sync(force=false){
   if(payload?.version!==1||!Array.isArray(payload.records))throw Error('Неизвестный формат ответа компаньона');
   const device=String(payload.device||'Android').slice(0,100);
   if(payload.records.length>5000)throw Error('Слишком много записей');
+  const newIcons=window.LifeSimsScreenTimeLinks?.importIcons?.(payload.icons)||0;
   const entries=payload.records.map(item=>({
    date:item.date,app:item.app,packageName:item.packageName,
    device,seconds:item.seconds,source:'android'
@@ -75,9 +76,9 @@ async function sync(force=false){
   if(entries.length){
    const result=B.commit(entries);
    if(!result.ok)throw Error(result.error||'Не удалось сохранить данные');
-   if(result.added||result.updated)B.refresh();
+   if(result.added||result.updated||newIcons)B.refresh();
    setStatus('✓ Android синхронизирован · '+entries.length+' приложений/дат · '+result.added+' новых, '+result.updated+' обновлённых · '+new Date().toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'}));
-  }else setStatus('✓ Соединение работает. Данных об использовании приложений за 7 дней пока нет.');
+  }else{if(newIcons)B.refresh();setStatus('✓ Соединение работает. Данных об использовании приложений за 7 дней пока нет.');}
   lastCompleted=Date.now();
  }catch(err){
   const details=err?.name==='AbortError'?'превышено время ожидания':err.message||'соединение недоступно';
