@@ -105,6 +105,8 @@ jobs:
              throw Error('Smart label saving incorrect: '+JSON.stringify(label));
            console.log('ONE PHOTO BUTTON -> OCR LABEL -> INGREDIENTS/MACROS: PASS');
            await page.evaluate(()=>{
+            // The test fixture is a 1-pixel PNG; bypass bitmap decoding to test barcode routing.
+            window.createImageBitmap=async()=>({close(){}});
             window.BarcodeDetector=class{
              static async getSupportedFormats(){return ['ean_13']}
              async detect(){return [{rawValue:'4601234567890'}]}
