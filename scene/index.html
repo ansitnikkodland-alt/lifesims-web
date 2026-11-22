@@ -1561,7 +1561,10 @@ function setHabitAmount(id,date,value){
 function recordEspresso(date=today()){
  if(date>today())return toast('Нельзя записать будущий кофе');
  const stamp=new Date().toISOString();
- if(!transact(()=>{state.events.push({id:uid(),kind:'espresso',name:'☕ Эспрессо',date,at:stamp,xp:0});adjustHabitMeasurement('coffee_habit',date,1)}))
+ const coffee=state.activities.find(a=>a.id==='coffee_habit');
+ if(!transact(()=>{state.events.push({id:uid(),kind:'espresso',name:'☕ Эспрессо',date,at:stamp,xp:0,
+  skill:coffee?.skill||null,negative:isNegativeSkillHabit(coffee),skillXp:skillExperience(coffee),difficulty:difficultyOf(coffee)});
+  adjustHabitMeasurement('coffee_habit',date,1)}))
   return toast('Не удалось сохранить эспрессо');
  renderAll();toast('☕ Эспрессо записан · '+espressoCount(date)+' за '+(date===today()?'сегодня':date));
 }
@@ -2287,6 +2290,17 @@ function skillImpactHistory(day=today()){
   }
   return {...e,points};
  });
+ // The built-in coffee counter stores espresso events rather than ordinary completions.
+ const coffee=activities.get('coffee_habit');
+ if(coffee)for(const e of state.events||[]){
+  if(e?.kind!=='espresso'||!/^\d{4}-\d{2}-\d{2}$/.test(e.date||'')||e.date>day)continue;
+  const harmful=e.negative===true||(e.negative!==false&&isNegativeSkillHabit(coffee));
+  const skill=Object.prototype.hasOwnProperty.call(e,'skill')?e.skill:coffee.skill;
+  if(!harmful||!skill)continue;
+  const points=Object.prototype.hasOwnProperty.call(e,'skillXp')&&Number.isFinite(Number(e.skillXp))?
+   -Math.abs(Number(e.skillXp)):skillExperience(coffee);
+  entries.push({...e,kind:'complete',activityId:'coffee_habit',name:coffee.name,skill,negative:true,points});
+ }
  const recorded=new Map();
  for(const e of entries){
   const a=activities.get(e.activityId);
