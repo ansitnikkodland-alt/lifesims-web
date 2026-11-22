@@ -42,7 +42,8 @@ jobs:
             if(!(overnight>=0&&overnight<100))throw Error('No decline overnight: '+overnight);
             console.log('OVERNIGHT HYGIENE DECAY: PASS',JSON.stringify({shower,overnight}));
             // Restore the time and check antiperspirant on the same baseline.
-            await page.clock.setFixedTime(new Date('2026-11-21T14:00:00+03:00'));
+            // Apply antiperspirant AFTER the logged shower, never before it.
+            await page.clock.setFixedTime(new Date('2026-11-21T14:30:00+03:00'));
             await page.locator('#showerCabin').click();
             await page.locator('#sheetActions > button').filter({hasText:'Антиперспирант'}).first().click();
             await page.clock.setFixedTime(new Date('2026-11-22T07:00:00+03:00'));
