@@ -148,7 +148,7 @@ jobs:
            const [unknownPicker]=await Promise.all([
             page.waitForEvent('filechooser'),page.locator('#mealSmartTakePhoto').click()
            ]);
-           if(await unknownPicker.element().then(el=>el.getAttribute('capture'))!=='environment')
+           if(await page.locator('#mealSmartCameraInput').getAttribute('capture')!=='environment')
             throw Error('Camera option launched a gallery-only input');
            await unknownPicker.setFiles(image);
            await page.locator('#mealLookupNutrition').waitFor({state:'visible',timeout:15000});
