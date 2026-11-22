@@ -153,7 +153,7 @@ function drawPeople(body){
    if(p.avatar)card.append(button('Удалить портрет',()=>{
     if(!confirm('Удалить фотографию этого персонажа с устройства?'))return;
     const next=catalog();next.people.find(x=>x.id===p.id).avatar='';
-    if(save(next)){const portrait=document.getElementById('portraitBtn');if(portrait)portrait.style.removeProperty('background-image');draw()}
+    if(save(next)){updateHeader();draw()}
    }));
   }
   body.append(card);
@@ -288,7 +288,14 @@ function drawLinks(body){
 function updateHeader(){
  const profile=person(),title=document.querySelector('.topbar .person strong'),portrait=document.getElementById('portraitBtn');
  if(title)title.textContent='LifeSims · '+profile.name;
- if(portrait&&profile.avatar){portrait.style.backgroundImage='url('+profile.avatar+')';portrait.style.backgroundSize='cover';portrait.title='Персонаж: '+profile.name}
+ if(portrait){
+  portrait.title='Персонаж: '+profile.name;
+  portrait.style.backgroundSize='cover';
+  portrait.textContent='';
+  if(profile.avatar)portrait.style.backgroundImage='url('+profile.avatar+')';
+  else if(profile.id===PRIMARY)portrait.style.removeProperty('background-image');
+  else{portrait.style.backgroundImage='none';portrait.textContent='👤'}
+ }
 }
 async function refreshRoom(){
  const scene=document.getElementById('scene');if(!scene)return;
