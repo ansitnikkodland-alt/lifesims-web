@@ -1587,7 +1587,7 @@ function addActivity(e){
  if(meta.habitGoal&&(!['min','max'].includes(meta.habitGoal.type)||!Number.isFinite(meta.habitGoal.value)||meta.habitGoal.value<0||meta.habitGoal.value>100000))return toast('Для нормы укажи неотрицательное число не больше 100000.');
  if(meta.resourceEffect&&!validatedResourceEffect(meta.resourceEffect))return toast('Проверь настройки влияния на показатель: значение должно быть от −100 до +100, а срок — допустимым.');
  if(meta.resourceEffect)meta.resourceEffect=validatedResourceEffect(meta.resourceEffect);
- const act={...(old||{}),...meta,id:old?.id||uid(),name,repeat,weekdays:repeat==='weekly'?weekdays:[],createdDate:$('taskStartDate').value||today(),kind:$('taskKind').value==='habit'?'habit':'task',xp:Number($('taskXP').value),...withSkills({},taskSkillsPicker?.get()||[]),object:$('taskObject').value||null,completions:old?.completions||[]};
+ const act=preserveSkillTimeline(old,{...(old||{}),...meta,id:old?.id||uid(),name,repeat,weekdays:repeat==='weekly'?weekdays:[],createdDate:$('taskStartDate').value||today(),kind:$('taskKind').value==='habit'?'habit':'task',xp:Number($('taskXP').value),...withSkills({},taskSkillsPicker?.get()||[]),object:$('taskObject').value||null,completions:old?.completions||[]},today());
  if(!transact(()=>{const i=state.activities.findIndex(x=>x.id===act.id);if(i<0)state.activities.push(act);else state.activities[i]=act;}))return toast('Не удалось сохранить');
  clearActivityEditor();$('calendarTaskEditor').open=false;
  if($('calendarTaskPopup')?.open)$('calendarTaskPopup').close();
@@ -2608,6 +2608,18 @@ function addCustomSkill(event){
 }
 // Resolve the skill effective on a historical date for derived habit measurements.
 // Recorded completions keep their original event.skill snapshot.
+// Skill-link edits take effect today; the earlier XP history is immutable.
+function preserveSkillTimeline(old,next,date){
+ if(!old||JSON.stringify(skillsOf(old))===JSON.stringify(skillsOf(next)))return next;
+ const previous=skillsOf(old),names=skillsOf(next);
+ const timeline=Array.isArray(old.skillLinkTimeline)&&old.skillLinkTimeline.length?
+  old.skillLinkTimeline.map(x=>({...x})):
+  [{from:'0000-00-00',skills:previous,skill:previous[0]||null}];
+ const last=timeline[timeline.length-1];
+ if(last.from===date){last.skills=names;last.skill=names[0]||null;}
+ else timeline.push({from:date,skills:names,skill:names[0]||null});
+ return {...next,skillLinkTimeline:timeline};
+}
 function skillsForDate(activity,date){
  const timeline=Array.isArray(activity?.skillLinkTimeline)?activity.skillLinkTimeline:null;
  if(!timeline||!timeline.length)return skillsOf(activity);
@@ -2659,7 +2671,7 @@ function saveExistingSkillLinks(name,request){
   for(const a of changedActs)setActivitySkillLink(a,desired(a,chosenActivities.has(a.id)),date);
   for(const e of changedEvents){
    const names=desired(e,chosenEvents.has(e.id));
-   e.skills=names;e.skill=names[0]||null;
+   setActivitySkillLink(e,names,date);
    if(names.length&&e.skillXp==null)e.skillXp=10;
   }
  });
@@ -3426,8 +3438,8 @@ function scheduleHistoryOccurrences(from,to){
     entries.push({id:event.id,occurrenceKey:key,date,title:info.title,startsAt:start,endsAt:end,
       google:!!event.google,googleIdentity:event.google?.id?(event.google.calendarId||'primary')+'::'+event.google.id:null,repeat:event.repeat&&event.repeat!=='none',allDay:!!info.allDay,
       sourceName:event.google?.sourceName||'LifeSims',color:info.color||event.google?.color||'#4285f4',
-      location:info.location||'',description:info.description||'',skill:skillsOf(localOverride&&('skills'in localOverride||'skill'in localOverride)?localOverride:event)[0]||null,
-       skills:skillsOf(localOverride&&('skills'in localOverride||'skill'in localOverride)?localOverride:event),
+      location:info.location||'',description:info.description||'',skill:skillsOf(localOverride&&('skills'in localOverride||'skill'in localOverride)?localOverride:{skills:skillsForDate(event,key)})[0]||null,
+       skills:skillsOf(localOverride&&('skills'in localOverride||'skill'in localOverride)?localOverride:{skills:skillsForDate(event,key)}),
       linkedTaskId:info.linkedTaskId||null,linkedHabitId:info.linkedHabitId||null,
       skillXp:Number.isFinite(Number(info.skillXp))?Number(info.skillXp):0});
    }
@@ -4100,9 +4112,10 @@ function saveEvent(e){
  const linkedTaskId=$('eventTaskLink').value||null,linkedHabitId=$('eventHabitLink').value||null;
  const skillXp=Number($('eventSkillXP').value);
  if(!Number.isFinite(skillXp)||skillXp<0||skillXp>40)return toast('Проверь количество опыта навыка');
- const next={...(old||{}),id,title,startsAt,endsAt,repeat,allDay,weekdays:repeat==='weekly'?weekdays:[],repeatInterval:interval,repeatEndMode:endMode,repeatCount,repeatUntil,
+ let next={...(old||{}),id,title,startsAt,endsAt,repeat,allDay,weekdays:repeat==='weekly'?weekdays:[],repeatInterval:interval,repeatEndMode:endMode,repeatCount,repeatUntil,
   location:$('eventLocation').value.trim(),description:$('eventDescription').value.trim(),color:$('eventColor').value,
   skill,skills:selectedSkills,linkedTaskId,linkedHabitId,skillXp};
+ if(scope==='all')next=preserveSkillTimeline(old,next,today());
  if(!transact(()=>{
   state.schedule??=[];
   const i=state.schedule.findIndex(x=>x.id===id);
