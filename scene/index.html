@@ -5043,7 +5043,7 @@ window.LifeSims3DBridge={
 };
 window.addEventListener('resize',()=>{if(currentSheetAnchor)placeSheet(currentSheetAnchor)},{passive:true});
 window.addEventListener('scroll',()=>{if(currentSheetAnchor)placeSheet(currentSheetAnchor)},{passive:true});
-if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=106',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
+if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=107',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 window.LifeSimsCalendarBridge={
   getSchedule:()=>JSON.parse(JSON.stringify(state.schedule||[])),
   getHidden:()=>JSON.parse(JSON.stringify(state.googleHidden||[])),
@@ -6708,6 +6708,6 @@ window.LifeSimsOuraVersion='oura-v72-auto-on-open-midnight-15min-missing';
 })();
 </script>
 
-<script src="./health-cycle-medications.js?v=106"></script>
-<script src="./mood-picker.js?v=104"></script>
+<script src="./health-cycle-medications.js?v=107"></script>
+<script src="./mood-picker.js?v=107"></script>
 </body></html>
