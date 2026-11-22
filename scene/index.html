@@ -2420,7 +2420,8 @@ function skillImpactHistory(day=today()){
  const recorded=new Map();
  for(const e of entries){
   const a=activities.get(e.activityId);
-  if(!isNegativeSkillHabit(a))continue;
+  // Coffee negative entries were already filtered to cups beyond the limit.
+  if(e.activityId==='coffee_habit'||!isNegativeSkillHabit(a))continue;
   const amount=manualHabitAmount(e.activityId,e.date);
   if(amount===null)continue;
   const key=e.activityId+'|'+e.date,index=recorded.get(key)||0;
@@ -2430,7 +2431,8 @@ function skillImpactHistory(day=today()){
  }
  for(const [id,dates] of Object.entries(state.habitMeasurements||{})){
   const a=activities.get(id);
-  if(!isNegativeSkillHabit(a)||!dates||typeof dates!=='object')continue;
+  // Manual coffee corrections are accounted for separately above.
+  if(id==='coffee_habit'||!isNegativeSkillHabit(a)||!dates||typeof dates!=='object')continue;
   for(const [date,amountRaw] of Object.entries(dates)){
    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||date>day)continue;
    const amount=Number(amountRaw);
@@ -4998,7 +5000,7 @@ window.LifeSimsFoodBridge={
 })();
 </script>
 <script src="./task-premium.js?v=67"></script>
-<script src="./habit-grid.js?v=69"></script>
+<script src="./habit-grid.js?v=82"></script>
 <script src="./skill-detail.js?v=76"></script>
 <script src="./focus-timer.js?v=65"></script>
 <script>

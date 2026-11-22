@@ -39,11 +39,17 @@
  const has=(habit,date)=>api.habitHasAmount(habit.id,date);
  const unit=habit=>habit.habitUnit||'раз';
  const format=n=>Number(n).toLocaleString('ru-RU',{maximumFractionDigits:2});
- const normText=habit=>habit.habitGoal?.type==='max'?'не больше '+format(habit.habitGoal.value)+' '+unit(habit):
+ const coffeeLimit=habit=>habit.habitGoal?.type==='max'&&habit.habitGoal.value!=null&&
+  Number.isFinite(Number(habit.habitGoal.value))&&Number(habit.habitGoal.value)>=0?
+  Number(habit.habitGoal.value):5;
+ const normText=habit=>habit.id==='coffee_habit'?'не больше '+format(coffeeLimit(habit))+' '+unit(habit):
+  habit.habitGoal?.type==='max'?'не больше '+format(habit.habitGoal.value)+' '+unit(habit):
   habit.habitGoal?.type==='min'?'не меньше '+format(habit.habitGoal.value)+' '+unit(habit):'';
  const badOn=(habit,date)=>{
   if(!has(habit,date))return false;
-  const goal=habit.habitGoal,n=count(habit,date);
+  const n=count(habit,date);
+  if(habit.id==='coffee_habit')return n>coffeeLimit(habit);
+  const goal=habit.habitGoal;
   if(goal&&['min','max'].includes(goal.type)&&Number.isFinite(Number(goal.value)))
    return goal.type==='max'?n>Number(goal.value):n<Number(goal.value);
   return negative(habit);
@@ -80,7 +86,7 @@
   const list=$('tpHabitRows');list.replaceChildren();
   for(const habit of habits){
    const row=el('tr'),title=el('th','tp-habit-name');
-   const bad=negative(habit);
+   const bad=negative(habit)&&habit.id!=='coffee_habit';
    const dot=el('span','tp-habit-dot');dot.style.background=bad&&!habit.habitGoal?'#fa6a77':(/^#[\da-f]{6}$/i.test(habit.habitColor||'')?habit.habitColor:shade(habit.name));
    const titleButton=button(habit.name,()=>openHabitEditor(habit),'tp-habit-edit-name');
    titleButton.title='Изменить привычку «'+habit.name+'»';
