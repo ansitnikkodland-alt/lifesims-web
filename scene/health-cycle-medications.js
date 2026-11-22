@@ -121,7 +121,35 @@ function slots(h,d){
   const key=m.id+'@'+entry.time;
   if(map.has(key))map.get(key).entry=entry;else map.set(key,{m,time:entry.time,entry});
  }
- return [...map.values()].sort((a,b)=>a.time.localeCompare(b.time)||a.m.name.localeCompare(b.m.name,'ru'));
+ // Older notes were sometimes saved as one scheduled or logged medicine.
+ // Expand such rows without altering their original stored text or log.
+ const expanded=new Map();
+ for(const slot of map.values()){
+  const parts=splitLegacyMedicines(slot.m.name);
+  if(parts.length<=1){
+   const key=slot.m.id+'@'+slot.time,prior=expanded.get(key);
+   if(!prior?.entry||slot.entry)expanded.set(key,slot);
+   continue;
+  }
+  parts.forEach((part,index)=>{
+   const id=slot.m.id+':split:'+index;
+   const edited=h.legacyMedicationEdits?.[id]||{};
+   const entry=h.medicationLog.find(x=>x.medicationId===id&&x.date===d&&x.time===slot.time);
+   const m={...slot.m,id,name:edited.name||part.name,
+    dose:typeof edited.dose==='string'?edited.dose:part.dose,
+    archived:true,legacy:true};
+   expanded.set(id+'@'+slot.time,{m,time:slot.time,entry:entry||null});
+  });
+ }
+ // A source diary note and a structured copy may coexist. Avoid showing
+ // the same medicine twice, preferring the individually marked log entry.
+ const distinct=new Map();
+ for(const slot of expanded.values()){
+  const key=slot.time+'|'+slot.m.name.trim().toLocaleLowerCase('ru')+'|'+String(slot.m.dose||'').trim().toLowerCase();
+  const old=distinct.get(key);
+  if(!old||(!old.entry&&slot.entry))distinct.set(key,slot);
+ }
+ return [...distinct.values()].sort((a,b)=>a.time.localeCompare(b.time)||a.m.name.localeCompare(b.m.name,'ru'));
 }
 function copyYesterday(){
  if(date>nowDay()){flash='Нельзя переносить приёмы на будущую дату.';renderMessage();return}
@@ -167,7 +195,7 @@ function setMedicationStatus(m,d,time,status){
 }
 function fillUi(){
  root.innerHTML=[
- '<div class="health-head"><div><h2>🌸 Дневник здоровья</h2><p>Цикл, лекарства, настроение и симптомы</p></div></div>',
+ '<div class="health-head"><div><h2>🌸 Дневник здоровья</h2><p>Цикл, лекарства, настроение и симптомы · версия журнала 103</p></div></div>',
  '<div class="health-switch"><button id="healthCycleTab" type="button">🌸 Цикл</button><button id="healthPillsTab" type="button">💊 Лекарства</button></div>',
  '<div id="healthNotice" class="health-notice" role="status" aria-live="polite"></div>',
  '<div class="health-panel"><h3>Влияние записей на ресурс «Здоровье»</h3><p class="hint">Автоматическая игровая оценка по прозрачным правилам, а не медицинский диагноз или вывод нейросети. Прогноз ПМС и сами месячные нейтральны.</p><div id="healthEffectList"></div></div>',
