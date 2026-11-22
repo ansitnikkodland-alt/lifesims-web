@@ -316,6 +316,26 @@ function appendAgenda(d,body){
  }
  for(const slot of s){const line=medicationSlotLine(slot,d);body.append(line)}
 }
+function appendHistory(d,panel){
+ const h=data(),entry=h.cycleDays[d],entries=slots(h,d);
+ let count=0;
+ if(entry){
+  const line=el('div','history-activity-line');
+  const info=el('div','','🌸 Цикл: '+(FLOWS[entry.flow]||'Нет кровотечения')+
+   (entry.mood?' · '+entry.mood:'')+
+   (entry.symptoms?.length?' · '+entry.symptoms.join(', '):''));
+  line.append(info,button('Изменить',()=>openAt(d,'cycle')));
+  panel.append(line);count++;
+ }
+ for(const s of entries){
+  const line=el('div','history-activity-line'),status=s.entry?.status==='taken'?'✓ принято':
+   s.entry?.status==='skipped'?'× пропущено':'запланировано';
+  line.append(el('div','','💊 '+s.time+' · '+s.m.name+' · '+status),
+   button('Открыть',()=>openAt(d,'pills')));
+  panel.append(line);count++;
+ }
+ return count;
+}
 function markCalendar(container){
  const h=data(),buttons=container.querySelectorAll('.calendar button');
  for(const b of buttons){
