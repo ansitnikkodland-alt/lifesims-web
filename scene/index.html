@@ -918,6 +918,10 @@ body{background:#091428}
 <fieldset id="eventWeekdays" hidden><legend>Дни недели</legend><div class="row"><label><input type="checkbox" name="eventWeekday" value="1"> Пн</label><label><input type="checkbox" name="eventWeekday" value="2"> Вт</label><label><input type="checkbox" name="eventWeekday" value="3"> Ср</label><label><input type="checkbox" name="eventWeekday" value="4"> Чт</label><label><input type="checkbox" name="eventWeekday" value="5"> Пт</label><label><input type="checkbox" name="eventWeekday" value="6"> Сб</label><label><input type="checkbox" name="eventWeekday" value="7"> Вс</label></div></fieldset>
 <label class="field">Место <input id="eventLocation" maxlength="300" placeholder="Адрес или место встречи"></label>
 <label class="field">Описание <textarea id="eventDescription" rows="3" placeholder="Дополнительные сведения"></textarea></label>
+<label class="field">Связанный навык <input id="eventSkill" list="skillSuggestions" maxlength="70" autocomplete="off" placeholder="Выбрать или создать навык"><small>Навык повышается только после отметки об участии, не по расписанию.</small></label>
+<div class="cols"><label class="field">Связанное дело <select id="eventTaskLink"><option value="">Без связи</option></select></label>
+<label class="field">Связанная привычка <select id="eventHabitLink"><option value="">Без связи</option></select></label></div>
+<label class="field">Опыт навыка за подтверждённое участие <select id="eventSkillXP"><option value="0">0 XP</option><option value="5">+5 XP</option><option value="10" selected>+10 XP</option><option value="15">+15 XP</option><option value="20">+20 XP</option><option value="40">+40 XP</option></select></label>
 <label class="field">Цвет в LifeSims <input id="eventColor" type="color" value="#4285f4"></label>
 <p id="eventEditSource" class="hint" role="status">Местные мероприятия сохраняются на этом устройстве. Google синхронизируется отдельно.</p>
 <div class="row"><button class="primary" type="submit">Сохранить мероприятие</button><button class="secondary" type="button" id="eventCancel">Отмена</button><button class="secondary" type="button" id="eventDuplicate" hidden>Дублировать</button></div>
@@ -2364,7 +2368,7 @@ function refreshSkillSuggestions(){
  const list=$('skillSuggestions');if(!list)return;list.replaceChildren();
  for(const v of skillScores()){const option=document.createElement('option');option.value=v.name;list.append(option)}
 }
-window.LifeSimsSkillBridge={today, scores:()=>skillScores(),history:()=>skillImpactHistory(),read:()=>({activities:state.activities||[],events:state.events||[],legacySkills:state.legacySkills||{},defaults:defs}),edit:id=>openActivityEditor(id),create:kind=>openNewCalendarTask(kind)};
+window.LifeSimsSkillBridge={today, scores:()=>skillScores(),history:()=>skillImpactHistory(),read:()=>({activities:state.activities||[],events:state.events||[],schedule:state.schedule||[],legacySkills:state.legacySkills||{},defaults:defs}),edit:id=>openActivityEditor(id),editEvent:id=>{openTab('history',true);openCalendarEventEditor(id)},create:kind=>openNewCalendarTask(kind)};
 function renderSkills(){
  const list=$('skillsList');if(!list)return;list.replaceChildren();
  const f=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:1});
@@ -2943,7 +2947,9 @@ function scheduleHistoryOccurrences(from,to){
     entries.push({id:event.id,occurrenceKey:key,date,title:info.title,startsAt:start,endsAt:end,
       google:!!event.google,repeat:event.repeat&&event.repeat!=='none',allDay:!!info.allDay,
       sourceName:event.google?.sourceName||'LifeSims',color:info.color||event.google?.color||'#4285f4',
-      location:info.location||'',description:info.description||''});
+      location:info.location||'',description:info.description||'',skill:info.skill||null,
+      linkedTaskId:info.linkedTaskId||null,linkedHabitId:info.linkedHabitId||null,
+      skillXp:Number.isFinite(Number(info.skillXp))?Number(info.skillXp):0});
    }
    date=plusDays(date,1);
   }
@@ -3421,8 +3427,19 @@ function toggleEventDates(){
     if(!$('eventDayEnd').value)$('eventDayEnd').value=($('eventEnd').value||$('eventDayStart').value).slice(0,10);
   }
 }
+function populateEventActivityLinks(){
+ for(const [id,kind] of [['eventTaskLink','task'],['eventHabitLink','habit']]){
+  const select=$(id);select.replaceChildren(new Option('Без связи',''));
+  for(const a of state.activities||[]){
+   if(!a||a.kind!==kind||a.legacyDone)continue;
+   select.add(new Option(a.name,a.id));
+  }
+ }
+ refreshSkillSuggestions();
+}
 function clearEventForm(){
-  $('eventForm').reset();$('eventEditId').value='';
+  $('eventForm').reset();$('eventEditId').value='';populateEventActivityLinks();
+  $('eventSkill').value='';$('eventTaskLink').value='';$('eventHabitLink').value='';$('eventSkillXP').value='10';
   $('eventWeekdays').hidden=true;$('eventAllDay').checked=false;
   $('eventDayStart').value='';$('eventDayEnd').value='';
   $('eventColor').value='#4285f4';$('eventOccurrenceDate').value='';$('eventScopeField').hidden=true;$('eventScope').value='one';
@@ -3468,7 +3485,12 @@ function openCalendarEventEditor(id,occurrenceDate){
  document.querySelectorAll('[name=eventWeekday]').forEach(x=>x.checked=(event.weekdays||[]).includes(Number(x.value)));
  $('eventWeekdays').hidden=$('eventRepeat').value!=='weekly';
  $('eventLocation').value=override?.location||event.location||'';
- $('eventDescription').value=override?.description||event.description||'';
+ $('eventDescription').value=override?.description??event.description??'';
+ $('eventSkill').value=override?.skill??event.skill??'';
+ $('eventTaskLink').value=override?.linkedTaskId??event.linkedTaskId??'';
+ $('eventHabitLink').value=override?.linkedHabitId??event.linkedHabitId??'';
+ $('eventSkillXP').value=String(override?.skillXp??event.skillXp??10);
+ if(!$('eventSkillXP').value)$('eventSkillXP').value='10';
  const color=override?.color||event.color||event.google?.color||'#4285f4';
  $('eventColor').value=/^#[0-9a-f]{6}$/i.test(color)?color:'#4285f4';
  if(override?.allDay??event.allDay){
@@ -3529,8 +3551,13 @@ function saveEvent(e){
  if(repeat==='weekly'&&!weekdays.length)return toast('Выбери дни недели');
  const id=$('eventEditId').value||uid(),old=(state.schedule||[]).find(x=>x.id===id),occurrenceKey=$('eventOccurrenceDate').value;
  const scope=old&&old.repeat&&old.repeat!=='none'?$('eventScope').value:'all';
+ const skill=$('eventSkill').value.trim().slice(0,70)||null;
+ const linkedTaskId=$('eventTaskLink').value||null,linkedHabitId=$('eventHabitLink').value||null;
+ const skillXp=Number($('eventSkillXP').value);
+ if(!Number.isFinite(skillXp)||skillXp<0||skillXp>40)return toast('Проверь количество опыта навыка');
  const next={...(old||{}),id,title,startsAt,endsAt,repeat,allDay,weekdays:repeat==='weekly'?weekdays:[],
-  location:$('eventLocation').value.trim(),description:$('eventDescription').value.trim(),color:$('eventColor').value};
+  location:$('eventLocation').value.trim(),description:$('eventDescription').value.trim(),color:$('eventColor').value,
+  skill,linkedTaskId,linkedHabitId,skillXp};
  if(!transact(()=>{
   state.schedule??=[];
   const i=state.schedule.findIndex(x=>x.id===id);
@@ -3550,7 +3577,8 @@ function saveEvent(e){
   }else if(scope==='one'){
    // Keep the original recurring series and override only the selected occurrence.
    const overrides={...(old.overrides||{})};
-   overrides[occurrenceKey]={title,startsAt,endsAt,allDay,location:next.location,description:next.description,color:next.color};
+   overrides[occurrenceKey]={title,startsAt,endsAt,allDay,location:next.location,description:next.description,color:next.color,
+    skill:next.skill,linkedTaskId:next.linkedTaskId,linkedHabitId:next.linkedHabitId,skillXp:next.skillXp};
    state.schedule[i]={...old,overrides};
   }else if(scope==='future'){
    const previousDay=plusDays(occurrenceKey,-1);
@@ -4066,7 +4094,8 @@ window.LifeSimsCalendarBridge={
         else{
          const prior=state.schedule[i],merged={...entry};
          // Preserve local occurrence exceptions when Google sync refreshes its source.
-         for(const key of ['overrides','repeatUntil','excludedDates'])if(prior[key]!=null)merged[key]=prior[key];
+         for(const key of ['overrides','repeatUntil','excludedDates','skill','linkedTaskId','linkedHabitId','skillXp'])
+          if(Object.prototype.hasOwnProperty.call(prior,key))merged[key]=prior[key];
          if(prior.localEditedAll){
           for(const key of ['title','startsAt','endsAt','repeat','weekdays','location','description','color','allDay'])merged[key]=prior[key];
           merged.localEditedAll=true;
