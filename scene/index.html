@@ -2752,17 +2752,45 @@ function refreshSkillSuggestions(){
  const list=$('skillSuggestions');if(!list)return;list.replaceChildren();
  for(const v of skillScores()){const option=document.createElement('option');option.value=v.name;list.append(option)}
 }
-window.LifeSimsSkillBridge={today, scores:()=>skillScores(),history:()=>skillImpactHistory(),read:()=>({activities:state.activities||[],events:state.events||[],schedule:state.schedule||[],legacySkills:state.legacySkills||{},defaults:defs}),setScore:setManualSkillScore,undoScore:undoManualSkillScore,linkExisting:saveExistingSkillLinks,edit:id=>openActivityEditor(id),editEvent:id=>{openTab('history',true);openCalendarEventEditor(id)},create:kind=>openNewCalendarTask(kind)};
+// A single continuous XP axis shared by all skills. It is not a level,
+// milestone or cap: the visible range grows as the highest total increases.
+function skillXpScale(scores=skillScores()){
+ const highest=Math.max(0,...scores.map(x=>Number.isFinite(x.score)?x.score:0));
+ const required=Math.max(100,highest*1.15);
+ const power=Math.pow(10,Math.floor(Math.log10(required)));
+ return [1,2,5,10].map(x=>x*power).find(x=>x>=required)||10*power;
+}
+function skillXpBar(score,scale,detail=false){
+ const value=Number.isFinite(score)?Math.max(0,score):0;
+ const track=document.createElement('div');
+ track.className=detail?'skill-detail-progress skill-xp-track':'skill-track skill-xp-track';
+ track.setAttribute('role','progressbar');
+ track.setAttribute('aria-label','Общий опыт навыка, непрерывная шкала XP');
+ track.setAttribute('aria-valuemin','0');
+ track.setAttribute('aria-valuemax',String(scale));
+ track.setAttribute('aria-valuenow',String(value));
+ track.setAttribute('aria-valuetext',value.toLocaleString('ru-RU')+' XP из диапазона отображения 0–'+scale.toLocaleString('ru-RU')+' XP');
+ track.dataset.xpScale=String(scale);track.dataset.xpValue=String(value);
+ const fill=document.createElement(detail?'b':'div');
+ fill.style.width=Math.min(100,value/scale*100)+'%';
+ track.append(fill);
+ return track;
+}
+window.LifeSimsSkillBridge={today, scores:()=>skillScores(),displayScale:()=>skillXpScale(),history:()=>skillImpactHistory(),read:()=>({activities:state.activities||[],events:state.events||[],schedule:state.schedule||[],legacySkills:state.legacySkills||{},defaults:defs}),setScore:setManualSkillScore,undoScore:undoManualSkillScore,linkExisting:saveExistingSkillLinks,edit:id=>openActivityEditor(id),editEvent:id=>{openTab('history',true);openCalendarEventEditor(id)},create:kind=>openNewCalendarTask(kind)};
 function renderSkills(){
  const list=$('skillsList');if(!list)return;list.replaceChildren();
  const f=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:1});
- for(const skill of skillScores()){
+ const scores=skillScores(),scale=skillXpScale(scores);
+ for(const skill of scores){
   const card=document.createElement('article');card.className='skill-item';
   const header=document.createElement('div');header.className='skill-item-head';
   const title=document.createElement('strong');title.textContent=skill.name;
   const value=document.createElement('b');value.textContent=f.format(skill.score)+' XP';header.append(title,value);
+  const bar=skillXpBar(skill.score,scale);
+  const axis=document.createElement('small');axis.className='skill-xp-axis';
+  axis.textContent='Шкала опыта: 0 — '+f.format(scale)+' XP';
   const last=document.createElement('small');last.textContent=skill.last?'Последняя практика: '+skill.last+(skill.days===0?' (сегодня)':' · '+skill.days+' дн. назад'):'Практика ещё не записана';
-  card.append(header,last);
+  card.append(header,bar,axis,last);
   card.classList.add('skill-clickable');card.tabIndex=0;card.setAttribute('role','button');
   card.setAttribute('aria-label','Подробнее о навыке '+skill.name);
   card.onclick=()=>window.LifeSimsSkillDetail?.open?.(skill.name);
