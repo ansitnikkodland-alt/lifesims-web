@@ -454,7 +454,7 @@ function checkReminders(){
  }
  if(!h.settings.reminders)return;
  for(const s of slots(h,d)){
-  if(s.m.archived||!/^(?:[01]\\d|2[0-3]):[0-5]\\d$/.test(s.time))continue;
+  if(s.m.archived||!/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(s.time))continue;
   const [hh,mm]=s.time.split(':').map(Number),due=hh*60+mm;
   if(s.entry||minutes<due||minutes-due>119)continue;
   const key='lifesims-health-notified-'+s.m.id+'-'+d+'-'+s.time;
