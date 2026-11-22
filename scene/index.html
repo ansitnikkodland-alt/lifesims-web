@@ -888,7 +888,7 @@ body{background:#091428}
 <polygon class="hot" tabindex="0" role="button" aria-label="Душ — помыться или вымыть ванную" data-object="shower" points="1193,0 1345,0 1353,255 1186,263"/>
 <ellipse class="hot" tabindex="0" role="button" aria-label="Чашка кофе — записать эспрессо" data-object="coffee" cx="329" cy="424" rx="75" ry="78"/>
 </svg><div class="work-indicator" id="workIndicator" hidden role="status"><strong>Анюта на мероприятии</strong><span id="workName"></span><button id="returnHome" type="button">Вернуться домой</button></div><div class="sheetwrap" id="sheetWrap" aria-hidden="true"><div class="sheet" role="dialog" aria-modal="false" aria-labelledby="sheetTitle"><div class="sheethead"><h2 id="sheetTitle">Действия</h2><button id="closeSheet" aria-label="Закрыть меню">×</button></div><div class="sheetacts" id="sheetActions"></div></div></div><span class="sr-only" id="sceneStatus" aria-live="polite"></span></div>
-<nav class="nav" aria-label="Разделы"><button class="active" type="button" data-tab="needs">◈ Потребности</button><button type="button" data-tab="tasks">☑ Дела</button><button type="button" data-tab="habits">◇ Привычки</button><button type="button" data-tab="skills">↗ Навыки</button><button type="button" data-tab="history">▦ Календарь</button><button type="button" data-tab="health">🌸 Здоровье</button></nav>
+<nav class="nav" aria-label="Разделы"><button class="active" type="button" data-tab="needs">◈ Потребности</button><button type="button" data-tab="tasks">☑ Дела</button><button type="button" data-tab="habits">◇ Привычки</button><button type="button" data-tab="skills">↗ Ресурсы</button><button type="button" data-tab="history">▦ Календарь</button></nav>
 <div class="content"><div id="storageStatus" class="notice" role="status">Проверка локального хранения…</div>
 <section class="section active" id="needs"><div class="heading"><h2>Потребности</h2><div class="row"><button class="secondary" id="openNeedsEditor" type="button">Все показатели</button><a id="ouraJump" class="secondary" href="#ouraMount">💍 Oura · подключение</a></div></div>
 <div id="needsEnergyTop" class="needs-energy-pair" aria-label="Баланс калорий и сытость">
@@ -942,7 +942,7 @@ body{background:#091428}
 </section>
 <section class="section activities-page" id="tasks"><div class="heading"><h2>☑ Дела</h2><input id="topTasksDate" type="date" aria-label="Дата дел"></div><div class="card"><div id="topTasksList" class="activity-list"></div><button class="secondary activity-add" type="button" id="topTasksAdd">+ Добавить дело</button></div></section>
 <section class="section activities-page" id="habits"><div class="heading"><h2>◇ Привычки</h2><input id="topHabitsDate" type="date" aria-label="Дата привычек"></div><div class="card"><div id="topHabitsList" class="activity-list"></div><div class="row"><button class="secondary activity-add" type="button" id="topHabitsAdd">+ Добавить привычку</button><button class="secondary" type="button" id="habitBackdateOpen">📅 Записать задним числом</button></div></div></section>
-<section class="section" id="skills"><div class="heading"><h2>↗ Навыки</h2></div><p class="hint">Полезные действия повышают связанные навыки, отрицательные привычки снижают их. Одно дело, привычка или мероприятие может развивать несколько навыков. Без практики опыт постепенно снижается на 0,1% в день. Значения навыков можно редактировать вручную.</p><form id="skillCreationForm"><label class="field">Новый навык<input id="newSkillName" type="text" maxlength="70" placeholder="Например, Английский" required></label><button type="submit" class="primary">+ Добавить навык</button></form><div id="skillsList" class="skills-list" aria-live="polite"></div></section><section class="section" id="health"><div id="lifesims-health-mount"><p class="hint">Загрузка журнала здоровья…</p></div></section><section class="section" id="history">
+<section class="section" id="skills"><div class="heading"><h2>↗ Ресурсы</h2></div><p class="hint">Полезные действия повышают связанные навыки, отрицательные привычки снижают их. Одно дело, привычка или мероприятие может развивать несколько навыков. Без практики опыт постепенно снижается на 0,1% в день. Значения навыков можно редактировать вручную.</p><form id="skillCreationForm"><label class="field">Новый навык<input id="newSkillName" type="text" maxlength="70" placeholder="Например, Английский" required></label><button type="submit" class="primary">+ Добавить навык</button></form><div id="skillsList" class="skills-list" aria-live="polite"></div></section><div id="health-parking" hidden><div id="lifesims-health-mount"><p class="hint">Загрузка дневника здоровья…</p></div></div><section class="section" id="history">
 <div class="heading"><h2>Календарь жизни</h2><input type="date" id="historyDate" aria-label="Выбранная дата"></div>
 <div class="history-controls"><button type="button" data-view="day">День</button><button type="button" data-view="week">Неделя</button><button type="button" data-view="month">Месяц</button><button type="button" id="todayPeriod">Сегодня</button><button type="button" id="prevPeriod" aria-label="Предыдущий период">◀</button><button type="button" id="nextPeriod" aria-label="Следующий период">▶</button></div>
 <div id="historyMonthLabel" class="history-month-label" aria-live="polite"></div><div id="historyRange" class="hint"></div><div id="calendar"></div>
@@ -2132,6 +2132,7 @@ $('closeSheet').focus({preventScroll:true});
 }
 function closeSheet(){$('sheetWrap').classList.remove('open');$('sheetWrap').setAttribute('aria-hidden','true');currentSheetAnchor=null}
 function openTab(tab,jump=false){
+  if(tab==='health'){openTab('skills',jump);window.LifeSimsSkillDetail?.open?.('Здоровье');return}
   if(tab==='diary'){openDiary($('historyDate').value||today());return}
   if(tab==='food'){openTab('needs');window.LifeSimsFood?.open?.();return}
   if(tab==='schedule')tab='history';
@@ -2144,7 +2145,6 @@ function openTab(tab,jump=false){
 
   if(tab==='history')renderHistory();
  if(tab==='skills')renderSkills();
-  if(tab==='health')window.LifeSimsHealth?.render?.();
   if(tab==='tasks'||tab==='habits')renderTopActivities();
   if(jump)requestAnimationFrame(()=>document.querySelector('.nav').scrollIntoView({behavior:'smooth',block:'start'}));
 }
@@ -2793,7 +2793,7 @@ function renderSkills(){
   const last=document.createElement('small');last.textContent=skill.last?'Последняя практика: '+skill.last+(skill.days===0?' (сегодня)':' · '+skill.days+' дн. назад'):'Практика ещё не записана';
   card.append(header,bar,axis,last);
   card.classList.add('skill-clickable');card.tabIndex=0;card.setAttribute('role','button');
-  card.setAttribute('aria-label','Подробнее о навыке '+skill.name);
+  card.setAttribute('aria-label','Подробнее о ресурсе '+skill.name);
   card.onclick=()=>window.LifeSimsSkillDetail?.open?.(skill.name);
   card.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();window.LifeSimsSkillDetail?.open?.(skill.name)}};
   if(skill.loss>=0.05){const loss=document.createElement('small');loss.className='skill-loss';loss.textContent='Снижение от отсутствия практики: −'+f.format(skill.loss)+' XP';card.append(loss)}
@@ -4445,7 +4445,7 @@ liveEventDialog.addEventListener('click',e=>{
 
 function renderAll(){
  const jobs=[['Калории за 24 часа',render24CalorieCard],['Сытость',renderHungerMeter],['Календарь',renderSchedule],['Потребности',renderNeeds],['Дела и привычки',renderTopActivities],
-  ['История',renderHistory],['Здоровье',()=>window.LifeSimsHealth?.render?.()],['Навыки',renderSkills],['Недосып',updateDebt],['Персонаж',renderWork],['Сейчас происходит',renderLiveCalendarEvent]];
+  ['История',renderHistory],['Ресурсы',renderSkills],['Недосып',updateDebt],['Персонаж',renderWork],['Сейчас происходит',renderLiveCalendarEvent]];
  if(typeof renderRoomMess==='function')jobs.push(['Комната',renderRoomMess]);
  jobs.push(['3D',()=>window.LifeSims3D?.sync?.(window.LifeSims3DBridge?.snapshot?.())]);
  const failures=[];
@@ -5068,6 +5068,13 @@ window.LifeSimsCalendarBridge={
 
 window.LifeSimsHealthBridge={
  read:()=>JSON.parse(JSON.stringify(state.health||base().health)),
+ // Old medicine entries were saved as free text in state.days[YYYY-MM-DD].meds.
+ // Expose a read-only view; never overwrite, infer doses, or mark old entries as taken.
+ legacyMeds:()=>Object.fromEntries(Object.entries(state.days||{}).filter(([d,row])=>
+   /^\d{4}-\d{2}-\d{2}$/.test(d)&&typeof row?.meds==='string'&&row.meds.trim()
+ ).map(([d,row])=>[d,row.meds])),
+ healthImpacts:(day)=>healthImpactHistory(day),
+ openHealthResource:()=>{openTab('skills',true);window.LifeSimsSkillDetail?.open?.('Здоровье')},
  write(next){
   if(storageBlocked||!storageOK||!next||typeof next!=='object'||Array.isArray(next))return false;
   if(!next.cycleDays||typeof next.cycleDays!=='object'||Array.isArray(next.cycleDays)||
@@ -5076,7 +5083,7 @@ window.LifeSimsHealthBridge={
   if(next.medications.some(x=>!x||typeof x.name!=='string'||typeof x.id!=='string'||
    !Array.isArray(x.times)||x.times.length>8))return false;
   const saved=transact(()=>{state.health=next});
-  if(saved){renderHistory();renderDayAgenda()}
+  if(saved){renderHistory();renderDayAgenda();renderSkills()}
   return saved;
  },
  openTab:(tab,jump)=>openTab(tab,jump)
