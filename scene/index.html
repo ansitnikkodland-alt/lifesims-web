@@ -3222,7 +3222,10 @@ function renderDayAgenda(){
     meta.textContent=(item.google?item.sourceName:'LifeSims')+
       (allDay?'':' · '+timeOf(item.startsAt)+'–'+timeOf(item.endsAt))+
       (item.location?' · 📍 '+item.location:'')+
-      (item.description?' · '+item.description:'');
+      (item.description?' · '+item.description:'')+
+      (item.skill?' · ↗ '+item.skill:'')+
+      (eventLinkName(item.linkedTaskId,'task')?' · ☑ '+eventLinkName(item.linkedTaskId,'task'):'')+
+      (eventLinkName(item.linkedHabitId,'habit')?' · ◇ '+eventLinkName(item.linkedHabitId,'habit'):'');
     main.append(name,meta);row.append(time,color,main);
     if(item.id){
       const edit=document.createElement('button');edit.className='agenda-edit';edit.type='button';edit.textContent='✎';
@@ -3290,7 +3293,8 @@ function renderDayAgenda(){
       const line=document.createElement('div');line.className='agenda-entry';
       const icon=document.createElement('span');icon.className='agenda-time';icon.textContent='✓';
       const info=document.createElement('div');info.className='agenda-event-main';
-      info.textContent=(e.name||'Выполненное действие')+(resourceEffectLabel(e.resourceEffect)?' · '+resourceEffectLabel(e.resourceEffect):'');
+      info.textContent=(e.name||'Выполненное действие')+(e.eventAttendance&&e.skill?' · ↗ '+e.skill+' +'+(Number(e.skillXp)||0)+' XP':'')+
+       (resourceEffectLabel(e.resourceEffect)?' · '+resourceEffectLabel(e.resourceEffect):'');
       const edit=document.createElement('button');edit.type='button';edit.className='agenda-edit';
       edit.textContent='✎';edit.setAttribute('aria-label','Редактировать запись: '+(e.name||'Событие'));
       edit.onclick=()=>openHistoryLogEditor(state.events.indexOf(e));
@@ -3403,7 +3407,8 @@ function renderHistory(){
   }
   for(const ev of state.events.filter(x=>x.date===chosen)){
     const text=ev.kind==='legacy'?'↩ '+ev.name+' · '+ev.legacyXP+' XP (старая версия)':
-      ev.kind==='complete'?'✓ '+ev.name+' · +'+ev.xp+' XP':
+      ev.eventAttendance?'📅 '+ev.name+(ev.skill?' · ↗ '+ev.skill+' +'+(Number(ev.skillXp)||0)+' XP':' · участие отмечено'):
+      ev.kind==='complete'?'✓ '+ev.name+' · '+(ev.xp>0?'+':'')+ev.xp+' XP':
       '↗ '+ev.name;
     addHistoryLine(panel,chosen,text);
     count++;
@@ -3415,7 +3420,7 @@ function renderHistory(){
     const endTime=new Date(event.endsAt).toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
     const when=event.allDay?'весь день':(chosen===startDay?startTime+'–'+endTime:'продолжение до '+endTime);
     const info=(event.google?'📅 Google':'📆 Мероприятие')+' · '+when+' · '+event.title+
-      (event.repeat?' · каждую неделю':'')+' · запланировано';
+      (event.repeat?' · повторяется':'')+(event.skill?' · ↗ '+event.skill:'')+' · запланировано';
     const row=document.createElement('div');
     row.className='history-activity-line';
     const text=document.createElement('div');
@@ -3485,7 +3490,8 @@ function renderSchedule(){
     const desc=document.createElement('small');
     desc.textContent=(e.google?'Google · '+(e.google.sourceName||'Календарь')+' · ':'LifeSims · ')+
       (e.allDay?'Весь день · ':'')+(e.startsAt||'')+' — '+(e.endsAt||'')+
-      (e.repeat&&e.repeat!=='none'?' · '+(eventRepeatLabels[e.repeat]||e.repeat):'');
+      (e.repeat&&e.repeat!=='none'?' · '+(eventRepeatLabels[e.repeat]||e.repeat):'')+
+      (e.skill?' · ↗ '+e.skill:'');
     info.append(title,desc);
     const edit=document.createElement('button');edit.className='secondary';edit.type='button';
     edit.textContent='Открыть / изменить';edit.onclick=()=>openCalendarEventEditor(e.id);
