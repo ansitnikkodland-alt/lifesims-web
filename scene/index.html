@@ -2868,7 +2868,9 @@ function screenTimeLinkNormalize(x){
  return {
   skill:text(x?.skill,70),activityId:text(x?.activityId,180),
   eventId:text(x?.eventId,180),projectId:text(x?.projectId,180),
-  tagId:text(x?.tagId,180),category:text(x?.category,60)
+  tagId:text(x?.tagId,180),category:text(x?.category,60),
+  // Work / Rest follows the Motivate Clock principle. Unassigned is explicit.
+  mode:['work','rest','other'].includes(x?.mode)?x.mode:''
  };
 }
 function screenTimeLinkFor(row){
@@ -2889,6 +2891,7 @@ function screenTimeLinkLabel(row){
  if(project)parts.push('📂 '+project.name);
  const tag=state.taskTags?.find(x=>x.id===link.tagId);
  if(tag)parts.push('#'+tag.name);
+ if(link.mode)parts.unshift(link.mode==='work'?'💼 Работа':link.mode==='rest'?'☕ Отдых':'◌ Другое');
  if(link.category)parts.push(link.category);
  return parts.join(' · ');
 }
@@ -2910,6 +2913,34 @@ window.LifeSimsScreenTimeBridge={
  },
  link:row=>screenTimeLinkFor(row),
  label:row=>screenTimeLinkLabel(row),
+ addProject(name){
+  if(storageBlocked||!storageOK)return {ok:false,error:'Сохранение недоступно'};
+  const title=String(name||'').trim().slice(0,65);
+  if(!title)return {ok:false,error:'Введи название проекта'};
+  let existing=(state.taskProjects||[]).find(x=>x.name.toLocaleLowerCase('ru')===title.toLocaleLowerCase('ru'));
+  if(existing)return {ok:true,id:existing.id,created:false};
+  let id=null;
+  const ok=transact(()=>{
+   state.taskProjects??=[];
+   id=uid();
+   state.taskProjects.push({id,name:title});
+  });
+  if(ok){renderAll();return {ok:true,id,created:true}}
+  return {ok:false,error:'Не удалось сохранить проект'};
+ },
+ summary(from,to){
+  const result=[];
+  const all=(state.screenTime?.records||[]).filter(x=>x.date>=from&&x.date<=to);
+  const dates=[...new Set(all.map(x=>x.date))];
+  for(const date of dates){
+   const day=all.filter(x=>x.date===date), android=day.filter(x=>x.source==='android');
+   for(const row of (android.length?android:day.filter(x=>x.source==='stayfree'))){
+    const meta=screenTimeLinkFor(row);
+    result.push({...row,link:meta.link});
+   }
+  }
+  return result.sort((a,b)=>a.date.localeCompare(b.date)||b.seconds-a.seconds);
+ },
  saveLink(row,link,scope='default'){
   if(storageBlocked||!storageOK)return {ok:false,error:'Сохранение LifeSims недоступно'};
   const key=screenTimeAppKey(row),date=String(row?.date||'');
