@@ -167,6 +167,7 @@
  function resetPhoto(){
   photoRevision++;
   photoFile=null;photoData=null;photoThumbnail=null;photoBusy=false;photoMode=null;
+  document.dispatchEvent(new Event('lifesims:meal-photo-reset'));
   if(photoPreviewURL)URL.revokeObjectURL(photoPreviewURL);
   photoPreviewURL=null;
   $('mealChatPhotoPanel').hidden=true;
@@ -180,6 +181,7 @@
  function photoFeedback(value){$('mealChatPhotoFeedback').textContent=value;status(value)}
  function showPhotoResult(result){
   photoData=result;
+  document.dispatchEvent(new CustomEvent('lifesims:meal-product',{detail:result}));
   if(result.title){
    $('mealChatInput').value=result.title+(result.ingredients?': '+result.ingredients:'');
    renderSuggestions();
@@ -265,12 +267,12 @@
    (match?.ingredients||(existing&&norm(existing.title)===norm(parsed.title)?existing.ingredients:'')||'');
   const canonicalTitle=!hasNewIngredients&&match?.title?match.title:parsed.title;
   if(photoBusy){status('Дождись завершения распознавания фото.');return}
-  const gramsFromPhoto=photoFile?Number($('mealChatPhotoGrams').value):null;
-  if(photoFile&&(!Number.isFinite(gramsFromPhoto)||gramsFromPhoto<1||gramsFromPhoto>10000)){
+  const gramsFromPhoto=(photoFile||photoData?.kind==='package')?Number($('mealChatPhotoGrams').value):null;
+  if((photoFile||photoData?.kind==='package')&&(!Number.isFinite(gramsFromPhoto)||gramsFromPhoto<1||gramsFromPhoto>10000)){
    status('Укажи, сколько граммов ты съела (от 1 до 10 000).');return
   }
   const estimate=legacy.estimate(canonicalTitle+(ingredientText?', '+ingredientText:''),gramsFromPhoto||(!hasNewIngredients&&match?.grams)||existing?.grams||null);
-  const fromPackage=!!photoFile&&photoData?.kind==='package';
+  const fromPackage=photoData?.kind==='package';
   const usePrevious=!photoFile&&!!match&&!hasNewIngredients&&match.kcal!=null;
   const nutrition=fromPackage?Object.fromEntries(['kcal','protein','fat','carbs'].map(k=>[
    k,photoData.per100?.[k]==null?null:Math.round(photoData.per100[k]*gramsFromPhoto/100*10)/10
@@ -279,15 +281,15 @@
   try{
    bridge.upsert({
     id:existing?.id,date:currentDate(),time,title:canonicalTitle,ingredients:ingredientText,
-    grams:photoFile?gramsFromPhoto:(nutrition.grams??estimate.grams),
+    grams:(photoFile||fromPackage)?gramsFromPhoto:(nutrition.grams??estimate.grams),
     kcal:fromPackage?nutrition.kcal:(nutrition.kcal??estimate.kcal),
     protein:fromPackage?nutrition.protein:(nutrition.protein??estimate.protein),
     fat:fromPackage?nutrition.fat:(nutrition.fat??estimate.fat),
     carbs:fromPackage?nutrition.carbs:(nutrition.carbs??estimate.carbs),
     estimate:!fromPackage||photoData.source!=='Open Food Facts',
-    method:photoFile?'photo':'text',remember:true,templateTitle:canonicalTitle,
+    method:photoFile?'photo':fromPackage?'catalog':'text',remember:true,templateTitle:canonicalTitle,
     photoThumb:photoFile?photoThumbnail:(existing?.photoThumb??null),
-    photoSource:photoFile?(photoData?.source||'Фото без распознавания'):(existing?.photoSource||''),
+    photoSource:photoData?.source||(photoFile?'Фото без распознавания':existing?.photoSource||''),
     barcode:photoData?.barcode||existing?.barcode||null
    });
    $('mealChatInput').value='';editingId=null;const savedFromPhoto=!!photoFile;
@@ -337,5 +339,5 @@
  window.LifeSimsFood={...legacy,open:openChat,close:()=>{
   closeChat();if(typeof originalClose==='function')originalClose();
  },openDetailed};
- window.LifeSimsMealChat={open:openChat,close:closeChat};
+ window.LifeSimsMealChat={open:openChat,close:closeChat,setProduct:showPhotoResult};
 })();
