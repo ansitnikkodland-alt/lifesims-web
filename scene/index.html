@@ -2376,15 +2376,16 @@ function skillImpactHistory(day=today()){
  }
  for(const [id,dates] of Object.entries(state.habitMeasurements||{})){
   const a=activities.get(id);
-  if(!isNegativeSkillHabit(a)||!a.skill||!dates||typeof dates!=='object')continue;
+  if(!isNegativeSkillHabit(a)||!dates||typeof dates!=='object')continue;
   for(const [date,amountRaw] of Object.entries(dates)){
    if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||date>day)continue;
    const amount=Number(amountRaw);
    if(!Number.isFinite(amount)||amount<=0)continue;
    const count=entries.filter(e=>e.activityId===id&&e.date===date).length;
    const remaining=Math.max(0,amount-count);
-   if(remaining>0)entries.push({kind:'complete',activityId:id,name:a.name+' · количество',date,
-    at:date+'T23:59:59',skill:a.skill,negative:true,points:skillExperience(a)*remaining,manual:true});
+   const skill=skillForDate(a,date);
+   if(remaining>0&&skill)entries.push({kind:'complete',activityId:id,name:a.name+' · количество',date,
+    at:date+'T23:59:59',skill,negative:true,points:skillExperience(a)*remaining,manual:true});
   }
  }
  return entries.sort((a,b)=>a.date.localeCompare(b.date)||String(a.at||'').localeCompare(String(b.at||'')));
@@ -2430,11 +2431,83 @@ function addCustomSkill(event){
  if(!transact(()=>{state.customSkills??=[];state.customSkills.push(name)}))return toast('Не удалось сохранить навык');
  input.value='';renderSkills();toast('Навык добавлен. Его можно выбрать в мероприятиях, делах и привычках.');
 }
+// Resolve the skill effective on a historical date for derived habit measurements.
+// Recorded completions keep their original event.skill snapshot.
+function skillForDate(activity,date){
+ const timeline=Array.isArray(activity?.skillLinkTimeline)?activity.skillLinkTimeline:null;
+ if(!timeline||!timeline.length)return activity?.skill||null;
+ let result=timeline[0]?.skill||null;
+ for(const item of timeline){if(item?.from<=date)result=item.skill||null}
+ return result;
+}
+function setActivitySkillLink(activity,skill,day){
+ if(!Array.isArray(activity.skillLinkTimeline)||!activity.skillLinkTimeline.length)
+  activity.skillLinkTimeline=[{from:'0000-00-00',skill:activity.skill||null}];
+ const timeline=activity.skillLinkTimeline,previous=timeline[timeline.length-1];
+ if(previous.from===day)previous.skill=skill;
+ else timeline.push({from:day,skill});
+ activity.skill=skill;
+}
+function saveExistingSkillLinks(name,request){
+ if(storageBlocked||!storageOK)throw Error('Сохранение недоступно: сначала восстанови хранилище LifeSims.');
+ if(typeof name!=='string'||!skillScores().some(item=>item.name===name))throw Error('Навык не найден.');
+ if(!request||!Array.isArray(request.activityIds)||!Array.isArray(request.eventIds)||
+    !request.expectedActivities||!request.expectedEvents)throw Error('Неправильный список связей.');
+ const activityIds=new Set(request.activityIds),eventIds=new Set(request.eventIds);
+ if(activityIds.size!==request.activityIds.length||eventIds.size!==request.eventIds.length)throw Error('Повторяющиеся идентификаторы.');
+ const activities=(state.activities||[]).filter(item=>item&&item.id&&!item.legacyDone);
+ const calendarEvents=(state.schedule||[]).filter(item=>item&&item.id);
+ const activitiesById=new Map(activities.map(item=>[item.id,item]));
+ const eventsById=new Map(calendarEvents.map(item=>[item.id,item]));
+ if([...activityIds].some(id=>!activitiesById.has(id))||[...eventIds].some(id=>!eventsById.has(id)))
+  throw Error('Список дел или мероприятий изменился. Открой выбор заново.');
+ for(const item of activities){
+  if(!Object.prototype.hasOwnProperty.call(request.expectedActivities,item.id)||
+     (request.expectedActivities[item.id]||null)!==(item.skill||null))
+   throw Error('Привязки дел изменились. Открой выбор заново.');
+ }
+ for(const item of calendarEvents){
+  if(!Object.prototype.hasOwnProperty.call(request.expectedEvents,item.id)||
+     (request.expectedEvents[item.id]||null)!==(item.skill||null))
+   throw Error('Привязки мероприятий изменились. Открой выбор заново.');
+ }
+ const changedActivities=activities.filter(item=>((activityIds.has(item.id)?name:
+   item.skill===name?null:item.skill||null)!==(item.skill||null)));
+ const changedEvents=calendarEvents.filter(item=>((eventIds.has(item.id)?name:
+   item.skill===name?null:item.skill||null)!==(item.skill||null)));
+ if(!changedActivities.length&&!changedEvents.length)return {changed:0};
+ const beforeSkills=new Map(changedActivities.map(a=>[a.id,a.skill||null]));
+ const changedIds=new Set(beforeSkills.keys()),day=today();
+ const ok=transact(()=>{
+  // Freeze past completions before modifying the current skill assignment.
+  // Do not change historical XP or participation records already linked explicitly.
+  for(const record of state.events||[]){
+   if(!changedIds.has(record.activityId)||!['complete','espresso'].includes(record.kind))continue;
+   if(!Object.prototype.hasOwnProperty.call(record,'skill'))
+    record.skill=beforeSkills.get(record.activityId)||null;
+  }
+  for(const item of changedActivities){
+   const next=activityIds.has(item.id)?name:null;
+   setActivitySkillLink(item,next,day);
+  }
+  for(const item of changedEvents){
+   const next=eventIds.has(item.id)?name:null;
+   item.skill=next;
+   // Google-imported calendar events may have no XP setting at all.
+   // Preserve explicit 0; newly linked events default to +10 only on confirmed attendance.
+   if(next&&item.skillXp==null)item.skillXp=10;
+  }
+ });
+ if(!ok)throw Error('Не удалось сохранить связи. Состояние восстановлено.');
+ renderAll();
+ return {changed:changedActivities.length+changedEvents.length,
+  activities:changedActivities.length,events:changedEvents.length};
+}
 function refreshSkillSuggestions(){
  const list=$('skillSuggestions');if(!list)return;list.replaceChildren();
  for(const v of skillScores()){const option=document.createElement('option');option.value=v.name;list.append(option)}
 }
-window.LifeSimsSkillBridge={today, scores:()=>skillScores(),history:()=>skillImpactHistory(),read:()=>({activities:state.activities||[],events:state.events||[],schedule:state.schedule||[],legacySkills:state.legacySkills||{},defaults:defs}),edit:id=>openActivityEditor(id),editEvent:id=>{openTab('history',true);openCalendarEventEditor(id)},create:kind=>openNewCalendarTask(kind)};
+window.LifeSimsSkillBridge={today, scores:()=>skillScores(),history:()=>skillImpactHistory(),read:()=>({activities:state.activities||[],events:state.events||[],schedule:state.schedule||[],legacySkills:state.legacySkills||{},defaults:defs}),linkExisting:saveExistingSkillLinks,edit:id=>openActivityEditor(id),editEvent:id=>{openTab('history',true);openCalendarEventEditor(id)},create:kind=>openNewCalendarTask(kind)};
 function renderSkills(){
  const list=$('skillsList');if(!list)return;list.replaceChildren();
  const f=new Intl.NumberFormat('ru-RU',{maximumFractionDigits:1});
@@ -4680,7 +4753,7 @@ window.LifeSimsFoodBridge={
 </script>
 <script src="./task-premium.js?v=67"></script>
 <script src="./habit-grid.js?v=69"></script>
-<script src="./skill-detail.js?v=74"></script>
+<script src="./skill-detail.js?v=75"></script>
 <script src="./focus-timer.js?v=65"></script>
 <script>
 /* LifeSims Google Calendar sync. OAuth tokens remain in memory; no background writes. */
