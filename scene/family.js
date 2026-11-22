@@ -270,6 +270,7 @@ function updateHeader(){
 async function refreshRoom(){
  const scene=document.getElementById('scene');if(!scene)return;
  if(roomOverlay){roomOverlay.remove();roomOverlay=null}
+ scene.classList.remove('family-room-active');
  const profile=person();if(!profile.roomActive)return;
  let photo;
  try{photo=await roomData(profile.id)}catch(_){return}
@@ -301,7 +302,7 @@ async function refreshRoom(){
   target.markers??={};target.markers[placing]={x:Math.round(x*10)/10,y:Math.round(y*10)/10};
   if(save(next)){placing=null;refreshRoom()}
  });
- scene.append(root);roomOverlay=root;
+ scene.append(root);roomOverlay=root;scene.classList.add('family-room-active');
 }
 function start(){
  const stat=document.querySelector('.topbar .stats');
