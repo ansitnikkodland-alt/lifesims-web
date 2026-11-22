@@ -5118,12 +5118,13 @@ window.LifeSimsMoodBridge={
 // Offer, never auto-create, the existing game's illness state.
 // The combinations are conservative, explicit and not a medical diagnosis.
 // References for symptom patterns: CDC flu symptoms and NIDDK gastroenteritis.
-function assessHealthIllnessSymptoms(raw){
+function assessHealthIllnessSymptoms(raw,moodTags=[]){
  const names=new Set(Array.isArray(raw)?raw.filter(x=>typeof x==='string'):[]);
  const has=(n)=>names.has(n);
  const reasons=[];
  if(has('Лихорадка'))reasons.push('отмечена лихорадка');
  if(has('Грипп'))reasons.push('отмечено гриппоподобное состояние');
+ if(Array.isArray(moodTags)&&moodTags.includes('Больная'))reasons.push('выбрано настроение «Больная»');
  const systemic=['Тело ломит','Боль в мышцах','Недомогание','Усталость','Головная боль'];
  if(has('Озноб')&&systemic.some(has))reasons.push('озноб вместе с общим недомоганием или болью');
  else if(has('Недомогание')&&(has('Тело ломит')||has('Боль в мышцах')))
@@ -5146,8 +5147,8 @@ window.LifeSimsHealthBridge={
  ).map(([d,row])=>[d,row.meds])),
  healthImpacts:(day)=>healthImpactHistory(day),
  legacyPhysicalTags:(d)=>Array.isArray(state.days?.[d]?.physicalTags)?[...state.days[d].physicalTags]:[],
- illnessSuggestion(date,symptoms){
-  const assessment=assessHealthIllnessSymptoms(symptoms);
+ illnessSuggestion(date,symptoms,moodTags=[]){
+  const assessment=assessHealthIllnessSymptoms(symptoms,moodTags);
   const active=isIllnessActive(date),declined=state.room?.healthIllnessDeclinedOn===date;
   return {...assessment,active,declined,canMark:date===today()&&!active&&!declined};
  },
