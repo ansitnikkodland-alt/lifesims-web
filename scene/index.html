@@ -2446,7 +2446,8 @@ function openSingleMetric(field,date=today()){
    const heading=document.createElement('h3');
    heading.textContent='🩺 Здоровье · симптомы, лекарства и цикл';
    section.append(heading,healthMount);root.append(section);
-   window.LifeSimsHealth?.render?.();
+   if(window.LifeSimsHealth?.setDate)window.LifeSimsHealth.setDate(date);
+   else window.LifeSimsHealth?.render?.();
   }else note('Дневник здоровья недоступен. Обнови LifeSims.');
   if(date===today()){
    addButton(isIllnessActive(date)?'✓ Завершить болезнь':'🩺 Отметить болезнь вручную',()=>{
@@ -2988,13 +2989,13 @@ function metricSnapshot(field,ref=today()){
 function physicalSnapshot(ref=today()){
  const observed=latestObserved(r=>Number.isFinite(r?.condition)||Number.isFinite(r?.ouraScores?.readiness),ref);
  const effected=latestResourceEffectDate('condition',ref);
+ const symptomDates=Object.keys(state.health?.cycleDays||{}).filter(day=>
+  day<=ref&&Array.isArray(state.health.cycleDays[day]?.symptoms)&&state.health.cycleDays[day].symptoms.length);
+ const symptomDate=symptomDates.sort().pop()||null;
  const bowel=poopHealthEffect(ref),ill=isIllnessActive(ref),harm=negativeHabitHealthEffect(ref);
- const date=[observed,effected,...(bowel.tracked||ill||harm.tracked?[ref]:[])].filter(Boolean).sort().pop()||null;
- const base=observed?unadjustedPhysicalCondition(currentRecord(observed),observed):null;
- const value=actionAdjustedNeed('condition',ref,base);
- if(!bowel.tracked&&!ill&&!harm.tracked)return {value,date};
- return {value:Math.max(0,Math.min(100,Math.round((Number.isFinite(value)?value:50)+bowel.delta+
-  (ill?POOP_ILLNESS_POINTS:0)-harm.points))),date};
+ const date=[observed,effected,symptomDate,...(bowel.tracked||ill||harm.tracked?[ref]:[])].filter(Boolean).sort().pop()||null;
+ const source=observed?currentRecord(observed):currentRecord(ref);
+ return {value:physicalCondition(source,ref),date};
 }
 function sleepSnapshot(ref=today()){
  const observed=latestObserved(r=>Number.isFinite(r?.sleepHours),ref);
@@ -3284,12 +3285,21 @@ function negativeHabitHealthEffect(date=today()){
  }
  return {points:Math.min(30,sum),rawPoints:sum,items,tracked:sum>0};
 }
+function healthPhysicalGameEffect(date){
+ // Previously recorded symptoms and explicit well-being notes are game signals.
+ // Medication adherence is not treated as proven clinical improvement.
+ const relevant=healthImpactHistory(date).filter(e=>e.date===date&&
+  (String(e.name).startsWith('Симптом:')||String(e.name).startsWith('Записанная боль')||
+   String(e.name).startsWith('Заметка:')));
+ return Math.max(-16,Math.min(6,relevant.reduce((n,e)=>n+Number(e.points||0)*2,0)));
+}
 function physicalCondition(r,d=today()){
  const base=actionAdjustedNeed('condition',d,unadjustedPhysicalCondition(r,d));
  const bowel=poopHealthEffect(d),ill=isIllnessActive(d),harm=negativeHabitHealthEffect(d);
- if(!bowel.tracked&&!ill&&!harm.tracked)return base;
+ const symptoms=healthPhysicalGameEffect(d);
+ if(!bowel.tracked&&!ill&&!harm.tracked&&!symptoms)return base;
  return Math.max(0,Math.min(100,Math.round((Number.isFinite(base)?base:50)+bowel.delta+
-  (ill?POOP_ILLNESS_POINTS:0)-harm.points)));
+  (ill?POOP_ILLNESS_POINTS:0)-harm.points+symptoms)));
 }
 function showerReference(){
  // A date supplied by the user can be used without fabricating a time of day.
