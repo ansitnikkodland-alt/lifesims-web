@@ -5,6 +5,8 @@ on:
       - 'scene/meal-lookup.js'
       - 'scene/meal-photo.js'
       - 'scene/meal-chat.js'
+      - 'scene/meal-live-camera.js'
+      - 'scene/meal-live-camera.css'
       - 'scene/index.html'
       - '.github/workflows/lifesims-food-lookup-smoke.yml'
   workflow_dispatch:
@@ -22,6 +24,7 @@ jobs:
           node --check scene/meal-photo.js
           node --check scene/meal-chat.js
           node --check scene/meal-lookup.js
+          node --check scene/meal-live-camera.js
       - name: Install browser test tools
         run: npm install --no-save playwright-core@1.56.1
       - name: Serve LifeSims
@@ -52,17 +55,15 @@ jobs:
            if(await page.locator('#mealChatPhotoActions').isVisible())throw Error('Legacy photo buttons still visible');
            if(await page.locator('.meal-lookup-shortcuts').isVisible())throw Error('Old 3-way photo actions still visible');
            if(await page.locator('#mealSmartSources').isVisible())
-            throw Error('Source picker should start closed');
-           if(await page.locator('#mealSmartCameraInput').getAttribute('capture')!=='environment')
-            throw Error('Camera input needs capture=environment');
+            throw Error('Old source picker should remain hidden');
            await page.locator('#mealSmartCapture').click();
-           if(!await page.locator('#mealSmartTakePhoto').isVisible()||
-              !await page.locator('#mealSmartChoosePhoto').isVisible())
-            throw Error('One smart button did not reveal camera and gallery');
-           await page.locator('#mealSmartCapture').click();
-           if(await page.locator('#mealSmartSources').isVisible())
-            throw Error('Camera/gallery picker would not close');
-           console.log('SINGLE SMART BUTTON + CAMERA/GALLERY OPTIONS: PASS');
+           await page.locator('#mealLiveScan').waitFor({state:'visible'});
+           if(!await page.locator('#mealLiveVideo').isVisible())
+            throw Error('Direct camera video preview missing');
+           await page.locator('#mealLiveClose').click();
+           if(await page.locator('#mealLiveScan').isVisible())
+            throw Error('Direct camera does not close');
+           console.log('SINGLE SMART BUTTON -> LIVE CAMERA: PASS');
            // Manual product lookup still works under the hood for future text search.
            await page.evaluate(()=>document.getElementById('mealLookupSearchOpen').click());
            await page.locator('#mealLookupName').fill('Творог');
@@ -80,6 +81,8 @@ jobs:
             return window.LifeSimsMealPhoto.extractNutrition(
              'Творог домашний\nСостав: молоко, закваска\nПищевая ценность на 100 г\nБелки: 12,5 г\nЖиры: 7 г\nУглеводы: 4,2 г\nЭнергетическая ценность: 133 ккал');
            });
+           const net=await page.evaluate(()=>window.LifeSimsMealPhoto.parseLabelSize('Масса нетто: 180 г\nПищевая ценность на 100 г'));
+           if(net?.value!==180||net.unit!=='г')throw Error('Net weight on label not recognized');
            if(!parsed.isLabel||!parsed.per100Confirmed||parsed.per100?.kcal!==133||
             parsed.per100.protein!==12.5||parsed.per100.fat!==7||parsed.per100.carbs!==4.2||
             !parsed.ingredients.includes('молоко'))
@@ -96,12 +99,12 @@ jobs:
              async detect(){return []}
             };
             window.Tesseract={recognize:async()=>({data:{text:
-             'Батончик тестовый\nСостав: овес, орехи, мед\nПищевая ценность на 100 г\nБелки 10 г\nЖиры 8 г\nУглеводы 40 г\nКалорийность 272 ккал'}})};
+             'Батончик тестовый\nМасса нетто 45 г\nСостав: овес, орехи, мед\nПищевая ценность на 100 г\nБелки 10 г\nЖиры 8 г\nУглеводы 40 г\nКалорийность 272 ккал'}})};
            });
            await page.locator('#mealSmartCapture').click();
            const [labelPicker]=await Promise.all([
             page.waitForEvent('filechooser'),
-            page.locator('#mealSmartChoosePhoto').click()
+            page.locator('#mealLiveGallery').click()
            ]);
            await labelPicker.setFiles(image);
            await page.locator('#mealLookupNutrition').waitFor({state:'visible',timeout:15000});
@@ -127,12 +130,14 @@ jobs:
            await page.locator('#mealSmartCapture').click();
            const [barcodePicker]=await Promise.all([
             page.waitForEvent('filechooser'),
-            page.locator('#mealSmartChoosePhoto').click()
+            page.locator('#mealLiveGallery').click()
            ]);
            await barcodePicker.setFiles(image);
            await page.locator('#mealLookupNutrition').waitFor({state:'visible',timeout:15000});
            if(await page.locator('#mealLookupKcal').inputValue()!=='120')
             throw Error('Smart barcode lookup failed');
+           if(await page.locator('#mealLookupGrams').inputValue()!=='200')
+            throw Error('Package net mass from catalog was not prefilled');
            await page.locator('#mealLookupGrams').fill('100');
            await page.locator('#mealChatSend').click();
            const barcode=await page.evaluate(()=>window.LifeSimsFoodBridge.list().find(x=>x.barcode==='4601234567890'));
@@ -146,10 +151,8 @@ jobs:
            });
            await page.locator('#mealSmartCapture').click();
            const [unknownPicker]=await Promise.all([
-            page.waitForEvent('filechooser'),page.locator('#mealSmartTakePhoto').click()
+            page.waitForEvent('filechooser'),page.locator('#mealLiveGallery').click()
            ]);
-           if(await page.locator('#mealSmartCameraInput').getAttribute('capture')!=='environment')
-            throw Error('Camera option launched a gallery-only input');
            await unknownPicker.setFiles(image);
            await page.locator('#mealLookupNutrition').waitFor({state:'visible',timeout:15000});
            if(await page.locator('#mealLookupKcal').inputValue()!=='272')
@@ -167,7 +170,7 @@ jobs:
            });
            await page.locator('#mealSmartCapture').click();
            const [mealPicker]=await Promise.all([
-            page.waitForEvent('filechooser'),page.locator('#mealSmartTakePhoto').click()
+            page.waitForEvent('filechooser'),page.locator('#mealLiveGallery').click()
            ]);
            await mealPicker.setFiles(image);
            await page.locator('#mealChatPhotoPanel').waitFor({state:'visible'});
