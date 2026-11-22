@@ -942,7 +942,7 @@ body{background:#091428}
 </section>
 <section class="section activities-page" id="tasks"><div class="heading"><h2>☑ Дела</h2><input id="topTasksDate" type="date" aria-label="Дата дел"></div><div class="card"><div id="topTasksList" class="activity-list"></div><button class="secondary activity-add" type="button" id="topTasksAdd">+ Добавить дело</button></div></section>
 <section class="section activities-page" id="habits"><div class="heading"><h2>◇ Привычки</h2><input id="topHabitsDate" type="date" aria-label="Дата привычек"></div><div class="card"><div id="topHabitsList" class="activity-list"></div><div class="row"><button class="secondary activity-add" type="button" id="topHabitsAdd">+ Добавить привычку</button><button class="secondary" type="button" id="habitBackdateOpen">📅 Записать задним числом</button></div></div></section>
-<section class="section" id="skills"><div class="heading"><h2>↗ Ресурсы</h2></div><p class="hint">Полезные действия повышают связанные навыки, отрицательные привычки снижают их. Одно дело, привычка или мероприятие может развивать несколько навыков. Без практики опыт постепенно снижается на 0,1% в день. Значения навыков можно редактировать вручную.</p><form id="skillCreationForm"><label class="field">Новый навык<input id="newSkillName" type="text" maxlength="70" placeholder="Например, Английский" required></label><button type="submit" class="primary">+ Добавить навык</button></form><div id="skillsList" class="skills-list" aria-live="polite"></div></section><div id="health-parking" hidden><div id="lifesims-health-mount"><p class="hint">Загрузка дневника здоровья…</p></div></div><section class="section" id="history">
+<section class="section" id="skills"><div class="heading"><h2>↗ Ресурсы</h2></div><p class="hint">Полезные действия повышают связанные ресурсы, отрицательные привычки снижают их. Одно дело, привычка или мероприятие может развивать несколько ресурсов. Без практики опыт постепенно снижается на 0,1% в день. Значения ресурсов можно редактировать вручную.</p><form id="skillCreationForm"><label class="field">Новый ресурс<input id="newSkillName" type="text" maxlength="70" placeholder="Например, Английский" required></label><button type="submit" class="primary">+ Добавить ресурс</button></form><div id="skillsList" class="skills-list" aria-live="polite"></div></section><div id="health-parking" hidden><div id="lifesims-health-mount"><p class="hint">Загрузка дневника здоровья…</p></div></div><section class="section" id="history">
 <div class="heading"><h2>Календарь жизни</h2><input type="date" id="historyDate" aria-label="Выбранная дата"></div>
 <div class="history-controls"><button type="button" data-view="day">День</button><button type="button" data-view="week">Неделя</button><button type="button" data-view="month">Месяц</button><button type="button" id="todayPeriod">Сегодня</button><button type="button" id="prevPeriod" aria-label="Предыдущий период">◀</button><button type="button" id="nextPeriod" aria-label="Следующий период">▶</button></div>
 <div id="historyMonthLabel" class="history-month-label" aria-live="polite"></div><div id="historyRange" class="hint"></div><div id="calendar"></div>
@@ -962,10 +962,10 @@ body{background:#091428}
 <fieldset id="eventRecurrenceOptions" class="event-repeat-options" hidden><legend>Повторения</legend><label class="field">Каждые <input id="eventRepeatInterval" type="number" min="1" max="365" value="1" step="1"> <span id="eventRepeatUnit">недель</span></label><div class="field"><strong>Окончание</strong><div class="row"><label><input type="radio" name="eventRecurrenceEnd" value="never" checked> Бесконечно</label><label><input type="radio" name="eventRecurrenceEnd" value="count"> После N раз</label><label><input type="radio" name="eventRecurrenceEnd" value="until"> До даты</label></div></div><label id="eventRepeatCountLabel" class="field" hidden>Количество повторов<input id="eventRepeatCount" type="number" min="1" max="3650" value="10"></label><label id="eventRepeatUntilLabel" class="field" hidden>Последняя дата<input id="eventRepeatUntil" type="date"></label></fieldset><fieldset id="eventWeekdays" hidden><legend>Дни недели</legend><div class="row"><label><input type="checkbox" name="eventWeekday" value="1"> Пн</label><label><input type="checkbox" name="eventWeekday" value="2"> Вт</label><label><input type="checkbox" name="eventWeekday" value="3"> Ср</label><label><input type="checkbox" name="eventWeekday" value="4"> Чт</label><label><input type="checkbox" name="eventWeekday" value="5"> Пт</label><label><input type="checkbox" name="eventWeekday" value="6"> Сб</label><label><input type="checkbox" name="eventWeekday" value="7"> Вс</label></div></fieldset>
 <label class="field">Место <input id="eventLocation" maxlength="300" placeholder="Адрес или место встречи"></label>
 <label class="field">Описание <textarea id="eventDescription" rows="3" placeholder="Дополнительные сведения"></textarea></label>
-<label class="field">Связанные навыки <input id="eventSkill" list="skillSuggestions" maxlength="70" autocomplete="off" placeholder="Выбрать или создать навык"><small>Каждый выбранный навык автоматически получает +2 XP по окончании мероприятия. При подтверждённом участии указанный ниже опыт начисляется каждому.</small></label>
+<label class="field">Связанные ресурсы <input id="eventSkill" list="skillSuggestions" maxlength="70" autocomplete="off" placeholder="Выбрать или создать ресурс"><small>Каждый выбранный ресурс автоматически получает +2 XP по окончании мероприятия. При подтверждённом участии указанный ниже опыт начисляется каждому.</small></label>
 <div class="cols"><label class="field">Связанное дело <select id="eventTaskLink"><option value="">Без связи</option></select></label>
 <label class="field">Связанная привычка <select id="eventHabitLink"><option value="">Без связи</option></select></label></div>
-<label class="field">Опыт навыка за подтверждённое участие <select id="eventSkillXP"><option value="0">0 XP</option><option value="5">+5 XP</option><option value="10" selected>+10 XP</option><option value="15">+15 XP</option><option value="20">+20 XP</option><option value="40">+40 XP</option></select></label>
+<label class="field">Опыт ресурса за подтверждённое участие <select id="eventSkillXP"><option value="0">0 XP</option><option value="5">+5 XP</option><option value="10" selected>+10 XP</option><option value="15">+15 XP</option><option value="20">+20 XP</option><option value="40">+40 XP</option></select></label>
 <label class="field">Цвет в LifeSims <input id="eventColor" type="color" value="#4285f4"></label>
 <p id="eventEditSource" class="hint" role="status">Местные мероприятия сохраняются на этом устройстве. Google синхронизируется отдельно.</p>
 <div class="row"><button class="primary" type="submit">Сохранить мероприятие</button><button class="secondary" type="button" id="eventCancel">Отмена</button><button class="secondary" type="button" id="eventDuplicate" hidden>Дублировать</button></div>
@@ -981,7 +981,7 @@ body{background:#091428}
 <label class="field">Повтор <select id="taskRepeat"><option value="once">Однократно</option><option value="daily">Ежедневно</option><option value="weekly">По дням недели</option></select></label></div>
 <fieldset id="taskWeekdays" hidden><legend>Конкретные дни недели</legend><div class="row"><label><input type="checkbox" name="taskWeekday" value="1"> Пн</label><label><input type="checkbox" name="taskWeekday" value="2"> Вт</label><label><input type="checkbox" name="taskWeekday" value="3"> Ср</label><label><input type="checkbox" name="taskWeekday" value="4"> Чт</label><label><input type="checkbox" name="taskWeekday" value="5"> Пт</label><label><input type="checkbox" name="taskWeekday" value="6"> Сб</label><label><input type="checkbox" name="taskWeekday" value="7"> Вс</label></div></fieldset>
 <div class="cols"><label class="field">Начало <input id="taskStartDate" type="date" required></label><label class="field">Влияние на ресурс <select id="taskXP"><option value="-40">−40 XP · сильное снижение</option><option value="-20">−20 XP</option><option value="-15">−15 XP</option><option value="-10">−10 XP</option><option value="-5">−5 XP</option><option value="0">0 XP · без влияния</option><option value="5">+5 XP</option><option value="10" selected>+10 XP</option><option value="15">+15 XP</option><option value="20">+20 XP</option><option value="40">+40 XP</option></select></label></div>
-<label class="field">Связанные навыки <input id="taskSkill" list="skillSuggestions" maxlength="70" autocomplete="off" placeholder="Не повышает навык"><datalist id="skillSuggestions"></datalist><small>Можно добавлять несколько навыков кнопкой «Добавить навык» или Enter.</small></label><label class="field">Связать с предметом в комнате <select id="taskObject"><option value="">Без связи</option><option value="bed">🛏 Кровать</option><option value="books">📚 Книжный шкаф</option><option value="tableBook">📖 Книга на журнальном столике</option><option value="phone">📱 Телефон</option><option value="coffee">☕ Чашка кофе</option><option value="clutter">🧹 Вещи для уборки</option><option value="desk">💻 Рабочий стол</option><option value="sink">🚰 Раковина</option><option value="shower">🚿 Душевая кабина</option><option value="fridge">🧊 Холодильник</option><option value="toilet">🚽 Туалет</option><option value="catLitter">🐈 Туалет котиков</option><option value="sofa">🛋 Диван</option><option value="sim">👤 Персонаж</option><option value="window">🪟 Окно</option></select></label>
+<label class="field">Связанные ресурсы <input id="taskSkill" list="skillSuggestions" maxlength="70" autocomplete="off" placeholder="Не повышает ресурс"><datalist id="skillSuggestions"></datalist><small>Можно добавлять несколько ресурсов кнопкой «Добавить ресурс» или Enter.</small></label><label class="field">Связать с предметом в комнате <select id="taskObject"><option value="">Без связи</option><option value="bed">🛏 Кровать</option><option value="books">📚 Книжный шкаф</option><option value="tableBook">📖 Книга на журнальном столике</option><option value="phone">📱 Телефон</option><option value="coffee">☕ Чашка кофе</option><option value="clutter">🧹 Вещи для уборки</option><option value="desk">💻 Рабочий стол</option><option value="sink">🚰 Раковина</option><option value="shower">🚿 Душевая кабина</option><option value="fridge">🧊 Холодильник</option><option value="toilet">🚽 Туалет</option><option value="catLitter">🐈 Туалет котиков</option><option value="sofa">🛋 Диван</option><option value="sim">👤 Персонаж</option><option value="window">🪟 Окно</option></select></label>
 <div class="row"><button class="primary" type="submit" id="taskSave">Сохранить дело/привычку</button><button class="secondary" type="button" id="taskCancel">Отмена</button><button class="secondary" type="button" id="taskDelete" hidden>Удалить</button></div>
 <p class="hint">Изменение или удаление дела не удаляет записи о его прежнем выполнении и уже полученный XP.</p>
 </form></details>
@@ -1129,7 +1129,7 @@ function createSkillPicker(id){
  if(!input||!label)return null;
  const tags=document.createElement('div'),button=document.createElement('button');
  tags.className='multi-skill-tags';tags.setAttribute('aria-live','polite');
- button.type='button';button.className='secondary multi-skill-add';button.textContent='＋ Добавить навык';
+ button.type='button';button.className='secondary multi-skill-add';button.textContent='＋ Добавить ресурс';
  let chosen=[];
  function paint(){
   tags.replaceChildren();
@@ -1137,7 +1137,7 @@ function createSkillPicker(id){
    const chip=document.createElement('span');chip.className='multi-skill-tag';
    const txt=document.createElement('span');txt.textContent=name;
    const remove=document.createElement('button');remove.className='multi-skill-remove';remove.type='button';
-   remove.textContent='×';remove.setAttribute('aria-label','Убрать навык '+name);
+   remove.textContent='×';remove.setAttribute('aria-label','Убрать ресурс '+name);
    remove.onclick=()=>{chosen=chosen.filter(x=>x!==name);paint()};
    chip.append(txt,remove);tags.append(chip);
   }
@@ -2682,7 +2682,7 @@ function skillScores(day=today()){
 function setManualSkillScore(name,rawExperience){
  if(storageBlocked||!storageOK)throw Error('Сохранение недоступно.');
  const current=skillScores().find(x=>x.name===name);
- if(!current)throw Error('Навык не найден.');
+ if(!current)throw Error('Ресурс не найден.');
  if(rawExperience==null||String(rawExperience).trim()==='')throw Error('Укажи общий опыт, XP.');
  const xp=Number(rawExperience);
  if(!Number.isFinite(xp)||xp<0||xp>1000000||
@@ -2693,7 +2693,7 @@ function setManualSkillScore(name,rawExperience){
  const date=today(),at=new Date().toISOString();
  const manualOrder=1+Math.max(0,...(state.events||[]).filter(e=>e?.kind==='skill_manual'&&e.skill===name)
   .map(e=>Number(e.manualOrder)||0));
- const entry={id:uid(),kind:'skill_manual',name:'Ручная настройка навыка',
+ const entry={id:uid(),kind:'skill_manual',name:'Ручная настройка ресурса',
   skill:name,date,at,targetScore:target,previousScore:Math.round(current.score*10)/10,manualOrder};
  if(!transact(()=>{state.events??=[];state.events.push(entry)}))
   throw Error('Сохранение не удалось. Прежние записи сохранены.');
@@ -2712,10 +2712,10 @@ function undoManualSkillScore(name){
 function addCustomSkill(event){
  event.preventDefault();
  const input=$('newSkillName'),name=input.value.trim().slice(0,70);
- if(!name)return toast('Укажи название навыка');
- if(skillScores().some(x=>x.name.toLocaleLowerCase('ru')===name.toLocaleLowerCase('ru')))return toast('Такой навык уже существует');
- if(!transact(()=>{state.customSkills??=[];state.customSkills.push(name)}))return toast('Не удалось сохранить навык');
- input.value='';renderSkills();toast('Навык добавлен. Его можно выбрать в мероприятиях, делах и привычках.');
+ if(!name)return toast('Укажи название ресурса');
+ if(skillScores().some(x=>x.name.toLocaleLowerCase('ru')===name.toLocaleLowerCase('ru')))return toast('Такой ресурс уже существует');
+ if(!transact(()=>{state.customSkills??=[];state.customSkills.push(name)}))return toast('Не удалось сохранить ресурс');
+ input.value='';renderSkills();toast('Ресурс добавлен. Его можно выбрать в мероприятиях, делах и привычках.');
 }
 // Resolve the skill effective on a historical date for derived habit measurements.
 // Recorded completions keep their original event.skill snapshot.
@@ -2752,7 +2752,7 @@ function setActivitySkillLink(activity,values,date){
 }
 function saveExistingSkillLinks(name,request){
  if(storageBlocked||!storageOK)throw Error('Сохранение недоступно.');
- if(!skillScores().some(x=>x.name===name))throw Error('Навык не найден.');
+ if(!skillScores().some(x=>x.name===name))throw Error('Ресурс не найден.');
  if(!request||!Array.isArray(request.activityIds)||!Array.isArray(request.eventIds)||
   !request.expectedActivities||!request.expectedEvents)throw Error('Некорректные связи.');
  const chosenActivities=new Set(request.activityIds),chosenEvents=new Set(request.eventIds);
@@ -2807,7 +2807,7 @@ function skillXpBar(score,scale,detail=false){
  const track=document.createElement('div');
  track.className=detail?'skill-detail-progress skill-xp-track':'skill-track skill-xp-track';
  track.setAttribute('role','progressbar');
- track.setAttribute('aria-label','Общий опыт навыка, непрерывная шкала XP');
+ track.setAttribute('aria-label','Общий опыт ресурса, непрерывная шкала XP');
  track.setAttribute('aria-valuemin','0');
  track.setAttribute('aria-valuemax',String(scale));
  track.setAttribute('aria-valuenow',String(value));
@@ -4250,7 +4250,7 @@ function saveEvent(e){
  const selectedSkills=eventSkillsPicker?.get()||[],skill=selectedSkills[0]||null;
  const linkedTaskId=$('eventTaskLink').value||null,linkedHabitId=$('eventHabitLink').value||null;
  const skillXp=Number($('eventSkillXP').value);
- if(!Number.isFinite(skillXp)||skillXp<0||skillXp>40)return toast('Проверь количество опыта навыка');
+ if(!Number.isFinite(skillXp)||skillXp<0||skillXp>40)return toast('Проверь количество опыта ресурса');
  let next={...(old||{}),id,title,startsAt,endsAt,repeat,allDay,weekdays:repeat==='weekly'?weekdays:[],repeatInterval:interval,repeatEndMode:endMode,repeatCount,repeatUntil,
   location:$('eventLocation').value.trim(),description:$('eventDescription').value.trim(),color:$('eventColor').value,
   skill,skills:selectedSkills,linkedTaskId,linkedHabitId,skillXp};
@@ -4443,7 +4443,7 @@ function showLiveCalendarEventDialog(){
   const entry=make('div','live-event-entry');
   entry.append(make('strong','',event.title));
   entry.append(make('small','',event.allDay?'Весь день':timeOf(event.startsAt)+' — '+timeOf(event.endsAt)));
-  if(skillsOf(event).length)entry.append(make('small','','↗ Навыки: '+skillsOf(event).join(', ')+
+  if(skillsOf(event).length)entry.append(make('small','','↗ Ресурсы: '+skillsOf(event).join(', ')+
    ' · автоматически +2 XP после окончания'+
    (Number(event.skillXp)>0?' · +'+event.skillXp+' XP при ручной отметке вместо +2':'')));
   for(const [key,kind,label] of [['linkedTaskId','task','☑ Дело'],['linkedHabitId','habit','◇ Привычка']]){
