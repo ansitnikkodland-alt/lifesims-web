@@ -269,7 +269,7 @@
    const row=make('div','skill-detail-action'),info=make('div','skill-detail-action-info');
    info.append(make('strong','','📅 '+event.title));
    const labels=[event.repeat&&event.repeat!=='none'?'Повторяющееся':'Однократное',
-    event.location||'',namesOf(event).includes(selected)?'Навыкы: '+namesOf(event).join(', '):'Навык указан в отдельном повторении'];
+    event.location||'',namesOf(event).includes(selected)?'Навыки: '+namesOf(event).join(', '):'Навык указан в отдельном повторении'];
    if(event.linkedTaskId)labels.push('Связано с делом');
    if(event.linkedHabitId)labels.push('Связано с привычкой');
    info.append(make('small','',labels.filter(Boolean).join(' · ')));
