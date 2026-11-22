@@ -801,6 +801,32 @@ body{background:#091428}
 #localDataReport .recovery-result strong{font-size:13px}
 #localDataReport .recovery-result small{display:block;color:#bed3e4;font-size:12px}
 #localDataReport button{min-height:44px}
+</style>
+<style id="lifesims-event-links-live">
+#scene #sceneLiveEvent[hidden]{display:none!important}
+#scene #sceneLiveEvent{position:absolute!important;left:45%;top:2.5%;z-index:32;
+ display:flex;flex-direction:column;gap:2px;align-items:flex-start;text-align:left;
+ width:max-content;max-width:min(57%,310px);min-width:135px;min-height:43px;
+ padding:7px 12px;border-radius:12px;border:1px solid #9ed8f1dd;
+ background:#152b4ce8;color:#f6ffff;box-shadow:0 4px 18px #06101fb8;
+ font-size:12px;line-height:1.25;backdrop-filter:blur(8px);cursor:pointer;pointer-events:auto}
+#sceneLiveEvent strong{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+#sceneLiveEvent small{font-size:10px;opacity:.82}
+#sceneLiveEvent .scene-live-event-marker{font-size:10px;color:#a2e9fd;font-weight:700}
+#scene.scene3d-active #sceneLiveEvent{z-index:40;left:44%;top:8px}
+@media(max-width:500px){#scene #sceneLiveEvent{left:44%;top:3%;min-width:100px;padding:6px 9px;max-width:54%}}
+#liveEventDialog{box-sizing:border-box;position:fixed;max-height:86dvh;overflow:auto;
+ width:min(93vw,450px);background:#192841;color:#f5fbff;border:1px solid #7b9ebb;
+ padding:14px;border-radius:17px;box-shadow:0 22px 70px #040f20cf;z-index:110}
+#liveEventDialog::backdrop{background:#061124a8}
+#liveEventDialog .live-event-head{display:flex;justify-content:space-between;align-items:center;gap:12px}
+#liveEventDialog .live-event-head h3{margin:0;font-size:17px}
+#liveEventDialog .live-event-entry{padding:12px 0;border-top:1px solid #496280;display:flex;flex-direction:column;gap:8px}
+#liveEventDialog .live-event-entry strong{overflow-wrap:anywhere}
+#liveEventDialog .live-event-entry small{font-size:12px;color:#c9dbe8}
+#liveEventDialog .live-event-actions{display:flex;flex-wrap:wrap;gap:7px}
+#liveEventDialog button{min-height:39px;padding:7px 10px;border-radius:9px}
+#liveEventDialog .live-event-actions button{flex-grow:1}
 </style></head>
 <body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v72</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
@@ -808,7 +834,9 @@ body{background:#091428}
 <span id="sceneCrystalTint" aria-hidden="true"></span>
 
 <button id="plumbob" class="plumbob" type="button" aria-label="Кристалл: записать ресурс" title="Записать ресурс"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 70 122" aria-hidden="true"><path d="M35 2 65 42 35 120 5 42Z" fill="var(--gem-middle,#76c9ef)" stroke="#c5f9ff" stroke-width="2"/><path d="M35 2 5 42 35 52Z" fill="var(--gem-light,#c5edff)"/><path d="M35 2 65 42 35 52Z" fill="var(--gem-middle,#76c9ef)"/><path d="M5 42 35 52 35 120Z" fill="var(--gem-middle,#76c9ef)"/><path d="M65 42 35 52 35 120Z" fill="var(--gem-dark,#2169b6)"/><path d="M35 9 13 42 35 49" fill="none" stroke="#fff9" stroke-width="2"/></svg></button><div id="sceneSky" class="scene-sky" aria-hidden="true"><span class="sky-stars">✧ · ✧</span></div>
-<div id="sceneLampGlow" class="scene-lamp-glow" aria-hidden="true"></div><div id="sceneMovie" class="scene-movie" hidden aria-live="polite">🎬 Смотрит кино</div>
+<div id="sceneLampGlow" class="scene-lamp-glow" aria-hidden="true"></div>
+<button id="sceneLiveEvent" class="scene-live-event" type="button" hidden aria-label="Текущее мероприятие — открыть действия" aria-live="polite"><span class="scene-live-event-marker">📅 Сейчас</span><strong id="sceneLiveEventTitle"></strong><small id="sceneLiveEventTime"></small></button>
+<div id="sceneMovie" class="scene-movie" hidden aria-live="polite">🎬 Смотрит кино</div>
 <div id="bathNiche" class="bath-niche" aria-hidden="true">
  <span class="bath-tile"></span><span class="bath-glass"></span><span class="bath-pipe"></span><span class="bath-water"></span>
 </div>
@@ -3466,6 +3494,7 @@ function renderSchedule(){
     item.append(info,edit,remove);list.append(item);
   }
   if(!list.children.length)list.textContent='Мероприятий пока нет';
+  renderLiveCalendarEvent();
 }
 function openCalendarEventEditor(id,occurrenceDate){
  const event=(state.schedule||[]).find(x=>x.id===id);
@@ -3662,9 +3691,132 @@ function duplicateCalendarEvent(id){
     toast('Копия создана в LifeSims. Она не связана с Google.');
   }else toast('Не удалось создать копию');
 }
+
+/* Live room event notification uses real calendar times; plans do not imply attendance. */
+function activeCalendarOccurrences(at=Date.now()){
+ const day=dayStr(new Date(at)),seen=new Set();
+ return scheduleHistoryOccurrences(day,day)
+  .filter(e=>e.startsAt<=at&&at<e.endsAt)
+  .filter(e=>{const key=e.id+'|'+e.occurrenceKey;if(seen.has(key))return false;seen.add(key);return true})
+  .sort((a,b)=>a.startsAt-b.startsAt||a.title.localeCompare(b.title,'ru'));
+}
+function eventAttendanceRecorded(entry){
+ return (state.events||[]).some(e=>e.eventAttendance===true&&
+  e.calendarEventId===entry.id&&e.calendarOccurrenceKey===entry.occurrenceKey);
+}
+function renderLiveCalendarEvent(){
+ const button=$('sceneLiveEvent');
+ if(!button)return;
+ const current=activeCalendarOccurrences();
+ button.hidden=current.length===0;
+ if(!current.length)return;
+ const item=current[0];
+ $('sceneLiveEventTitle').textContent=item.title+(current.length>1?' · ещё '+(current.length-1):'');
+ $('sceneLiveEventTime').textContent=item.allDay?'Весь день':
+  timeOf(item.startsAt)+' — '+timeOf(item.endsAt);
+ button.title='Сейчас: '+current.map(x=>x.title).join(', ')+'. Нажми для управления';
+}
+function eventLinkName(id,kind){
+ const a=(state.activities||[]).find(x=>x.id===id&&x.kind===kind);
+ return a?.name||null;
+}
+function openLiveEventEditor(entry){
+ $('liveEventDialog').close();
+ openTab('history',true);
+ $('historyDate').value=dayStr(new Date(entry.startsAt));
+ openCalendarEventEditor(entry.id,entry.occurrenceKey);
+}
+function cancelLiveEventOccurrence(entry){
+ const original=(state.schedule||[]).find(x=>x.id===entry.id);
+ if(!original)return toast('Мероприятие больше не найдено');
+ const recurring=!!(original.repeat&&original.repeat!=='none');
+ const message='Отменить '+(recurring?'этот экземпляр':'мероприятие')+' «'+entry.title+'»?'+
+  (original.google?' Это скроет его только в LifeSims, не в Google.':'');
+ if(!confirm(message))return;
+ if(recurring){
+  if(!transact(()=>{
+   const item=state.schedule.find(x=>x.id===entry.id);
+   item.excludedDates=[...new Set([...(item.excludedDates||[]),entry.occurrenceKey])];
+   if(item.overrides)delete item.overrides[entry.occurrenceKey];
+  }))return toast('Не удалось отменить мероприятие');
+  renderAll();toast('Экземпляр мероприятия отменён в LifeSims');
+ }else{
+  try{removeLocalCalendarEvent(entry.id,true);renderLiveCalendarEvent();toast('Мероприятие отменено в LifeSims')}
+  catch(error){toast('Не удалось отменить: '+error.message)}
+ }
+ const dialog=$('liveEventDialog');if(dialog?.open)dialog.close();
+}
+function markLiveEventAttendance(entry){
+ const current=activeCalendarOccurrences().find(x=>x.id===entry.id&&x.occurrenceKey===entry.occurrenceKey);
+ if(!current)return toast('Мероприятие сейчас не идёт');
+ if(eventAttendanceRecorded(current))return toast('Участие уже отмечено');
+ const skill=current.skill||null;
+ const skillXp=skill?Math.max(0,Math.min(40,Number(current.skillXp)||0)):0;
+ if(!transact(()=>{state.events.push({
+  id:uid(),kind:'complete',eventAttendance:true,calendarEventId:current.id,
+  calendarOccurrenceKey:current.occurrenceKey,name:'Участие: '+current.title,
+  date:today(),at:new Date().toISOString(),xp:0,skill,skillXp,
+  difficulty:3,linkedTaskId:current.linkedTaskId||null,linkedHabitId:current.linkedHabitId||null
+ })}))return toast('Не удалось сохранить участие');
+ renderAll();
+ toast('Участие записано'+(skillXp?' · '+skill+' +'+skillXp+' XP':''));
+ showLiveCalendarEventDialog();
+}
+function showLiveCalendarEventDialog(){
+ const events=activeCalendarOccurrences(),dialog=$('liveEventDialog'),container=$('liveEventEntries');
+ container.replaceChildren();
+ if(!events.length){if(dialog.open)dialog.close();renderLiveCalendarEvent();return;}
+ const make=(tag,cls,content)=>{
+  const el=document.createElement(tag);if(cls)el.className=cls;
+  if(content!=null)el.textContent=content;return el;
+ };
+ for(const event of events){
+  const entry=make('div','live-event-entry');
+  entry.append(make('strong','',event.title));
+  entry.append(make('small','',event.allDay?'Весь день':timeOf(event.startsAt)+' — '+timeOf(event.endsAt)));
+  if(event.skill)entry.append(make('small','','↗ Навык: '+event.skill+
+   (Number(event.skillXp)>0?' · +'+event.skillXp+' XP при подтверждении участия':'')));
+  for(const [key,kind,label] of [['linkedTaskId','task','☑ Дело'],['linkedHabitId','habit','◇ Привычка']]){
+   const name=eventLinkName(event[key],kind);
+   if(!name)continue;
+   const button=make('button','secondary',label+': '+name);
+   button.type='button';button.onclick=()=>{
+    dialog.close();openActivityEditor(event[key]);
+   };
+   entry.append(button);
+  }
+  const row=make('div','live-event-actions');
+  const edit=make('button','secondary','✎ Изменить / связать');
+  edit.type='button';edit.onclick=()=>openLiveEventEditor(event);
+  const cancel=make('button','danger-outline','Отменить');
+  cancel.type='button';cancel.onclick=()=>cancelLiveEventOccurrence(event);
+  const attended=make('button','primary',eventAttendanceRecorded(event)?'✓ Участие отмечено':'✓ Я участвовала');
+  attended.type='button';attended.disabled=eventAttendanceRecorded(event);
+  attended.onclick=()=>markLiveEventAttendance(event);
+  row.append(edit,cancel,attended);entry.append(row);
+  if(event.google)entry.append(make('small','','Действия в LifeSims не удаляют мероприятие из Google.'));
+  container.append(entry);
+ }
+ if(!dialog.open)dialog.showModal();
+}
+const liveEventDialog=document.createElement('dialog');liveEventDialog.id='liveEventDialog';
+const liveEventHeading=document.createElement('div');liveEventHeading.className='live-event-head';
+const liveTitle=document.createElement('h3');liveTitle.textContent='Сейчас происходит';
+const liveClose=document.createElement('button');liveClose.type='button';liveClose.textContent='×';
+liveClose.setAttribute('aria-label','Закрыть');liveClose.onclick=()=>liveEventDialog.close();
+liveEventHeading.append(liveTitle,liveClose);liveEventDialog.append(liveEventHeading);
+const liveEntries=document.createElement('div');liveEntries.id='liveEventEntries';liveEventDialog.append(liveEntries);
+document.body.append(liveEventDialog);
+$('sceneLiveEvent').onclick=showLiveCalendarEventDialog;
+liveEventDialog.addEventListener('click',e=>{
+ if(e.target!==liveEventDialog)return;
+ const r=liveEventDialog.getBoundingClientRect();
+ if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)liveEventDialog.close();
+});
+
 function renderAll(){
  const jobs=[['Калории за 24 часа',render24CalorieCard],['Сытость',renderHungerMeter],['Календарь',renderSchedule],['Потребности',renderNeeds],['Дела и привычки',renderTopActivities],
-  ['История',renderHistory],['Навыки',renderSkills],['Недосып',updateDebt],['Персонаж',renderWork]];
+  ['История',renderHistory],['Навыки',renderSkills],['Недосып',updateDebt],['Персонаж',renderWork],['Сейчас происходит',renderLiveCalendarEvent]];
  if(typeof renderRoomMess==='function')jobs.push(['Комната',renderRoomMess]);
  jobs.push(['3D',()=>window.LifeSims3D?.sync?.(window.LifeSims3DBridge?.snapshot?.())]);
  const failures=[];
@@ -4039,6 +4191,7 @@ function refreshLiveMetrics(){
   renderAll(); // Midnight changes due tasks, daily history and yesterday labels.
  }else{
   renderNeeds(); // Derive time-dependent values from records, without saving.
+  renderLiveCalendarEvent(); // Live event times may change without a state update.
  }
 }
 setInterval(refreshLiveMetrics,30*1000);
