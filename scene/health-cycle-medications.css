@@ -1,5 +1,5 @@
 /* Dedicated health module; does not alter other LifeSims panels. */
-.nav{grid-template-columns:repeat(3,minmax(0,1fr))!important}
+body .nav{grid-template-columns:repeat(3,minmax(0,1fr))!important}
 #health{--hc:#eeabd1;--hp:#263956}
 #health .health-head{display:flex;align-items:center;justify-content:space-between;margin:5px 0 14px}
 #health .health-head h2{font-size:21px;margin:0;color:#fff}
