@@ -168,11 +168,13 @@
  };
  $('mealChatCamera').addEventListener('click',()=>{autoLabel=false});
  $('mealChatGallery').addEventListener('click',()=>{autoLabel=false});
- $('mealChatCameraInput').addEventListener('change',()=>{
+ $('mealChatCameraInput').addEventListener('change',event=>{
+  // Capture the selected file before attachPhoto resets the input's value.
   if(!autoLabel)return;
+  const hasFile=!!event.target.files?.length;
   autoLabel=false;
-  if($('mealChatCameraInput').files?.length)queueMicrotask(()=>$('mealChatAnalyzePackage').click());
- });
+  if(hasFile)queueMicrotask(()=>$('mealChatAnalyzePackage').click());
+ },true);
  document.addEventListener('lifesims:meal-photo-reset',reset);
  document.addEventListener('lifesims:meal-product',event=>onPhotoResult(event.detail||{}));
  document.addEventListener('visibilitychange',()=>{if(document.hidden)stopScan()});
