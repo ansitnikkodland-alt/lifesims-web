@@ -1159,7 +1159,7 @@ const eventSkillsPicker=createSkillPicker('eventSkill');
 function normalize(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.schema!==VERSION||!raw.days||typeof raw.days!=='object'||Array.isArray(raw.days)||!Array.isArray(raw.activities)||!Array.isArray(raw.events))throw Error('Неизвестный или повреждённый формат');const safe=base();const normalized={...safe,...raw,screenTime:{records:Array.isArray(raw.screenTime?.records)?
  raw.screenTime.records.filter(x=>x&&typeof x==='object'&&/^\d{4}-\d{2}-\d{2}$/.test(x.date||'')&&
  typeof x.app==='string'&&x.app.length>0&&x.app.length<=110&&Number.isFinite(x.seconds)&&x.seconds>0&&x.seconds<=86400)
- .slice(0,20000).map(x=>({...x,source:'stayfree'})):[]},foodMeals:Array.isArray(raw.foodMeals)?raw.foodMeals.filter(x=>x&&typeof x==='object'&&typeof x.id==='string'&&typeof x.date==='string'):[],foodTemplates:Array.isArray(raw.foodTemplates)?raw.foodTemplates.filter(x=>x&&typeof x==='object'&&typeof x.title==='string'&&x.title.trim().length>0):[],googleHidden:Array.isArray(raw.googleHidden)?raw.googleHidden.filter(x=>x&&typeof x.calendarId==='string'&&typeof x.id==='string').map(x=>({calendarId:x.calendarId,id:x.id,title:typeof x.title==='string'?x.title:'',hiddenAt:typeof x.hiddenAt==='string'?x.hiddenAt:''})):[],schedule:Array.isArray(raw.schedule)?raw.schedule:(Array.isArray(raw.legacyCopy?.events)?raw.legacyCopy.events.map((e,i)=>({id:'legacy-schedule-'+i,title:e.title||'Мероприятие',startsAt:e.startsAt,endsAt:e.endsAt,repeat:e.repeat==='weekly'?'weekly':'none',weekdays:e.repeat==='weekly'&&e.startsAt?[((new Date(e.startsAt.slice(0,10)+'T12:00:00').getDay()+6)%7)+1]:[]})):[]),room:(raw.room&&typeof raw.room==='object'&&!Array.isArray(raw.room))?{...safe.room,...raw.room}:safe.room};
+ .slice(0,20000).map(x=>({...x,source:x.source==='android'?'android':'stayfree'})):[]},foodMeals:Array.isArray(raw.foodMeals)?raw.foodMeals.filter(x=>x&&typeof x==='object'&&typeof x.id==='string'&&typeof x.date==='string'):[],foodTemplates:Array.isArray(raw.foodTemplates)?raw.foodTemplates.filter(x=>x&&typeof x==='object'&&typeof x.title==='string'&&x.title.trim().length>0):[],googleHidden:Array.isArray(raw.googleHidden)?raw.googleHidden.filter(x=>x&&typeof x.calendarId==='string'&&typeof x.id==='string').map(x=>({calendarId:x.calendarId,id:x.id,title:typeof x.title==='string'?x.title:'',hiddenAt:typeof x.hiddenAt==='string'?x.hiddenAt:''})):[],schedule:Array.isArray(raw.schedule)?raw.schedule:(Array.isArray(raw.legacyCopy?.events)?raw.legacyCopy.events.map((e,i)=>({id:'legacy-schedule-'+i,title:e.title||'Мероприятие',startsAt:e.startsAt,endsAt:e.endsAt,repeat:e.repeat==='weekly'?'weekly':'none',weekdays:e.repeat==='weekly'&&e.startsAt?[((new Date(e.startsAt.slice(0,10)+'T12:00:00').getDay()+6)%7)+1]:[]})):[]),room:(raw.room&&typeof raw.room==='object'&&!Array.isArray(raw.room))?{...safe.room,...raw.room}:safe.room};
  if(!raw.room?.antiperspirantInitialized){
   if(!normalized.activities.some(a=>a?.id==='hygiene_antiperspirant')){
    const item=defs.find(a=>a.id==='hygiene_antiperspirant');
@@ -2865,8 +2865,8 @@ window.LifeSimsScreenTimeBridge={
     Number.isFinite(x.seconds)&&x.seconds>0&&x.seconds<=86400&&
     typeof x.packageName==='string'&&x.packageName.length<=120&&
     typeof x.device==='string'&&x.device.length<=100;
-  if(!incoming.every(valid))return {ok:false,error:'Файл содержит некорректную дату, длительность или название приложения.'};
-  const key=x=>[x.date,(x.packageName||x.app).trim().toLocaleLowerCase('ru'),(x.device||'').trim().toLocaleLowerCase('ru')].join('||');
+  if(!incoming.every(valid)||incoming.some(x=>x.source&&x.source!=='android'&&x.source!=='stayfree'))return {ok:false,error:'Файл содержит некорректные данные приложения.'};
+  const key=x=>[x.source==='android'?'android':'stayfree',x.date,(x.packageName||x.app).trim().toLocaleLowerCase('ru'),(x.device||'').trim().toLocaleLowerCase('ru')].join('||');
   const existing=state.screenTime?.records||[],index=new Map(existing.map((x,i)=>[key(x),i]));
   const next=existing.map(x=>({...x}));
   let added=0,updated=0,unchanged=0;
@@ -2875,7 +2875,7 @@ window.LifeSimsScreenTimeBridge={
    const id=key(x),match=index.get(id);
    if(match===undefined){
     next.push({date:x.date,app:x.app.trim(),packageName:x.packageName.trim(),
-     device:x.device.trim(),seconds:x.seconds,source:'stayfree',importedAt:stamp});
+     device:x.device.trim(),seconds:x.seconds,source:x.source==='android'?'android':'stayfree',importedAt:stamp});
     index.set(id,next.length-1);added++;
    }else if(next[match].seconds!==x.seconds||next[match].app!==x.app){
     next[match]={...next[match],seconds:x.seconds,app:x.app.trim(),importedAt:stamp};updated++;
