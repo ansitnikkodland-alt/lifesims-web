@@ -2719,10 +2719,11 @@ function satietyAssessment(ref=today(),now=new Date()){
   if(!Number.isFinite(at)||at>ms)continue;
   const contribution=macroSatietyContribution(m);
   if(!contribution){
-   missingMacroCount++; // Do not invent satiety using kcal if BJU is missing.
+   // Explain only missing BJU relevant to the current 16-hour window.
+   if(at>=from)missingMacroCount++;
    continue;
   }
-  if(contribution.incomplete)incompleteMacroCount++;
+  if(at>=from&&contribution.incomplete)incompleteMacroCount++;
   sources.push({at,date:m.date,kind:contribution.kind});
   if(at>=from)events.push({at,mode:'delta',amount:contribution.amount,
    priority:1,kind:contribution.kind});
