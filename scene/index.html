@@ -2858,7 +2858,8 @@ window.LifeSimsPetsBridge={
    if(!pet)return;
    const previous=pet.name;pet.name=name;
    const feeding=state.activities.find(a=>a?.id==='pet_feed_'+id);
-   if(feeding&&feeding.name==='Покормить '+previous)feeding.name='Покормить '+name;
+   const defaultName=id==='ginger'?'Покормить рыжего котика':'Покормить чёрного котика';
+   if(feeding&&(feeding.name==='Покормить '+previous||feeding.name===defaultName))feeding.name='Покормить '+name;
   });
   if(ok)renderAll();
   return ok;
