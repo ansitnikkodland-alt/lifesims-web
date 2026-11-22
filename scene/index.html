@@ -64,6 +64,14 @@
 .needs-editor #stateForm{margin-top:12px}
 </style><link rel="stylesheet" href="./calendar-style.css">
 <link rel="stylesheet" href="./task-premium.css?v=69">
+<style id="lifesims-weight-measurements">
+#weightMeasurementDialog{color:#eef7ff;background:linear-gradient(145deg,#2b3d61,#17253f);border:1px solid #7da8c8;border-radius:18px;width:min(93vw,470px);max-height:88dvh;overflow:auto;padding:18px;box-shadow:0 15px 65px #000b}
+#weightMeasurementDialog::backdrop{background:#060e22bc;backdrop-filter:blur(4px)}
+#weightMeasurementForm .field{display:block;margin:12px 0}
+#weightMeasurementForm .field input{display:block;width:100%;min-height:44px;margin-top:6px}
+#weightMeasurementForm .row{display:flex;gap:9px;flex-wrap:wrap;margin-top:17px}
+#weightMeasurementForm .row button{min-height:44px;flex:1 1 140px}
+</style>
 <link rel="stylesheet" href="./oura-style.css">
 <style>
 
@@ -968,6 +976,21 @@ body{background:#091428}
  <div class="row"><button class="primary" type="submit">Сохранить</button><button id="historyLogDelete" class="danger-outline" type="button">Удалить запись</button></div>
  </form>
 </dialog>
+<dialog id="weightMeasurementDialog" aria-labelledby="weightMeasurementTitle">
+ <div class="single-metric-head"><h3 id="weightMeasurementTitle">⚖️ Замеры внешности</h3><button id="weightMeasurementClose" type="button" class="secondary" aria-label="Закрыть замеры">×</button></div>
+ <p class="hint">Замер за <strong id="weightMeasurementDateLabel"></strong>. После сохранения дело будет отмечено выполненным.</p>
+ <form id="weightMeasurementForm">
+  <input type="hidden" id="weightMeasurementActivityId"><input type="hidden" id="weightMeasurementDate">
+  <div class="cols">
+   <label class="field">Вес, кг <input id="weightMeasure_weight" type="number" min="20" max="350" step="0.1" inputmode="decimal" required placeholder="Например, 65.8"></label>
+   <label class="field">Талия, см <input id="weightMeasure_waist" type="number" min="25" max="250" step="0.1" inputmode="decimal" placeholder="Необязательно"></label>
+   <label class="field">Бёдра, см <input id="weightMeasure_hips" type="number" min="25" max="250" step="0.1" inputmode="decimal" placeholder="Необязательно"></label>
+   <label class="field">Грудь, см <input id="weightMeasure_chest" type="number" min="25" max="250" step="0.1" inputmode="decimal" placeholder="Необязательно"></label>
+  </div>
+  <p id="weightMeasurementStatus" class="hint" role="status" aria-live="polite"></p>
+  <div class="row"><button class="primary" type="submit">Сохранить замеры и выполнить дело</button><button id="weightMeasurementCancel" class="secondary" type="button">Отмена</button></div>
+ </form>
+</dialog>
 <dialog id="singleMetricDialog" aria-labelledby="singleMetricTitle">
  <div class="single-metric-head"><h3 id="singleMetricTitle">Показатель</h3><button id="singleMetricClose" type="button" class="secondary" aria-label="Закрыть">×</button></div>
  <div id="singleMetricContent"></div>
@@ -1237,12 +1260,75 @@ function due(a,d){
 function done(a,d){if(a.legacyDone)return true;const cm=Array.isArray(a.completions)?a.completions:[];if(a.repeat==='once'||a.repeat==='inbox')return cm.length>0;if(a.repeat==='weekly')return cm.some(c=>Array.isArray(a.weekdays)&&a.weekdays.length>1?c.date===d:weekKey(c.date)===weekKey(d));return cm.some(c=>c.date===d)}
 function difficultyOf(a){const n=Number(a?.difficulty);return Number.isInteger(n)&&n>=1&&n<=5?n:3}
 function skillExperience(a){const points=Number(a?.xp);return a?.skill&&Number.isFinite(points)&&points>0?Math.round(points*difficultyOf(a)/3):0}
-function complete(a,date){if(a.id==='coffee_habit')return recordEspresso(date);if(a.kind!=='habit'&&done(a,date))return toast('Уже выполнено — XP второй раз не начисляются');if(a.repeat!=='inbox'&&!due(a,date))return toast('Дело ещё не запланировано');const xp=Number.isFinite(a.xp)?a.xp:0,skillXp=skillExperience(a),difficulty=difficultyOf(a);const stamp=new Date().toISOString();if(transact(()=>{a.completions??=[];a.completions.push({date,at:stamp,xp,skillXp,difficulty});adjustHabitMeasurement(a.id,date,1);
+// An appearance measurement task commits its dated measurements and task completion together.
+function isWeightMeasurementTask(a){
+ if(a?.kind!=='task')return false;
+ const title=String(a.name||'').toLocaleLowerCase('ru').replace(/[^\p{L}\p{N}]+/gu,' ').trim();
+ return ['замер веса','измерение веса','взвешивание'].includes(title);
+}
+function appendActivityCompletion(a,date){
+ const xp=Number.isFinite(a.xp)?a.xp:0,skillXp=skillExperience(a),difficulty=difficultyOf(a),stamp=new Date().toISOString();
+ a.completions??=[];a.completions.push({date,at:stamp,xp,skillXp,difficulty});
+ adjustHabitMeasurement(a.id,date,1);
  if(a.id==='bed_make'){state.room??={};state.room.bedMadeOn=date}
  if(a.id==='hygiene_antiperspirant'){state.room??={};state.room.lastAntiperspirantAt=stamp}
  if(a.object==='shower'&&/принят.*душ|принять душ|помытьс|приняла душ/i.test(a.name)){state.room??={};state.room.lastShowerAt=stamp}
  if(/уборк|помыть|убрать|постират|мыть посуд|разобрать|пропылесос/i.test(a.name)){state.room??={};state.room.lastCleanAt=stamp;state.room.entropyOffset=Math.min(0,(state.room.entropyOffset||0)-4)}
- state.events.push({id:uid(),kind:'complete',activityId:a.id,name:a.name,date,at:stamp,xp,skillXp,difficulty,skill:a.skill||null,resourceEffect:effectSnapshot(a)})})){toast(`✓ ${a.name}${xp?' · '+(xp>0?'+':'')+xp+' XP':''}`);$('sceneStatus').textContent='✓ '+a.name;renderAll()}}
+ state.events.push({id:uid(),kind:'complete',activityId:a.id,name:a.name,date,at:stamp,xp,skillXp,difficulty,skill:a.skill||null,resourceEffect:effectSnapshot(a)});
+ return xp;
+}
+function showCompletion(a,xp){
+ toast(`✓ ${a.name}${xp?' · '+(xp>0?'+':'')+xp+' XP':''}`);
+ $('sceneStatus').textContent='✓ '+a.name;renderAll();
+}
+function complete(a,date){
+ if(a.id==='coffee_habit')return recordEspresso(date);
+ if(a.kind!=='habit'&&done(a,date))return toast('Уже выполнено — XP второй раз не начисляются');
+ if(a.repeat!=='inbox'&&!due(a,date))return toast('Дело ещё не запланировано');
+ if(isWeightMeasurementTask(a))return openWeightMeasurement(a,date);
+ let xp=0;
+ if(transact(()=>{xp=appendActivityCompletion(a,date)}))showCompletion(a,xp);
+}
+function openWeightMeasurement(a,date){
+ closeOtherMetricPopups();closeSheet();closeDayAgenda();
+ const dialog=$('weightMeasurementDialog'),record=currentRecord(date);
+ $('weightMeasurementActivityId').value=a.id;
+ $('weightMeasurementDate').value=date;
+ $('weightMeasurementDateLabel').textContent=date;
+ for(const field of ['weight','waist','hips','chest']){
+  $('weightMeasure_'+field).value=record[field]==null?'':String(record[field]);
+ }
+ $('weightMeasurementStatus').textContent='';
+ if(!dialog.open)dialog.showModal();
+ $('weightMeasure_weight').focus({preventScroll:true});
+}
+function saveWeightMeasurement(event){
+ event.preventDefault();
+ const id=$('weightMeasurementActivityId').value,date=$('weightMeasurementDate').value;
+ const activity=state.activities.find(a=>a.id===id),status=$('weightMeasurementStatus');
+ if(!activity||!isWeightMeasurementTask(activity)){status.textContent='Дело не найдено или переименовано. Замеры не сохранены.';return}
+ if(date>today()||(activity.repeat!=='inbox'&&!due(activity,date))||done(activity,date)){
+  status.textContent='Эту запись уже нельзя выполнить за выбранную дату.';return;
+ }
+ const patch={};
+ for(const field of ['weight','waist','hips','chest']){
+  const input=$('weightMeasure_'+field),raw=input.value.trim();
+  if(raw===''){
+   if(field==='weight'){input.setCustomValidity('Введи вес для выполнения дела');input.reportValidity();input.setCustomValidity('');return}
+   patch[field]=null;continue;
+  }
+  if(!input.checkValidity()||!Number.isFinite(Number(raw))){input.reportValidity();return}
+  patch[field]=Number(raw);
+ }
+ const old=currentRecord(date);
+ const updated={...old,...patch,updatedAt:new Date().toISOString(),
+  ouraFields:Array.isArray(old.ouraFields)?old.ouraFields.filter(field=>!(field in patch)):old.ouraFields};
+ let xp=0;
+ // Persist measurements and completion atomically; neither survives a failed save.
+ if(transact(()=>{state.days[date]=updated;xp=appendActivityCompletion(activity,date)})){
+  $('weightMeasurementDialog').close();activeDay=date;showCompletion(activity,xp);
+ }else status.textContent='Не удалось сохранить запись. Дело не отмечено выполненным.';
+}
 let activeQuickKind='task';
 function relevantActivities(date,kind){
  return state.activities.filter(a=>{
@@ -1916,7 +2002,7 @@ function syncLifeModalMask(){
  $('lifeModalMask').hidden=!active;
 }
 function closeOtherMetricPopups(){
- for(const id of ['singleMetricDialog','financeDialog','historyLogDialog','objectLinkDialog']){
+ for(const id of ['singleMetricDialog','financeDialog','historyLogDialog','objectLinkDialog','weightMeasurementDialog']){
   const dialog=$(id);if(dialog?.open)dialog.close();
  }
  $('food').classList.remove('open');
@@ -3487,13 +3573,13 @@ for(const b of document.querySelectorAll('.touchmap .hot')){b.addEventListener('
 document.addEventListener('click',event=>{
  const button=event.target.closest('button');
  if(!button)return;
- const ids=['closeSheet','needsClose','foodDismiss','diaryClose','singleMetricClose','financeClose','historyLogClose','agendaClose'];
+ const ids=['closeSheet','needsClose','foodDismiss','diaryClose','singleMetricClose','financeClose','historyLogClose','agendaClose','weightMeasurementClose'];
  if(ids.includes(button.id))closeAllLifeOverlays();
 },true);
 document.addEventListener('pointerdown',e=>{if($('sheetWrap').classList.contains('open')&&!e.target.closest('.sheet')&&!e.target.closest('.hot')&&!e.target.closest('#scenePhone,#sceneFridge,#sceneToilet,#sceneCatLitter,#showerCabin'))closeSheet()});document.addEventListener('keydown',e=>{if(e.key==='Escape'){closeSheet();closeDayAgenda()}});for(const b of document.querySelectorAll('[data-tab]'))b.onclick=()=>openTab(b.dataset.tab,true);$('openNeedsEditor').onclick=()=>{
  try{showNeedsEditor('',today())}
  catch(error){console.error('Open all metrics:',error);toast('Не удалось открыть показатели: '+String(error?.message||error))}
-};$('stateForm').onsubmit=saveFieldState;$('taskForm').onsubmit=addActivity;$('saveDiary').onclick=saveDiary;for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>{historyView=b.dataset.view;renderHistory()};$('historyDate').onchange=renderHistory;$('prevPeriod').onclick=()=>changePeriod(-1);$('nextPeriod').onclick=()=>changePeriod(1);$('todayPeriod').onclick=()=>{$('historyDate').value=today();renderHistory()};$('editSelectedDay').onclick=()=>{activeDay=$('historyDate').value;showNeedsEditor('',activeDay)};$('stateDate').onchange=()=>fillState($('stateDate').value);$('addCalendarEvent').onclick=openNewCalendarEvent;$('addCalendarTask').onclick=()=>openNewCalendarTask('task');
+};$('weightMeasurementForm').onsubmit=saveWeightMeasurement;$('weightMeasurementClose').onclick=()=>$('weightMeasurementDialog').close();$('weightMeasurementCancel').onclick=()=>$('weightMeasurementDialog').close();$('stateForm').onsubmit=saveFieldState;$('taskForm').onsubmit=addActivity;$('saveDiary').onclick=saveDiary;for(const b of document.querySelectorAll('[data-view]'))b.onclick=()=>{historyView=b.dataset.view;renderHistory()};$('historyDate').onchange=renderHistory;$('prevPeriod').onclick=()=>changePeriod(-1);$('nextPeriod').onclick=()=>changePeriod(1);$('todayPeriod').onclick=()=>{$('historyDate').value=today();renderHistory()};$('editSelectedDay').onclick=()=>{activeDay=$('historyDate').value;showNeedsEditor('',activeDay)};$('stateDate').onchange=()=>fillState($('stateDate').value);$('addCalendarEvent').onclick=openNewCalendarEvent;$('addCalendarTask').onclick=()=>openNewCalendarTask('task');
 $('addCalendarHabit').onclick=()=>openNewCalendarTask('habit');
 for(const id of ['topTasksDate','topHabitsDate'])$(id).addEventListener('change',renderTopActivities);
 $('topTasksAdd').onclick=()=>{$('historyDate').value=$('topTasksDate').value||today();openNewCalendarTask('task')};
