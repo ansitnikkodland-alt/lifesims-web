@@ -63,6 +63,9 @@
 .needs-editor .heading{margin:10px 0}
 .needs-editor #stateForm{margin-top:12px}
 </style><link rel="stylesheet" href="./calendar-style.css"><style id="lifesims-calendar-controls">
+.event-repeat-options{border:1px solid #526a91;border-radius:13px;margin:10px 0;padding:10px}
+.event-repeat-options .row label{display:flex;align-items:center;gap:6px}
+.event-repeat-options input[type=number],.event-repeat-options input[type=date]{min-height:44px}
 .agenda-day-arrow{border:1px solid #81a3ca;border-radius:14px;background:#2d4767;color:#fff;font-size:34px;min-width:44px;min-height:48px;padding:0 8px}
 .agenda-top>div{flex:1;min-width:0}
 .agenda-swipe-hint{text-align:center;font-size:12px;margin:8px 0}
@@ -951,7 +954,7 @@ body{background:#091428}
 <div id="eventTimedDates" class="cols"><label class="field">Начало <input id="eventStart" type="datetime-local" required></label><label class="field">Конец <input id="eventEnd" type="datetime-local" required></label></div>
 <div id="eventAllDayDates" class="cols" hidden><label class="field">Дата начала <input id="eventDayStart" type="date"></label><label class="field">Дата окончания (включительно) <input id="eventDayEnd" type="date"></label></div>
 <label class="field">Повтор <select id="eventRepeat"><option value="none">Без повтора</option><option value="daily">Каждый день</option><option value="weekly">По дням недели</option><option value="monthly">Каждый месяц</option><option value="yearly">Каждый год</option></select></label>
-<fieldset id="eventWeekdays" hidden><legend>Дни недели</legend><div class="row"><label><input type="checkbox" name="eventWeekday" value="1"> Пн</label><label><input type="checkbox" name="eventWeekday" value="2"> Вт</label><label><input type="checkbox" name="eventWeekday" value="3"> Ср</label><label><input type="checkbox" name="eventWeekday" value="4"> Чт</label><label><input type="checkbox" name="eventWeekday" value="5"> Пт</label><label><input type="checkbox" name="eventWeekday" value="6"> Сб</label><label><input type="checkbox" name="eventWeekday" value="7"> Вс</label></div></fieldset>
+<fieldset id="eventRecurrenceOptions" class="event-repeat-options" hidden><legend>Повторения</legend><label class="field">Каждые <input id="eventRepeatInterval" type="number" min="1" max="365" value="1" step="1"> <span id="eventRepeatUnit">недель</span></label><div class="field"><strong>Окончание</strong><div class="row"><label><input type="radio" name="eventRecurrenceEnd" value="never" checked> Бесконечно</label><label><input type="radio" name="eventRecurrenceEnd" value="count"> После N раз</label><label><input type="radio" name="eventRecurrenceEnd" value="until"> До даты</label></div></div><label id="eventRepeatCountLabel" class="field" hidden>Количество повторов<input id="eventRepeatCount" type="number" min="1" max="3650" value="10"></label><label id="eventRepeatUntilLabel" class="field" hidden>Последняя дата<input id="eventRepeatUntil" type="date"></label></fieldset><fieldset id="eventWeekdays" hidden><legend>Дни недели</legend><div class="row"><label><input type="checkbox" name="eventWeekday" value="1"> Пн</label><label><input type="checkbox" name="eventWeekday" value="2"> Вт</label><label><input type="checkbox" name="eventWeekday" value="3"> Ср</label><label><input type="checkbox" name="eventWeekday" value="4"> Чт</label><label><input type="checkbox" name="eventWeekday" value="5"> Пт</label><label><input type="checkbox" name="eventWeekday" value="6"> Сб</label><label><input type="checkbox" name="eventWeekday" value="7"> Вс</label></div></fieldset>
 <label class="field">Место <input id="eventLocation" maxlength="300" placeholder="Адрес или место встречи"></label>
 <label class="field">Описание <textarea id="eventDescription" rows="3" placeholder="Дополнительные сведения"></textarea></label>
 <label class="field">Связанный навык <input id="eventSkill" list="skillSuggestions" maxlength="70" autocomplete="off" placeholder="Выбрать или создать навык"><small>Навык повышается только после отметки об участии, не по расписанию.</small></label>
@@ -2975,6 +2978,34 @@ function updateDebt(){const d=$('stateDate').value||today(),s=sleepAssessment(d)
 function getPeriod(){const d=$('historyDate').value||today();if(historyView==='day')return[d,d];if(historyView==='week')return[weekKey(d),plusDays(weekKey(d),6)];const a=asDay(d),b=new Date(a.getFullYear(),a.getMonth()+1,0);return [dayStr(new Date(a.getFullYear(),a.getMonth(),1)),dayStr(b)]}
 function addHistoryLine(parent,date,text){const e=document.createElement('div');e.className='logrow';const time=document.createElement('time');time.textContent=date+' · ';const span=document.createElement('span');span.textContent=text;e.append(time,span);parent.append(e)}
 
+function matchesCalendarRecurrence(event,date){
+ const base=event.startsAt.slice(0,10);if(date<base)return false;
+ const origin=asDay(base),d=asDay(date),interval=Math.max(1,Math.min(365,Number(event.repeatInterval)||1));
+ if(event.repeat==='daily')return Math.round((d-origin)/86400000)%interval===0;
+ if(event.repeat==='weekly'){
+  const weeks=Math.round((asDay(weekKey(date))-asDay(weekKey(base)))/604800000);
+  const selected=Array.isArray(event.weekdays)&&event.weekdays.length?event.weekdays:[((origin.getDay()+6)%7)+1];
+  return weeks>=0&&weeks%interval===0&&selected.includes(((d.getDay()+6)%7)+1);
+ }
+ if(event.repeat==='monthly'){
+  const months=(d.getFullYear()-origin.getFullYear())*12+d.getMonth()-origin.getMonth();
+  return months>=0&&months%interval===0&&d.getDate()===origin.getDate();
+ }
+ if(event.repeat==='yearly'){
+  const years=d.getFullYear()-origin.getFullYear();
+  return years>=0&&years%interval===0&&d.getMonth()===origin.getMonth()&&d.getDate()===origin.getDate();
+ }
+ return false;
+}
+function calendarCountEnd(event,visibleTo){
+ const count=Number(event.repeatCount);
+ if(event.repeatEndMode!=='count'||!Number.isInteger(count)||count<1)return null;
+ let actual=0;
+ for(let d=event.startsAt.slice(0,10);d<=visibleTo;d=plusDays(d,1)){
+  if(matchesCalendarRecurrence(event,d)){actual++;if(actual>=count)return d}
+ }
+ return null;
+}
 /* Expands local and imported Google events only for the visible History period.
    Calendar events are plans, not evidence of attendance or completed tasks. */
 function scheduleHistoryOccurrences(from,to){
@@ -3004,7 +3035,7 @@ function scheduleHistoryOccurrences(from,to){
   const baseStart=new Date(event.startsAt),baseEnd=new Date(event.endsAt);
   if(!Number.isFinite(baseStart.getTime())||!Number.isFinite(baseEnd.getTime())||baseEnd<=baseStart)continue;
   const duration=baseEnd-baseStart,baseDay=event.startsAt.slice(0,10);
-  const until=valid(event.repeatUntil)?event.repeatUntil:'9999-12-31';
+  const countEnd=calendarCountEnd(event,to);const until=[valid(event.repeatUntil)?event.repeatUntil:'9999-12-31',countEnd||'9999-12-31'].sort()[0];
   const excluded=new Set(Array.isArray(event.excludedDates)?event.excludedDates:[]);
   const overrides=event.overrides&&typeof event.overrides==='object'?event.overrides:{};
   if(!event.repeat||event.repeat==='none'){
@@ -3014,14 +3045,8 @@ function scheduleHistoryOccurrences(from,to){
   const shiftedBack=Math.min(10,Math.ceil(duration/86400000)+1);
   let startDay=plusDays(from,-shiftedBack);
   if(startDay<baseDay)startDay=baseDay;
-  const weeks=Array.isArray(event.weekdays)?event.weekdays.map(Number):[];
-  const selected=new Set(weeks.length?weeks:[((baseStart.getDay()+6)%7)+1]);
-  const origin=asDay(baseDay);
   for(let date=startDay;date<=to&&date<=until;date=plusDays(date,1)){
-   const d=asDay(date),weekday=((d.getDay()+6)%7)+1;
-   const matches=event.repeat==='daily'||(event.repeat==='weekly'&&selected.has(weekday))||
-    (event.repeat==='monthly'&&d.getDate()===origin.getDate())||
-    (event.repeat==='yearly'&&d.getMonth()===origin.getMonth()&&d.getDate()===origin.getDate());
+   const matches=matchesCalendarRecurrence(event,date);
    if(!matches||excluded.has(date)||overrides[date])continue;
    const time=event.startsAt.slice(11)||'00:00',start=new Date(date+'T'+time).getTime();
    addOccurrence(event,start,start+duration,date);
@@ -3484,6 +3509,13 @@ function renderHistory(){
   if(!$('dayAgendaOverlay').hidden)renderDayAgenda();
 }
 function changePeriod(n){const d=$('historyDate').value||today(),x=asDay(d);if(historyView==='month'){const wanted=x.getDate();x.setDate(1);x.setMonth(x.getMonth()+n);const last=new Date(x.getFullYear(),x.getMonth()+1,0).getDate();x.setDate(Math.min(wanted,last))}else x.setDate(x.getDate()+n*(historyView==='week'?7:1));$('historyDate').value=dayStr(x);renderHistory()}
+function toggleEventRecurrence(){
+ const repeat=$('eventRepeat').value,active=repeat!=='none',end=document.querySelector('[name=eventRecurrenceEnd]:checked')?.value||'never';
+ $('eventRecurrenceOptions').hidden=!active;$('eventWeekdays').hidden=repeat!=='weekly';
+ $('eventRepeatUnit').textContent=({daily:'дней',weekly:'недель',monthly:'месяцев',yearly:'лет'})[repeat]||'';
+ $('eventRepeatCountLabel').hidden=!active||end!=='count';$('eventRepeatUntilLabel').hidden=!active||end!=='until';
+ $('eventRepeatCount').required=active&&end==='count';$('eventRepeatUntil').required=active&&end==='until';$('eventRepeatInterval').required=active;
+}
 const weekdayNames=['Пн','Вт','Ср','Чт','Пт','Сб','Вс'];
 const eventRepeatLabels={none:'Без повтора',daily:'Ежедневно',weekly:'По дням недели',monthly:'Ежемесячно',yearly:'Ежегодно'};
 function toggleEventDates(){
@@ -3510,7 +3542,7 @@ function populateEventActivityLinks(){
 function clearEventForm(){
   $('eventForm').reset();$('eventEditId').value='';populateEventActivityLinks();
   $('eventSkill').value='';$('eventTaskLink').value='';$('eventHabitLink').value='';$('eventSkillXP').value='10';
-  $('eventWeekdays').hidden=true;$('eventAllDay').checked=false;
+  $('eventRepeatInterval').value='1';$('eventRepeatCount').value='10';$('eventRepeatUntil').value='';document.querySelector('[name=eventRecurrenceEnd][value=never]').checked=true;toggleEventRecurrence();$('eventAllDay').checked=false;
   $('eventDayStart').value='';$('eventDayEnd').value='';
   $('eventColor').value='#4285f4';$('eventOccurrenceDate').value='';$('eventScopeField').hidden=true;$('eventScope').value='one';
   $('eventDeleteLocal').hidden=true;$('eventDeleteGoogle').hidden=true;
@@ -3555,7 +3587,8 @@ function openCalendarEventEditor(id,occurrenceDate){
  $('eventStart').value=startsAt.slice(0,16);$('eventEnd').value=endsAt.slice(0,16);
  $('eventRepeat').value=['none','daily','weekly','monthly','yearly'].includes(event.repeat)?event.repeat:'none';
  document.querySelectorAll('[name=eventWeekday]').forEach(x=>x.checked=(event.weekdays||[]).includes(Number(x.value)));
- $('eventWeekdays').hidden=$('eventRepeat').value!=='weekly';
+ $('eventRepeatInterval').value=String(event.repeatInterval||1);$('eventRepeatCount').value=String(event.repeatCount||10);$('eventRepeatUntil').value=event.repeatEndMode==='until'?event.repeatUntil||'':'';
+ const end=document.querySelector('[name=eventRecurrenceEnd][value='+(event.repeatEndMode||'never')+']');if(end)end.checked=true;toggleEventRecurrence();
  $('eventLocation').value=override?.location||event.location||'';
  $('eventDescription').value=override?.description??event.description??'';
  $('eventSkill').value=override?.skill??event.skill??'';
@@ -3621,13 +3654,17 @@ function saveEvent(e){
  const weekdays=[...document.querySelectorAll('[name=eventWeekday]:checked')].map(x=>Number(x.value));
  if(!title||!startsAt||!endsAt||endsAt<=startsAt||!Number.isFinite(Date.parse(startsAt))||!Number.isFinite(Date.parse(endsAt)))return toast('Проверь даты и название');
  if(repeat==='weekly'&&!weekdays.length)return toast('Выбери дни недели');
+  const interval=repeat==='none'?1:Number($('eventRepeatInterval').value),endMode=repeat==='none'?'never':document.querySelector('[name=eventRecurrenceEnd]:checked')?.value||'never',repeatCount=endMode==='count'?Number($('eventRepeatCount').value):null,repeatUntil=endMode==='until' ? $('eventRepeatUntil').value : null;
+  if(!Number.isInteger(interval)||interval<1||interval>365)return toast('Интервал: от 1 до 365');
+  if(endMode==='count'&&(!Number.isInteger(repeatCount)||repeatCount<1||repeatCount>3650))return toast('Повторений: от 1 до 3650');
+  if(endMode==='until'&&(!/^\d{4}-\d{2}-\d{2}$/.test(repeatUntil)||repeatUntil<startsAt.slice(0,10)))return toast('Неверная дата окончания');
  const id=$('eventEditId').value||uid(),old=(state.schedule||[]).find(x=>x.id===id),occurrenceKey=$('eventOccurrenceDate').value;
  const scope=old&&old.repeat&&old.repeat!=='none'?$('eventScope').value:'all';
  const skill=$('eventSkill').value.trim().slice(0,70)||null;
  const linkedTaskId=$('eventTaskLink').value||null,linkedHabitId=$('eventHabitLink').value||null;
  const skillXp=Number($('eventSkillXP').value);
  if(!Number.isFinite(skillXp)||skillXp<0||skillXp>40)return toast('Проверь количество опыта навыка');
- const next={...(old||{}),id,title,startsAt,endsAt,repeat,allDay,weekdays:repeat==='weekly'?weekdays:[],
+ const next={...(old||{}),id,title,startsAt,endsAt,repeat,allDay,weekdays:repeat==='weekly'?weekdays:[],repeatInterval:interval,repeatEndMode:endMode,repeatCount,repeatUntil,
   location:$('eventLocation').value.trim(),description:$('eventDescription').value.trim(),color:$('eventColor').value,
   skill,linkedTaskId,linkedHabitId,skillXp};
  if(!transact(()=>{
@@ -3654,7 +3691,8 @@ function saveEvent(e){
    state.schedule[i]={...old,overrides};
   }else if(scope==='future'){
    const previousDay=plusDays(occurrenceKey,-1);
-   const remainder={...next,id:uid(),google:undefined,overrides:{},excludedDates:[],repeatUntil:undefined};
+   const remainder={...next,id:uid(),google:undefined,overrides:{},excludedDates:[]};
+    if(next.repeatEndMode==='count'){let consumed=0;for(let day=old.startsAt.slice(0,10);day<occurrenceKey;day=plusDays(day,1))if(matchesCalendarRecurrence(old,day))consumed++;remainder.repeatCount=Math.max(1,Number(next.repeatCount||1)-consumed)}
    // Earlier instances remain part of the old series; the new series starts here.
    state.schedule[i]={...old,repeatUntil:previousDay};
    state.schedule.push(remainder);
@@ -3956,7 +3994,7 @@ $('taskDelete').onclick=()=>deleteActivity($('taskEditId').value);
 // State must be loaded before editors or skill widgets read state.days/activities/events.
 load();
 clearActivityEditor();
-$('eventRepeat').onchange=()=>{$('eventWeekdays').hidden=$('eventRepeat').value!=='weekly'};$('eventForm').onsubmit=saveEvent;
+$('eventRepeat').onchange=toggleEventRecurrence;for(const i of document.querySelectorAll('[name=eventRecurrenceEnd]'))i.onchange=toggleEventRecurrence;$('eventForm').onsubmit=saveEvent;
 $('eventCancel').onclick=()=>{clearEventForm();$('calendarEventEditor').open=false};
 $('eventAllDay').onchange=toggleEventDates;
 
@@ -4756,6 +4794,17 @@ window.LifeSimsFoodBridge={
     else if(event.repeat==='monthly')payload.recurrence=['RRULE:FREQ=MONTHLY;BYMONTHDAY='+start.getDate()];
     else if(event.repeat==='yearly')payload.recurrence=['RRULE:FREQ=YEARLY;BYMONTH='+(start.getMonth()+1)+';BYMONTHDAY='+start.getDate()];
     else payload.recurrence = [];
+    if(payload.recurrence.length){
+      let rule=payload.recurrence[0],interval=Number(event.repeatInterval)||1;
+      if(interval>1)rule+=';INTERVAL='+interval;
+      if(event.repeatEndMode==='count'&&Number.isInteger(Number(event.repeatCount))&&Number(event.repeatCount)>0)rule+=';COUNT='+Number(event.repeatCount);
+      else if(event.repeatEndMode==='until'&&/^\d{4}-\d{2}-\d{2}$/.test(event.repeatUntil||'')){
+       const day=event.repeatUntil.replace(/-/g,'');
+       const until=event.allDay?day:new Date(event.repeatUntil+'T23:59:59').toISOString().replace(/[-:]/g,'').replace(/\.\d{3}/,'');
+       rule+=';UNTIL='+until;
+      }
+      payload.recurrence=[rule];
+    }
     return payload;
   }
   async function listRemote(){
