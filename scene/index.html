@@ -4035,6 +4035,96 @@ $('taskCancel').onclick=()=>{clearActivityEditor();$('calendarTaskEditor').open=
 $('taskDelete').onclick=()=>deleteActivity($('taskEditId').value);
 // State must be loaded before editors or skill widgets read state.days/activities/events.
 load();
+// One-time, opt-in clean slate for the LifeSims events calendar only.
+// Activated solely by an explicit special link, never by a normal app visit.
+// Do not modify Google Calendar, personal history, tasks, habits, food or measurements.
+function runRequestedOneTimeCalendarClear(){
+ let requested=false;
+ try{requested=new URLSearchParams(window.location.search).get('calendar_clear')==='once-20261122';}
+ catch(_){return;}
+ if(!requested)return;
+ const KEY='lifesims-calendar-backup-before-clear-2026-11-22';
+ const show=message=>{
+  const existing=$('calendarOneTimeClearNotice');
+  if(existing)existing.remove();
+  const note=document.createElement('div');
+  note.id='calendarOneTimeClearNotice';note.className='notice';
+  note.setAttribute('role','status');note.textContent=message;
+  const target=$('historyRange');
+  if(target)target.before(note);
+  else $('history').prepend(note);
+  return note;
+ };
+ if(storageBlocked||!storageOK){
+  show('⚠ Очистка не выполнена: сохранение LifeSims недоступно. Старые данные не изменены.');
+  return;
+ }
+ let stored;
+ try{stored=localStorage.getItem(STORE);}
+ catch(_){show('⚠ Очистка не выполнена: нет доступа к сохранениям браузера.');return;}
+ if(!stored){
+  show('⚠ В этом браузере нет сохранения LifeSims. Ничего не удалено. Открой специальную ссылку в том же браузере, где находятся твои мероприятия.');
+  return;
+ }
+ if(state.calendarManualClearOnce20261122===true){
+  show('✓ Одноразовая очистка календаря уже применена в этом браузере. Повторно ничего не удалено.');
+  return;
+ }
+ if(!Array.isArray(state.schedule)){
+  show('⚠ Очистка не выполнена: формат мероприятий повреждён. Сохрани JSON и проверь данные.');
+  return;
+ }
+ const originalCount=state.schedule.length;
+ let backup;
+ try{
+  // Keep the precise original events and hidden-list settings for recovery.
+  const snapshot={kind:'lifesims-calendar-backup',createdAt:new Date().toISOString(),
+   events:state.schedule,googleHidden:state.googleHidden||[]};
+  const oldBackup=localStorage.getItem(KEY);
+  if(oldBackup){
+   backup=JSON.parse(oldBackup);
+   if(!backup||!Array.isArray(backup.events)||
+      JSON.stringify(backup.events)!==JSON.stringify(state.schedule))
+    throw Error('Уже существует резервная копия другого состояния. Экспортируй JSON перед новой очисткой.');
+  }else{
+   localStorage.setItem(KEY,JSON.stringify(snapshot));
+   backup=JSON.parse(localStorage.getItem(KEY));
+   if(!backup||JSON.stringify(backup.events)!==JSON.stringify(state.schedule))
+    throw Error('Не удалось проверить резервную копию.');
+  }
+ }catch(error){
+  show('⚠ Очистка не выполнена: резервная копия не создана. '+
+   String(error?.message||'Недостаточно памяти браузера')+
+   ' Скачай JSON через «Данные и резервная копия».');
+  return;
+ }
+ const success=transact(()=>{
+  state.schedule=[];
+  state.calendarManualClearOnce20261122=true;
+  state.calendarManualClearedAt=new Date().toISOString();
+ });
+ if(!success){
+  show('⚠ Очистка не выполнена: браузер отказался сохранять изменения. Исходные мероприятия оставлены без изменений.');
+  return;
+ }
+ try{
+  const readback=JSON.parse(localStorage.getItem(STORE));
+  if(readback.calendarManualClearOnce20261122!==true||!Array.isArray(readback.schedule)||readback.schedule.length!==0){
+   show('⚠ Не удалось подтвердить очистку в памяти браузера. Проверь раздел «Данные».');
+   return;
+  }
+ }catch(_){
+  show('⚠ Не удалось проверить очищенный календарь. Проверь доступность хранилища.');
+  return;
+ }
+ closeDayAgenda();clearEventForm();
+ renderAll();
+ show('✓ Календарь LifeSims очищен: удалено '+originalCount+
+  ' мероприятий. Дела, привычки, приёмы пищи, показатели и история не изменены. '+
+  'Резервная копия мероприятий сохранена в памяти этого браузера. '+
+  'Google Календарь не изменён. При новой синхронизации события Google будут импортированы снова.');
+}
+runRequestedOneTimeCalendarClear();
 clearActivityEditor();
 $('eventRepeat').onchange=toggleEventRecurrence;for(const i of document.querySelectorAll('[name=eventRecurrenceEnd]'))i.onchange=toggleEventRecurrence;$('eventForm').onsubmit=saveEvent;
 $('eventCancel').onclick=()=>{clearEventForm();$('calendarEventEditor').open=false};
