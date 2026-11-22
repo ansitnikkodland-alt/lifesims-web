@@ -1,5 +1,5 @@
-const CACHE='lifesims-scene-v92';
-const FILES=['./','./index.html','./room-illustrated-v42.jpg','./calendar-style.css?v=76','./task-premium.css?v=92','./task-premium.js?v=67','./habit-grid.js?v=82','./skill-detail.js?v=92','./focus-timer.js?v=65','./oura-style.css','./food-log.css','./food-log.js','./meal-chat.css?v=90','./meal-photo.js?v=88','./meal-chat.js?v=88','./meal-lookup.js?v=89','./oura-sync.js','./privacy.html','./terms.html','./manifest.webmanifest','../icon.svg'];
+const CACHE='lifesims-scene-v93';
+const FILES=['./','./index.html','./room-illustrated-v42.jpg','./calendar-style.css?v=76','./task-premium.css?v=92','./task-premium.js?v=67','./habit-grid.js?v=82','./skill-detail.js?v=92','./focus-timer.js?v=65','./oura-style.css','./food-log.css','./food-log.js','./meal-chat.css?v=90','./meal-live-camera.css?v=93','./meal-photo.js?v=93','./meal-chat.js?v=93','./meal-lookup.js?v=89','./meal-live-camera.js?v=93','./oura-sync.js','./privacy.html','./terms.html','./manifest.webmanifest','../icon.svg'];
 self.addEventListener('install',event=>{
  event.waitUntil(caches.open(CACHE)
   .then(cache=>cache.addAll(FILES.map(path=>new Request(path,{cache:'reload'}))))

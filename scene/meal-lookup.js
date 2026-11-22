@@ -86,8 +86,10 @@
   selected=result;
   $('mealLookupNutrition').hidden=false;
   $('mealLookupTitle').textContent=result.title||'Название не определено — введи его вручную';
-  $('mealLookupSource').textContent='Источник: '+result.source+'. '+result.confidence;
-  $('mealLookupGrams').value=100;$('mealChatPhotoGrams').value=100;
+  $('mealLookupSource').textContent='Источник: '+result.source+'. '+(result.gramsEstimate?'Масса/объём упаковки: '+result.gramsEstimate+' '+(result.portionUnit||'г')+'. ':'')+result.confidence;
+  const portion=Number(result.gramsEstimate)>0?Number(result.gramsEstimate):100;
+  $('mealLookupGrams').value=portion;$('mealChatPhotoGrams').value=portion;
+  $('mealLookupGrams').closest('label').firstChild.textContent='Съедено, '+(result.portionUnit||'г')+' ';
   const oldPortion=$('mealChatPhotoGrams').closest('.meal-chat-photo-portion');
   if(oldPortion)oldPortion.hidden=true;
   const rawText=String(result.labelText||'').trim();

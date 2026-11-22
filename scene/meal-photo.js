@@ -126,6 +126,26 @@ async function startBarcodeScanner(video,onCode,onError){
  }catch(error){stop();onError?.(error);throw error}
 }
 
+
+/* Net package size, never the nutritional "per 100 g" reference quantity. */
+function parsePackageSize(value){
+ const txt=String(value||'').toLowerCase().replace(/,/g,'.').replace(/\u00a0/g,' ');
+ const multiply=txt.match(/(\d{1,3})\s*[x×х*]\s*(\d+(?:\.\d+)?)\s*(кг|kg|г|гр|g|мл|ml|л|l)(?![а-яa-z])/i);
+ const single=txt.match(/(\d+(?:\.\d+)?)\s*(кг|kg|г|гр|g|мл|ml|л|l)(?![а-яa-z])/i);
+ const match=multiply||single;
+ if(!match)return null;
+ const amount=Number(match[multiply?2:1])*(multiply?Number(match[1]):1);
+ const unit=String(match[multiply?3:2]).toLowerCase();
+ const liquid=/^(мл|ml|л|l)$/.test(unit), large=/^(кг|kg|л|l)$/.test(unit);
+ const size=amount*(large?1000:1);
+ return Number.isFinite(size)&&size>0&&size<=10000?{value:Math.round(size*10)/10,unit:liquid?'мл':'г'}:null;
+}
+function parseLabelSize(raw){
+ const text=String(raw||'').replace(/\u00a0/g,' ');
+ const match=text.match(/(?:масса\s*нетто|нетто|масса\s*продукта|масса|вес|объ[её]м|net\s*(?:weight|wt|volume)|объем)\s*[:\-—]?\s*((?:\d{1,3}\s*[x×х*]\s*)?\d+(?:[.,]\d+)?\s*(?:кг|kg|г|гр|g|мл|ml|л|l))/i);
+ return match?parsePackageSize(match[1]):null;
+}
+
 const PRODUCT_FIELDS='code,product_name,product_name_ru,product_name_en,brands,ingredients_text,ingredients_text_ru,nutriments,quantity';
 function normalizeProduct(p,code,source='Open Food Facts'){
  const n=p?.nutriments||{};
@@ -134,10 +154,11 @@ function normalizeProduct(p,code,source='Open Food Facts'){
  const title=base||brand;
  if(!title)return null;
  const kcal=number(n['energy-kcal_100g']);
+ const packageSize=parsePackageSize(p?.quantity);
  return {kind:'package',source,barcode:code||p.code||null,title:brand&&base&&!base.toLowerCase().includes(brand.toLowerCase())?base+' · '+brand:title,
   ingredients:bounded(p?.ingredients_text_ru||p?.ingredients_text||'',700),
   per100:{kcal,protein:number(n.proteins_100g),fat:number(n.fat_100g),carbs:number(n.carbohydrates_100g)},
-  details:bounded(p?.quantity||'',120),
+  details:bounded(p?.quantity||'',120),gramsEstimate:packageSize?.value??null,portionUnit:packageSize?.unit??null,
   confidence:'Данные пользовательской базы; сверь с этикеткой'};
 }
 async function fetchJSON(url,timeout=16000){
@@ -256,7 +277,9 @@ async function readLabel(file,onStatus){
  return {raw,found:extractNutrition(raw)};
 }
 function labelResult(barcode,raw,found){
+ const packageSize=parseLabelSize(raw);
  return {kind:'package',source:'OCR этикетки',barcode:barcode||null,
+  gramsEstimate:packageSize?.value??null,portionUnit:packageSize?.unit??null,
   title:found.title||'',ingredients:found.ingredients||'',
   per100:found.per100||null,labelText:raw.slice(0,3000),
   detectedNutrition:found.detectedNutrition,
@@ -347,5 +370,5 @@ async function analyzeFood(file,onStatus){
     'Название не определено уверенно. Размер порции и калории оцени самостоятельно'};
  }finally{URL.revokeObjectURL(url)}
 }
-window.LifeSimsMealPhoto={compressedThumbnail,barcodeFromPhoto,startBarcodeScanner,productByBarcode,searchProducts,analyzeFood,analyzePackage,analyzeSmart,extractNutrition,typicalPortion};
+window.LifeSimsMealPhoto={compressedThumbnail,barcodeFromPhoto,startBarcodeScanner,productByBarcode,searchProducts,analyzeFood,analyzePackage,analyzeSmart,extractNutrition,typicalPortion,parsePackageSize,parseLabelSize};
 })();

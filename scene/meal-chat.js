@@ -188,7 +188,7 @@
   }
   const mode=result.kind==='package';
   if(mode){
-   $('mealChatPhotoGrams').value=100;
+   $('mealChatPhotoGrams').value=Number.isFinite(Number(result.gramsEstimate))&&Number(result.gramsEstimate)>0?result.gramsEstimate:100;
    $('mealChatPhotoBarcode').hidden=false;
   }
   if(!mode&&result.kind==='meal'&&Number.isFinite(result.gramsEstimate)){
@@ -252,6 +252,12 @@
    await attachPhoto(file);
    if(photoFile===file)await analyzePhoto('smart');
   }
+ async function acceptLiveFrame(file,result){
+  if(!file||!result)return;
+  if(!editingId){$('mealChatInput').value='';renderSuggestions()}
+  await attachPhoto(file);
+  if(photoFile===file)showPhotoResult(result);
+ }
  async function findBarcode(){
   if(photoBusy)return;
   const code=$('mealChatBarcodeValue').value.replace(/[^0-9]/g,'');
@@ -349,5 +355,5 @@
  window.LifeSimsFood={...legacy,open:openChat,close:()=>{
   closeChat();if(typeof originalClose==='function')originalClose();
  },openDetailed};
- window.LifeSimsMealChat={open:openChat,close:closeChat,setProduct:showPhotoResult,recognizeSmartPhoto};
+ window.LifeSimsMealChat={open:openChat,close:closeChat,setProduct:showPhotoResult,recognizeSmartPhoto,acceptLiveFrame};
 })();
