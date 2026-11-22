@@ -3607,7 +3607,7 @@ function openCalendarEventEditor(id,occurrenceDate){
  document.querySelectorAll('[name=eventWeekday]').forEach(x=>x.checked=(event.weekdays||[]).includes(Number(x.value)));
  $('eventRepeatInterval').value=String(event.repeatInterval||1);$('eventRepeatCount').value=String(event.repeatCount||10);$('eventRepeatUntil').value=event.repeatEndMode==='until'?event.repeatUntil||'':'';
  const end=document.querySelector('[name=eventRecurrenceEnd][value='+(event.repeatEndMode||'never')+']');if(end)end.checked=true;toggleEventRecurrence();
- $('eventLocation').value=override?.location||event.location||'';
+ $('eventLocation').value=override?.location??event.location??'';
  $('eventDescription').value=override?.description??event.description??'';
  $('eventSkill').value=override?.skill??event.skill??'';
  $('eventTaskLink').value=override?.linkedTaskId??event.linkedTaskId??'';
@@ -3626,8 +3626,8 @@ function openCalendarEventEditor(id,occurrenceDate){
  $('eventDeleteHelp').hidden=!event.google?.id;
  $('eventDuplicate').hidden=false;
  $('eventEditSource').textContent=event.google
-  ? 'Изменения повторений сохраняются локально в LifeSims, не в Google. Google продолжает хранить исходную серию.'
-  : 'Выбери: только этот экземпляр, этот и будущие или всю серию.';
+  ? (event.google.seriesId?'Это экземпляр Google-повтора. Изменения отдельного экземпляра можно передать при двусторонней синхронизации; для всей серии используй Google Calendar.':'Изменения мероприятия можно передать в Google после подтверждения двусторонней синхронизации.')
+  : 'Для повторяющегося мероприятия после сохранения выбери: одно событие, это и будущие либо всю серию.';
  $('calendarEventEditor').open=true;
  $('calendarEventEditor').scrollIntoView({behavior:'smooth',block:'start'});
 }
@@ -3734,7 +3734,6 @@ function saveEvent(e){
   }else if(scope==='future'){
    const previousDay=plusDays(occurrenceKey,-1);
    const remainder={...next,id:uid(),google:undefined,overrides:{},excludedDates:[]};
-    if(next.repeatEndMode==='count'){let consumed=0;for(let day=old.startsAt.slice(0,10);day<occurrenceKey;day=plusDays(day,1))if(matchesCalendarRecurrence(old,day))consumed++;remainder.repeatCount=Math.max(1,Number(next.repeatCount||1)-consumed)}
    // Earlier instances remain part of the old series; the new series starts here.
    state.schedule[i]={...old,repeatUntil:previousDay};
    state.schedule.push(remainder);
@@ -3774,7 +3773,7 @@ function deleteEventLocal(id,instanceDate,approvedScope=null){
  const message=scope==='one'?'Убрать только экземпляр «'+event.title+'» за '+key+'?':
    scope==='future'?'Убрать «'+event.title+'» с '+key+' и все будущие повторения?':
    'Удалить всю серию «'+event.title+'» из LifeSims?'+(event.google?' В Google событие останется.':'');
- if(!confirm(message))return;
+ if(!approvedScope&&!confirm(message))return;
  try{
   if(scope==='all'||!recurring){removeLocalCalendarEvent(id,true);}
   else if(scope==='one'){
