@@ -6,6 +6,12 @@ import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
+import android.graphics.Bitmap;
+import android.graphics.Canvas;
+import android.graphics.drawable.Drawable;
+import android.util.Base64;
+
+import java.io.ByteArrayOutputStream;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -41,6 +47,32 @@ public final class UsageCollector {
         }
     }
 
+
+    private static String appIcon(PackageManager pm, String pkg) {
+        try {
+            Drawable drawable = pm.getApplicationIcon(pkg);
+            if (drawable == null) return null;
+            Bitmap bitmap = Bitmap.createBitmap(72, 72, Bitmap.Config.ARGB_8888);
+            Canvas canvas = new Canvas(bitmap);
+            drawable.setBounds(0, 0, 72, 72);
+            drawable.draw(canvas);
+            ByteArrayOutputStream output = new ByteArrayOutputStream();
+            try {
+                if (!bitmap.compress(Bitmap.CompressFormat.PNG, 80, output)) return null;
+                byte[] bytes = output.toByteArray();
+                if (bytes.length > 38000) return null;
+                return "data:image/png;base64," +
+                        Base64.encodeToString(bytes, Base64.NO_WRAP);
+            } finally {
+                bitmap.recycle();
+                output.close();
+            }
+        } catch (Exception | OutOfMemoryError ignored) {
+            // Non-launchable apps or hidden packages can lack accessible artwork.
+            return null;
+        }
+    }
+
     public static JSONObject collect(Context context, int days) throws Exception {
         if (!MainActivity.hasUsageAccess(context)) throw new SecurityException("Usage access denied");
         if (days < 1 || days > 7) throw new IllegalArgumentException("Invalid days");
@@ -56,7 +88,9 @@ public final class UsageCollector {
         midnight.set(Calendar.MILLISECOND, 0);
         midnight.add(Calendar.DAY_OF_YEAR, 1 - days);
         JSONArray rows = new JSONArray();
+        JSONObject icons = new JSONObject();
         Map<String, String> names = new HashMap<>();
+        Map<String, Boolean> iconAttempted = new HashMap<>();
         for (int day = 0; day < days; day++) {
             Calendar next = (Calendar) midnight.clone();
             next.add(Calendar.DAY_OF_YEAR, 1);
@@ -94,6 +128,13 @@ public final class UsageCollector {
                 row.put("packageName", pkg);
                 row.put("seconds", seconds);
                 rows.put(row);
+                // Send each icon only once, not once per date. Missing icons
+                // fall back to app initials in the browser (never invented logos).
+                if (!iconAttempted.containsKey(pkg) && iconAttempted.size() < 100) {
+                    iconAttempted.put(pkg, Boolean.TRUE);
+                    String png = appIcon(pm, pkg);
+                    if (png != null) icons.put(pkg, png);
+                }
                 if (rows.length() > 5000) throw new IllegalStateException("Too many usage entries");
             }
             midnight = next;
@@ -103,6 +144,7 @@ public final class UsageCollector {
         payload.put("source", "android");
         payload.put("device", Build.MANUFACTURER + " " + Build.MODEL);
         payload.put("records", rows);
+        payload.put("icons", icons);
         payload.put("generatedAt", now);
         payload.put("detail", "daily Android foreground usage totals, not individual sessions");
         return payload;
