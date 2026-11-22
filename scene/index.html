@@ -1003,6 +1003,12 @@ body{background:#091428}
 <div class="agenda-actions"><button type="button" id="agendaAddEvent" class="primary">+ Мероприятие</button><button type="button" id="agendaAddTask" class="secondary">+ Дело</button><button type="button" id="agendaHabitBackdate" class="secondary">◇ Отметить привычку</button><button type="button" id="agendaAddMeal" class="secondary">+ Питание</button></div>
 </div></div>
 <section class="section" id="data"><div class="heading"><h2>Резервная копия</h2></div>
+<div class="card" id="calendarResetRecoveryCard" hidden>
+ <h3>📅 Резервная копия мероприятий перед очисткой</h3>
+ <p id="calendarResetRecoveryInfo" class="hint">Сохранён календарь до одноразовой очистки. Google Календарь не изменялся.</p>
+ <button type="button" class="secondary" id="restoreOneTimeCalendarButton">Восстановить прежние мероприятия</button>
+ <p id="calendarResetRecoveryStatus" class="hint" role="status" aria-live="polite"></p>
+</div>
 <div class="card" id="recoveryCard"><h3>🔎 Проверка прежних записей</h3>
 <p class="hint">Проверка не меняет прогресс. Показывает только доступные сохранения LifeSims в этом браузере на этом сайте. Сохранения другого браузера или адреса здесь не появятся.</p>
 <button class="secondary" id="inspectLocalData" type="button">Проверить локальные сохранения</button>
@@ -4125,6 +4131,27 @@ function runRequestedOneTimeCalendarClear(){
   'Google Календарь не изменён. При новой синхронизации события Google будут импортированы снова.');
 }
 runRequestedOneTimeCalendarClear();
+function initOneTimeCalendarRecovery(){
+ const KEY='lifesims-calendar-backup-before-clear-2026-11-22',card=$('calendarResetRecoveryCard');
+ let record;
+ try{record=JSON.parse(localStorage.getItem(KEY));}catch(_){return;}
+ if(!record||!Array.isArray(record.events))return;
+ card.hidden=false;
+ $('calendarResetRecoveryInfo').textContent='Мероприятий в исходной копии: '+record.events.length+
+  '. При восстановлении текущий список мероприятий будет заменён исходным. Дела, привычки и показатели не изменятся.';
+ $('restoreOneTimeCalendarButton').onclick=()=>{
+  if(storageBlocked||!storageOK){$('calendarResetRecoveryStatus').textContent='Сохранение недоступно — восстановление отменено.';return;}
+  let backup;
+  try{backup=JSON.parse(localStorage.getItem(KEY));}
+  catch(_){$('calendarResetRecoveryStatus').textContent='Не удалось прочитать резервную копию.';return;}
+  if(!Array.isArray(backup?.events))return;
+  if(!confirm('Восстановить '+backup.events.length+' прежних мероприятий вместо текущих '+(state.schedule||[]).length+'? Старые дубликаты также вернутся. Google не изменится.'))return;
+  if(transact(()=>{state.schedule=JSON.parse(JSON.stringify(backup.events));state.calendarManualClearOnce20261122=true;})){
+   renderAll();$('calendarResetRecoveryStatus').textContent='✓ Мероприятия восстановлены из локальной копии.';
+  }else $('calendarResetRecoveryStatus').textContent='Ошибка сохранения. Текущий календарь не заменён.';
+ };
+}
+initOneTimeCalendarRecovery();
 clearActivityEditor();
 $('eventRepeat').onchange=toggleEventRecurrence;for(const i of document.querySelectorAll('[name=eventRecurrenceEnd]'))i.onchange=toggleEventRecurrence;$('eventForm').onsubmit=saveEvent;
 $('eventCancel').onclick=()=>{clearEventForm();$('calendarEventEditor').open=false};
