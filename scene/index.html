@@ -2853,7 +2853,13 @@ window.LifeSimsPetsBridge={
  rename(id,value){
   const name=String(value||'').trim().slice(0,50);
   if(!name||!['ginger','black'].includes(id))return false;
-  const ok=transact(()=>{const pet=state.pets?.animals?.find(p=>p.id===id);if(pet)pet.name=name});
+  const ok=transact(()=>{
+   const pet=state.pets?.animals?.find(p=>p.id===id);
+   if(!pet)return;
+   const previous=pet.name;pet.name=name;
+   const feeding=state.activities.find(a=>a?.id==='pet_feed_'+id);
+   if(feeding&&feeding.name==='Покормить '+previous)feeding.name='Покормить '+name;
+  });
   if(ok)renderAll();
   return ok;
  },
