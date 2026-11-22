@@ -1101,9 +1101,11 @@ const defs=[
 {id:'desk_code',object:'desk',name:'Учиться программированию',xp:20,repeat:'daily',skill:'Программирование'},
 {id:'sim_appearance',object:'sim',name:'Посмотреть внешность',xp:0,repeat:'daily',open:'state'},
 {id:'sim_diary',object:'sim',name:'Записать в дневник',xp:0,repeat:'daily',open:'diary'},
-{id:'sofa_rest',object:'sofa',name:'Отдохнуть',xp:5,repeat:'daily',skill:'Здоровье'}];
+{id:'sofa_rest',object:'sofa',name:'Отдохнуть',xp:5,repeat:'daily',skill:'Здоровье'},
+{id:'pet_feed_ginger',object:null,petId:'ginger',name:'Покормить рыжего котика',xp:10,repeat:'daily',skill:'Забота'},
+{id:'pet_feed_black',object:null,petId:'black',name:'Покормить чёрного котика',xp:10,repeat:'daily',skill:'Забота'}];
 const labels={window:'🪟 Окно · мероприятия',bed:'🛏 Кровать',books:'📚 Книжная полка',desk:'💻 Компьютер',phone:'📱 Телефон',tableBook:'📖 Книга на столике',fridge:'🧊 Холодильник',coffee:'☕ Кофе',clutter:'🧹 Уборка',sink:'🚰 Раковина',sim:'👤 Персонаж',sofa:'🛋 Диван',shower:'🚿 Ванная',toilet:'🚽 Туалет',catLitter:'🐈 Туалет котиков'};
-const base=()=>({schema:VERSION,createdAt:new Date().toISOString(),days:{},activities:[...defs.filter(a=>a.xp>0).map(a=>({...a,kind:'habit',difficulty:3,createdDate:a.id==='to_poop'?today():undefined,completions:[]})),{id:'coffee_habit',kind:'habit',name:'Кофе',xp:0,skill:null,repeat:'daily',difficulty:3,habitUnit:'чаш.',habitGoal:{type:'max',value:5},completions:[]}],events:[],schedule:[],googleHidden:[],foodMeals:[],foodTemplates:[],financeChecks:[],health:{cycleDays:{},medications:[],medicationLog:[],settings:{cycleLength:28,periodLength:5,reminders:false}},room:{work:null,lastShowerDateReported:'2026-11-18',antiperspirantInitialized:true,poopHabitInitialized:true,illnessEpisodes:[]},legacySkills:{},legacyCopy:null,skillDecaySince:today(),
+const base=()=>({schema:VERSION,createdAt:new Date().toISOString(),days:{},activities:[...defs.filter(a=>a.xp>0).map(a=>({...a,kind:'habit',difficulty:3,createdDate:a.id==='to_poop'?today():undefined,completions:[]})),{id:'coffee_habit',kind:'habit',name:'Кофе',xp:0,skill:null,repeat:'daily',difficulty:3,habitUnit:'чаш.',habitGoal:{type:'max',value:5},completions:[]}],events:[],schedule:[],googleHidden:[],foodMeals:[],foodTemplates:[],financeChecks:[],health:{cycleDays:{},medications:[],medicationLog:[],settings:{cycleLength:28,periodLength:5,reminders:false}},room:{work:null,lastShowerDateReported:'2026-11-18',antiperspirantInitialized:true,poopHabitInitialized:true,petHabitsInitialized:true,illnessEpisodes:[]},pets:{animals:[{id:'ginger',name:'Рыжий котик',activities:[],schedule:[]},{id:'black',name:'Чёрный котик',activities:[],schedule:[]}]},legacySkills:{},legacyCopy:null,skillDecaySince:today(),
  taskProjects:[],taskTags:[{id:'tp-family',name:'Семья'},{id:'tp-work',name:'Работа'}],
  habitMeasurements:{},customSkills:[],focusSettings:{focus:25,short:5,long:15},focusTimer:{mode:'focus',running:false,remainingSec:1500,elapsedSec:0,endAt:null,startAt:null,taskId:''}});
 let state,storageOK=true,storageBlocked=false,activeDay=today(),historyView='month',selectedTab='needs';
@@ -1177,6 +1179,22 @@ function normalize(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.
  normalized.focusTimer=raw.focusTimer&&typeof raw.focusTimer==='object'?{...safe.focusTimer,...raw.focusTimer}:safe.focusTimer;
  normalized.skillDecaySince=typeof raw.skillDecaySince==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(raw.skillDecaySince)?raw.skillDecaySince:today();
  normalized.activities=normalized.activities.map(a=>a&&typeof a==='object'?{...a,difficulty:(Number.isInteger(Number(a.difficulty))&&Number(a.difficulty)>=1&&Number(a.difficulty)<=5?Number(a.difficulty):3)}:a);
+ if(!raw.room?.petHabitsInitialized){
+  for(const id of ['pet_feed_ginger','pet_feed_black']){
+   if(!normalized.activities.some(a=>a?.id===id)){
+    const item=defs.find(a=>a.id===id);
+    normalized.activities.push({...item,kind:'habit',difficulty:2,createdDate:today(),completions:[]});
+   }
+  }
+  normalized.room.petHabitsInitialized=true;
+ }
+ const existingPets=Array.isArray(raw.pets?.animals)?raw.pets.animals:[];
+ normalized.pets={animals:safe.pets.animals.map(pet=>{
+  const prev=existingPets.find(p=>p?.id===pet.id)||{};
+  const links=arr=>Array.isArray(arr)?[...new Set(arr.filter(x=>typeof x==='string'&&x.length<=128))].slice(0,100):[];
+  return {...pet,name:typeof prev.name==='string'&&prev.name.trim()?prev.name.trim().slice(0,50):pet.name,
+   activities:links(prev.activities),schedule:links(prev.schedule)};
+ })};
  if(!normalized.activities.some(a=>a?.id==='coffee_habit'))normalized.activities.push({...safe.activities.find(a=>a.id==='coffee_habit'),createdDate:(raw.createdAt||'').slice(0,10)||today()});
  normalized.habitMeasurements=(raw.habitMeasurements&&typeof raw.habitMeasurements==='object'&&!Array.isArray(raw.habitMeasurements))?raw.habitMeasurements:{};
  const skillMap=new Map([...defs,...normalized.activities].filter(a=>a?.id).map(a=>[a.id,skillsOf(a)]));
@@ -2467,7 +2485,7 @@ function showNeedsEditor(field='',date=today()){
  $('lifeModalMask').hidden=true;
 }
 
-const DEFAULT_SKILLS=['Психология','Программирование','Психотерапия','Экономика','Имидж','Здоровье'];
+const DEFAULT_SKILLS=['Психология','Программирование','Психотерапия','Экономика','Имидж','Здоровье','Забота'];
 function skillDayDiff(a,b){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(a||'')||!/^\d{4}-\d{2}-\d{2}$/.test(b||''))return 0;
  const d=[a,b].map(x=>x.split('-').map(Number));
@@ -2510,6 +2528,21 @@ function healthImpactHistory(day=today()){
   if(!entry||entry.date>day)continue;
   if(entry.status==='taken')push(entry.date,'Отмечен приём: '+(entry.medicationName||'лекарство')+' (учёт режима, не эффект препарата)',1);
   else if(entry.status==='skipped')push(entry.date,'Отмечен пропуск: '+(entry.medicationName||'лекарство'),-1);
+ }
+ return entries;
+}
+function petCareImpactHistory(day=today()){
+ const entries=[],count=new Map();
+ for(const e of state.events||[]){
+  if(!e||!e.date||e.date>day)continue;
+  let points=0;
+  if(e.kind==='pet_care'&&e.action==='pet'){
+   const key=e.date+'|'+e.petId,n=(count.get(key)||0)+1;count.set(key,n);
+   if(n<=3)points=5;
+  }else if(e.kind==='clean'&&String(e.name||'').includes('туалет котиков'))points=8;
+  if(points)entries.push({kind:'pet_care_xp',skill:'Забота',skills:['Забота'],points,
+   name:e.kind==='clean'?'Уборка туалета котиков':'Погладить питомца',
+   date:e.date,at:e.at||e.date+'T12:00:00',automatic:true,petId:e.petId||null});
  }
  return entries;
 }
@@ -2581,8 +2614,8 @@ function skillImpactHistory(day=today()){
    }
   }
  }
- // Recorded health signals are derived from saved facts; editing/deleting a record recalculates XP.
- entries.push(...healthImpactHistory(day));
+ // Care and health are derived from dated actions without modifying old records.
+ entries.push(...healthImpactHistory(day),...petCareImpactHistory(day));
  // Manual skill edits are absolute, dated settings in the normal XP timeline.
  for(const e of state.events||[]){
   if(e?.kind!=='skill_manual'||typeof e.skill!=='string'||!e.skill.trim()||
