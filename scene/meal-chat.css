@@ -135,3 +135,22 @@
 .meal-smart-sources{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;padding:4px 0 7px}
 .meal-smart-sources button{min-height:52px;background:#344552;color:#f3f8fa;border:1px solid #91a7b5;border-radius:12px;font:600 13px system-ui;padding:10px 8px;cursor:pointer}
 .meal-smart-sources button:focus-visible{outline:3px solid #f7edbd;outline-offset:2px}
+
+
+/* v90 — food history inside satiety metric */
+#singleMetricContent .satiety-food-history{border:1px solid #6c879d;background:#15263d;border-radius:14px;padding:11px;display:flex;flex-direction:column;gap:9px}
+#singleMetricContent .satiety-food-history-head{display:flex;flex-direction:column;gap:5px}
+#singleMetricContent .satiety-food-history-head h4{margin:0;font-size:16px;color:#f8fcff}
+#singleMetricContent .satiety-food-history-head small{font-size:12px;color:#c9dbe8}
+#singleMetricContent .satiety-food-history-list{display:flex;flex-direction:column;gap:7px}
+#singleMetricContent .satiety-food-day{margin:9px 0 2px;padding-bottom:4px;border-bottom:1px solid #486079;font-size:12px;font-weight:650;color:#b8d9ec}
+#singleMetricContent .satiety-food-item{display:flex;align-items:center;gap:9px;width:100%;min-height:66px;text-align:left;border:1px solid #53677c;border-radius:11px;background:#273b51;color:#f7faff;padding:10px;cursor:pointer}
+#singleMetricContent .satiety-food-item:hover,#singleMetricContent .satiety-food-item:focus-visible{background:#344f68;border-color:#9bcce0}
+#singleMetricContent .satiety-food-item-body{min-width:0;flex:1;display:flex;flex-direction:column;gap:4px}
+#singleMetricContent .satiety-food-item-body strong{font-size:13px;line-height:1.3;overflow-wrap:anywhere}
+#singleMetricContent .satiety-food-item-body small{font-size:11px;color:#d8e0eb;line-height:1.3;overflow-wrap:anywhere}
+#singleMetricContent .satiety-food-item-body .satiety-food-item-macros{color:#a5d8d2}
+#singleMetricContent .satiety-food-item-right{display:flex;flex-direction:column;align-items:flex-end;gap:6px;flex:none;font-size:12px;font-weight:650}
+#singleMetricContent .satiety-food-item-right small{font-size:11px;font-weight:400;color:#bde2ef}
+#singleMetricContent .satiety-food-thumb{width:51px;height:54px;object-fit:cover;border-radius:8px;flex:none}
+#singleMetricContent .satiety-food-more{width:100%;min-height:44px;margin-top:3px}
