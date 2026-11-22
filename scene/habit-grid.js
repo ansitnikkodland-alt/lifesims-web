@@ -97,7 +97,7 @@
    if(habit.resourceEffect?.target){
     const related=el('small','tp-habit-resource','⚡ '+({
      mood:'Настроение',condition:'Физическое состояние',hygiene:'Гигиена',resource:'Ресурс',
-     nutrition:'Питание',hunger:'Сытость',sleepNeed:'Сон',entropy:'Энтропия',activity:'Активность'
+     nutrition:'Питание',hunger:'Сытость',sleepNeed:'Сон',entropy:'Порядок',activity:'Активность'
     }[habit.resourceEffect.target]||habit.resourceEffect.target));
     title.append(related);
    }
