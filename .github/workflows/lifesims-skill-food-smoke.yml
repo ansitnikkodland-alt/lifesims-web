@@ -38,8 +38,27 @@ jobs:
             const p=page.locator('.skill-clickable').filter({hasText:'Психология'}).first();
             await p.click();
             await page.locator('#skillDetailDialog').waitFor({state:'visible'});
-            if(!await page.locator('#skillDetailBody').innerText().then(t=>t.includes('Читать')&&t.includes('История практики')&&t.includes('Текущий опыт')))
-              throw Error('Skill detail missing linked habit or metrics');
+            if(!await page.locator('#skillDetailBody').innerText().then(t=>t.includes('Читать')&&t.includes('История изменений навыка')&&t.includes('Общий опыт')))
+              throw Error('Skill detail missing linked habit or XP data');
+            if(await page.locator('#skillDetailBody').innerText().then(t=>t.includes('Уровень')||t.includes('До следующего уровня')||t.includes('XP внутри уровня')))
+              throw Error('Old level UI still shown');
+            if(await page.locator('#manualSkillLevel').count()||await page.locator('#manualSkillWithin').count())
+              throw Error('Level-based inputs still exist');
+            const original=await page.evaluate(()=>window.LifeSimsSkillBridge.scores().find(s=>s.name==='Психология').score);
+            await page.locator('#manualSkillExperience').fill('6900.5');
+            await page.locator('#skillDetailBody .skill-manual-save').click();
+            const updated=await page.evaluate(()=>window.LifeSimsSkillBridge.scores().find(s=>s.name==='Психология').score);
+            if(Math.abs(updated-6900.5)>0.051)
+              throw Error('Editing flat XP failed: '+updated);
+            if(!await page.locator('#skillDetailBody').innerText().then(t=>t.includes('6 900,5')||t.includes('6 900,5')))
+              throw Error('Edited XP not reflected in the skill dialog');
+            if(await page.locator('.skill-clickable').filter({hasText:'Психология'}).innerText().then(t=>/Уровень|\/ 100 XP/.test(t)))
+              throw Error('Level display remained on skill card');
+            await page.evaluate(()=>window.LifeSimsSkillBridge.undoScore('Психология'));
+            const restored=await page.evaluate(()=>window.LifeSimsSkillBridge.scores().find(s=>s.name==='Психология').score);
+            if(Math.abs(restored-original)>0.1)
+              throw Error('Undo flat XP changed previous skill state: '+restored+' vs '+original);
+            console.log('FLAT SKILL XP EDIT + UNDO + NO LEVELS: PASS');
             await page.locator('#skillDetailBody .skill-detail-action').filter({hasText:'Читать'}).first().locator('button').click();
             await page.locator('#calendarTaskPopup').waitFor({state:'visible'});
             if(await page.locator('#taskSkill').inputValue()!=='Психология')throw Error('Skill linked editor lost skill binding');
