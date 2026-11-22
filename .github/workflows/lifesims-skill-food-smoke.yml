@@ -61,7 +61,8 @@ jobs:
             console.log('FLAT SKILL XP EDIT + UNDO + NO LEVELS: PASS');
             await page.locator('#skillDetailBody .skill-detail-action').filter({hasText:'Читать'}).first().locator('button').click();
             await page.locator('#calendarTaskPopup').waitFor({state:'visible'});
-            if(await page.locator('#taskSkill').inputValue()!=='Психология')throw Error('Skill linked editor lost skill binding');
+            if(!await page.locator('#taskSkill').locator('xpath=..').innerText().then(t=>t.includes('Психология')))
+              throw Error('Skill linked editor lost multi-skill binding');
             await page.locator('#taskCancel').click();
             console.log('SKILL DETAILS + ASSOCIATED HABIT EDITOR: PASS');
             const setup=await page.evaluate(()=>{
