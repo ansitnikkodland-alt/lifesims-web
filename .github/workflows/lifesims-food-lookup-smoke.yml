@@ -71,6 +71,25 @@ jobs:
            if(all.length!==2||!all.some(x=>x.kcal===123&&x.barcode==='4601234567890'))
             throw Error('Barcode nutrition correction failed: '+JSON.stringify(all));
            console.log('BARCODE + EDITED NUTRITION: PASS');
+           await page.evaluate(()=>{
+            window.LifeSimsMealPhoto.compressedThumbnail=async()=>null;
+            window.LifeSimsMealPhoto.analyzePackage=async()=>({kind:'package',source:'OCR этикетки',
+              title:'Батончик тестовый',per100:{kcal:250,protein:4,fat:8,carbs:34},
+              confidence:'Тестовый текст этикетки'});
+           });
+           const [chooser]=await Promise.all([
+            page.waitForEvent('filechooser'),
+            page.locator('#mealLookupLabelOpen').click()
+           ]);
+           await chooser.setFiles({name:'label.png',mimeType:'image/png',
+            buffer:Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/O5cAAAAASUVORK5CYII=','base64')});
+           await page.locator('#mealLookupNutrition').waitFor({state:'visible',timeout:10000});
+           if(await page.locator('#mealLookupKcal').inputValue()!=='250')throw Error('Label OCR did not populate editable nutrition');
+           await page.locator('#mealLookupGrams').fill('40');
+           await page.locator('#mealChatSend').click();
+           const label=await page.evaluate(()=>window.LifeSimsFoodBridge.list().find(x=>x.title==='Батончик тестовый'));
+           if(!label||label.grams!==40||label.kcal!==100)throw Error('Label recording failed: '+JSON.stringify(label));
+           console.log('LABEL PHOTO OCR FLOW (STUBBED OCR) + 40 G NUTRITION: PASS');
            if(errors.length)throw Error('Unexpected JS page error: '+errors.join(' | '));
            await browser.close();
           })().catch(e=>{console.error(e);process.exit(1)});
