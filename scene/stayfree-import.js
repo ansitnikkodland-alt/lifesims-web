@@ -223,7 +223,13 @@ function commit(){
  view.hidden=false;confirm.disabled=true;pending=null;
  bridge.refresh();
 }
-function entriesForDate(date){return (bridge.read(date)||[]).filter(x=>x?.source==='stayfree').sort((a,b)=>b.seconds-a.seconds)}
+function entriesForDate(date){
+ const all=(bridge.read(date)||[]).filter(x=>x?.source==='stayfree'||x?.source==='android');
+ const android=all.filter(x=>x.source==='android');
+ // Android statistics supersede any earlier manual StayFree data on this date.
+ // Old CSV records stay in backup unchanged for possible review.
+ return (android.length?android:all.filter(x=>x.source==='stayfree')).sort((a,b)=>b.seconds-a.seconds);
+}
 function renderAgenda(date,container){
  const rows=entriesForDate(date);if(!rows.length)return 0;
  const heading=el('div','agenda-group-title','📱 Экранное время · '+fmt(rows.reduce((sum,x)=>sum+x.seconds,0)));
@@ -231,7 +237,7 @@ function renderAgenda(date,container){
  for(const row of rows){
   const line=el('div','agenda-entry sf-calendar-line');
   const icon=el('span','agenda-time','📱'),text=el('div','agenda-event-main');
-  text.append(el('div','agenda-event-title',row.app),el('div','agenda-event-meta',fmt(row.seconds)+(row.device?' · '+row.device:'')+' · StayFree · итог за день'));
+  text.append(el('div','agenda-event-title',row.app),el('div','agenda-event-meta',fmt(row.seconds)+(row.device?' · '+row.device:'')+' · '+(row.source==='android'?'Android · автоматически':'StayFree · CSV')+' · итог за день'));
   line.append(icon,text);container.append(line);
  }
  return rows.length;
@@ -239,7 +245,7 @@ function renderAgenda(date,container){
 function appendHistory(date,container){
  const rows=entriesForDate(date);if(!rows.length)return 0;
  const part=el('div','history-activity-line sf-summary-line');
- const body=el('div','','📱 StayFree: '+fmt(rows.reduce((sum,x)=>sum+x.seconds,0))+' · '+rows.length+' приложений');
+ const body=el('div','','📱 Экранное время'+(rows.some(x=>x.source==='android')?' · Android':' · StayFree')+': '+fmt(rows.reduce((sum,x)=>sum+x.seconds,0))+' · '+rows.length+' приложений');
  const view=button('Показать',()=>{const d=$('historyDate');if(d)d.value=date;window.LifeSimsScreenTimeBridge.openAgenda(date)},'secondary');
  part.append(body,view);container.append(part);return rows.length;
 }
