@@ -171,7 +171,7 @@ function fillUi(){
  '<div class="health-actions"><button type="submit" class="primary">Сохранить препарат</button><button id="healthMedCancel" type="button" class="secondary">Очистить форму</button></div></form>',
  '<details class="health-panel health-advanced"><summary>Дополнительные настройки лекарств</summary><label class="health-inline"><input id="healthContraception" type="checkbox"> Показывать способы контрацепции</label><p class="hint">По умолчанию скрыты. При включении появятся дополнительные варианты в поле «Тип».</p></details>',
  '<div class="health-panel"><h3>Напоминания</h3><label class="health-inline"><input type="checkbox" id="healthReminders"> Напоминать о приёме таблеток</label><button id="healthNotifyPermission" type="button" class="secondary">Разрешить уведомления</button><p id="healthNotifyStatus" class="hint"></p><p class="hint">Веб-версия проверяет время только пока страница открыта. Для надёжных фоновых уведомлений потребуется Android-приложение или серверная push-система. Не меняй схему лечения на основании этого журнала.</p></div>',
- '<div class="health-panel"><h3>История приёма · 30 дней</h3><div id="healthAdherence"></div><div id="healthMedicationHistory"></div></div>',
+ '<div class="health-panel"><h3>История приёма</h3><div id="healthAdherence"></div><div id="healthMedicationHistory"></div></div>',
  '</div>',
  '<div class="health-panel"><p class="hint">Данные сохраняются в локальном JSON LifeSims, включая резервные копии. Хранение в браузере не зашифровано отдельно: не используй общий телефон для чувствительных записей.</p></div>'
  ].join('');
@@ -365,6 +365,23 @@ function medicationSlotLine(s,d,compact=false){
  }
  return row;
 }
+function renderLegacy(h){
+ const raw=B.legacyMeds?.()||{},dates=Object.keys(raw).filter(validDay).sort().reverse();
+ const panel=$('healthOldMedsPanel'),list=$('healthOldMedsList');
+ panel.hidden=!dates.length;list.replaceChildren();
+ if(!dates.length)return;
+ const chosen=showAllLegacy?dates:dates.slice(0,8);
+ for(const d of chosen){
+  const rows=slots(h,d).filter(x=>x.m.legacy),group=el('div','health-legacy-day');
+  if(!rows.length)continue;
+  const day=button('📅 '+dayLabel(d),()=>{date=d;month=d.slice(0,7);section='pills';render()},'secondary');
+  group.append(day);
+  for(const slot of rows)group.append(medicationSlotLine(slot,d));
+  list.append(group);
+ }
+ $('healthLegacyMore').hidden=dates.length<=8;
+ $('healthLegacyMore').textContent=showAllLegacy?'Свернуть старые записи':'Показать все прежние записи ('+dates.length+' дней)';
+}
 function renderMedications(h){
  $('healthPillsDate').value=date;$('healthReminders').checked=!!h.settings.reminders;
  $('healthContraception').checked=!!h.settings.contraceptionEnabled;renderMedicationTypes(h);
@@ -373,13 +390,19 @@ function renderMedications(h){
  if(!todaySlots.length)slotPanel.append(el('p','hint','На эту дату приёмов нет. Добавь лекарство или перенеси список со вчера.'));
  for(const s of todaySlots)slotPanel.append(medicationSlotLine(s,date));
  renderMedicationList(h);
+ renderLegacy(h);
  const history=$('healthMedicationHistory');history.replaceChildren();
  // Show planned and unmarked historical doses as well as those already logged.
  const scheduled=[];
- for(let i=0;i<30;i++){const d=add(nowDay(),-i);scheduled.push(...slots(h,d).map(slot=>({...slot,date:d})))}
- const taken=scheduled.filter(x=>x.entry?.status==='taken').length;
- $('healthAdherence').textContent='По расписанию за 30 дней: '+taken+' принятых отметок из '+scheduled.length+' запланированных. Пропуски, которые не отмечены, не приравниваются к пропущенным дозам.';
- for(const dose of scheduled.filter(s=>s.date<nowDay()).slice(0,120)){
+ const dates=new Set(h.medicationLog.filter(x=>validDay(x.date)&&x.date<=nowDay()).map(x=>x.date));
+ for(let i=0;i<30;i++)dates.add(add(nowDay(),-i));
+ for(const d of [...dates].sort().reverse()){
+  scheduled.push(...slots(h,d).filter(slot=>!slot.m.legacy).map(slot=>({...slot,date:d})));
+ }
+ const recent=scheduled.filter(x=>x.date>=add(nowDay(),-29));
+ const taken=recent.filter(x=>x.entry?.status==='taken').length;
+ $('healthAdherence').textContent='За последние 30 дней: '+taken+' отмечено принятыми из '+recent.length+' записанных или запланированных приёмов. Неотмеченные дозы не считаются пропущенными.';
+ for(const dose of scheduled.filter(s=>s.date<nowDay()).slice(0,200)){
    const item=el('div','health-history-row');
    item.append(el('span','',dayLabel(dose.date)+' · '));
    item.append(medicationSlotLine(dose,dose.date,true));
