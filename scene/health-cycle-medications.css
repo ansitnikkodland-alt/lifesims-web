@@ -1,66 +1,81 @@
 /* Dedicated health module; does not alter other LifeSims panels. */
-body .nav{grid-template-columns:repeat(3,minmax(0,1fr))!important}
-#health{--hc:#eeabd1;--hp:#263956}
-#health .health-head{display:flex;align-items:center;justify-content:space-between;margin:5px 0 14px}
-#health .health-head h2{font-size:21px;margin:0;color:#fff}
-#health .health-head p{margin:2px 0;color:#c4cfec;font-size:12px}
-#health .health-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 14px}
-#health .health-switch button{background:#273b5b;border:1px solid #6c7fa3;border-radius:14px;padding:12px;color:#fff;font-weight:700}
-#health .health-switch button.active{background:#704369;border-color:#e8a8d2}
-#health .health-panel{background:linear-gradient(148deg,#263854,#192841);border:1px solid #53698d;border-radius:17px;margin:11px 0;padding:14px}
-#health .health-panel h3{font-size:16px;margin:0 0 12px}
-#health .health-warning{font-size:12px;color:#f1c9dc}
-#health label{display:grid;gap:5px;margin-bottom:11px;color:#e1e9f7;font-size:13px;font-weight:600}
-#health input:not([type=checkbox]),#health select,#health textarea{width:100%;min-width:0;padding:11px 10px;background:#14243f;color:#fff;border:1px solid #6e83a4;border-radius:11px}
-#health input[type=checkbox]{accent-color:#ea9fc6}
-#health .health-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
-#health .health-chips{display:flex;flex-wrap:wrap;gap:7px;margin:7px 0}
-#health .health-chips label{display:flex;align-items:center;gap:6px;border:1px solid #536b89;background:#233653;border-radius:12px;padding:7px 9px;margin:0;font-size:12px}
-#health .health-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:7px}
-#health .health-actions button{min-height:35px;padding:7px 9px;border-radius:9px}
-#health .health-month-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}
-#health .health-month-head button{background:#30486c;color:white;border:1px solid #8296b6;border-radius:10px;font-size:21px;width:42px;height:40px}
-#health .health-calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
-#health .health-weekday{text-align:center;font-size:11px;color:#b1c3df}
-#health .health-day{min-width:0;min-height:50px;padding:4px 0 1px;border-radius:11px;border:1px solid #546b8d;background:#213351;color:#fff;position:relative;font-size:14px}
-#health .health-day.bleeding{background:#8b466c;border-color:#efafd2}
-#health .health-day.predicted{border-style:dashed;border-color:#f0a9c9}
-#health .health-day.selected{outline:2px solid #98e4e7;outline-offset:1px}
-#health .health-day.today{font-weight:900}
-#health .health-day-icon{display:block;color:#ffd1eb;font-size:10px;line-height:10px}
-#health .health-day-med{position:absolute;right:1px;top:0;font-size:10px}
-#health .health-legend,#health .health-notice{font-size:12px;color:#c9d8ed}
-#health .health-notice{min-height:14px}
-#health .health-med-row,#health .health-dose-row{border-top:1px solid #485e81;padding:10px 0;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px}
-#health .health-med-info,#health .health-dose-main{display:grid;gap:3px;flex:1;min-width:150px}
-#health small{font-size:12px;color:#d1dcec}
-#health .health-status.taken{color:#85dfbb}#health .health-status.skipped{color:#ff9cba}
-#health .health-active{background:#8b587c;color:white;border:1px solid #ffbee0}
-#health .health-history-row{border-bottom:1px solid #405875;padding:7px 0;font-size:12px}
-#health .health-inline{display:flex;align-items:center;gap:10px}
+#lifesims-health-mount{--hc:#eeabd1;--hp:#263956}
+#lifesims-health-mount .health-head{display:flex;align-items:center;justify-content:space-between;margin:5px 0 14px}
+#lifesims-health-mount .health-head h2{font-size:21px;margin:0;color:#fff}
+#lifesims-health-mount .health-head p{margin:2px 0;color:#c4cfec;font-size:12px}
+#lifesims-health-mount .health-switch{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:10px 0 14px}
+#lifesims-health-mount .health-switch button{background:#273b5b;border:1px solid #6c7fa3;border-radius:14px;padding:12px;color:#fff;font-weight:700}
+#lifesims-health-mount .health-switch button.active{background:#704369;border-color:#e8a8d2}
+#lifesims-health-mount .health-panel{background:linear-gradient(148deg,#263854,#192841);border:1px solid #53698d;border-radius:17px;margin:11px 0;padding:14px}
+#lifesims-health-mount .health-panel h3{font-size:16px;margin:0 0 12px}
+#lifesims-health-mount .health-warning{font-size:12px;color:#f1c9dc}
+#lifesims-health-mount label{display:grid;gap:5px;margin-bottom:11px;color:#e1e9f7;font-size:13px;font-weight:600}
+#lifesims-health-mount input:not([type=checkbox]),#lifesims-health-mount select,#lifesims-health-mount textarea{width:100%;min-width:0;padding:11px 10px;background:#14243f;color:#fff;border:1px solid #6e83a4;border-radius:11px}
+#lifesims-health-mount input[type=checkbox]{accent-color:#ea9fc6}
+#lifesims-health-mount .health-cols{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px}
+#lifesims-health-mount .health-chips{display:flex;flex-wrap:wrap;gap:7px;margin:7px 0}
+#lifesims-health-mount .health-chips label{display:flex;align-items:center;gap:6px;border:1px solid #536b89;background:#233653;border-radius:12px;padding:7px 9px;margin:0;font-size:12px}
+#lifesims-health-mount .health-actions{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:7px}
+#lifesims-health-mount .health-actions button{min-height:35px;padding:7px 9px;border-radius:9px}
+#lifesims-health-mount .health-month-head{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-bottom:12px}
+#lifesims-health-mount .health-month-head button{background:#30486c;color:white;border:1px solid #8296b6;border-radius:10px;font-size:21px;width:42px;height:40px}
+#lifesims-health-mount .health-calendar{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
+#lifesims-health-mount .health-weekday{text-align:center;font-size:11px;color:#b1c3df}
+#lifesims-health-mount .health-day{min-width:0;min-height:50px;padding:4px 0 1px;border-radius:11px;border:1px solid #546b8d;background:#213351;color:#fff;position:relative;font-size:14px}
+#lifesims-health-mount .health-day.bleeding{background:#8b466c;border-color:#efafd2}
+#lifesims-health-mount .health-day.predicted{border-style:dashed;border-color:#f0a9c9}
+#lifesims-health-mount .health-day.selected{outline:2px solid #98e4e7;outline-offset:1px}
+#lifesims-health-mount .health-day.today{font-weight:900}
+#lifesims-health-mount .health-day-icon{display:block;color:#ffd1eb;font-size:10px;line-height:10px}
+#lifesims-health-mount .health-day-med{position:absolute;right:1px;top:0;font-size:10px}
+#lifesims-health-mount .health-legend,#lifesims-health-mount .health-notice{font-size:12px;color:#c9d8ed}
+#lifesims-health-mount .health-notice{min-height:14px}
+#lifesims-health-mount .health-med-row,#lifesims-health-mount .health-dose-row{border-top:1px solid #485e81;padding:10px 0;display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px}
+#lifesims-health-mount .health-med-info,#lifesims-health-mount .health-dose-main{display:grid;gap:3px;flex:1;min-width:150px}
+#lifesims-health-mount small{font-size:12px;color:#d1dcec}
+#lifesims-health-mount .health-status.taken{color:#85dfbb}#lifesims-health-mount .health-status.skipped{color:#ff9cba}
+#lifesims-health-mount .health-active{background:#8b587c;color:white;border:1px solid #ffbee0}
+#lifesims-health-mount .health-history-row{border-bottom:1px solid #405875;padding:7px 0;font-size:12px}
+#lifesims-health-mount .health-inline{display:flex;align-items:center;gap:10px}
 .health-agenda-link{display:block;width:100%;text-align:left;padding:10px;border-radius:11px;color:#fff;background:#563f69;border:1px solid #b37fb2}
 .calendar-day-markers{flex-wrap:wrap}.health-calendar-marker{font-size:11px;position:absolute;right:2px;top:2px}
-@media(max-width:390px){#health .health-cols{grid-template-columns:1fr}#health .health-panel{padding:10px}#health .health-day{min-height:44px}}
+@media(max-width:390px){#lifesims-health-mount .health-cols{grid-template-columns:1fr}#lifesims-health-mount .health-panel{padding:10px}#lifesims-health-mount .health-day{min-height:44px}}
 /* Compact, touch-friendly medication checklist and cycle diary. */
-#health .health-med-checklist{display:grid;gap:7px;margin-top:12px}
-#health .health-dose-checkrow{display:flex;align-items:center;gap:8px;border:1px solid #4d6489;background:#1a2b46;border-radius:12px;padding:8px}
-#health label.health-dose-checklabel{display:flex;align-items:center;gap:11px;margin:0;flex:1;min-width:0;cursor:pointer}
-#health .health-taken-check{width:25px;height:25px;min-width:25px;accent-color:#59e5b8;cursor:pointer}
-#health .health-taken-check:disabled{opacity:.45;cursor:not-allowed}
-#health .health-dose-description{display:grid;gap:3px;min-width:0;overflow-wrap:anywhere}
-#health .health-dose-description strong{font-size:14px;line-height:1.35}
-#health .health-dose-description small{color:#c0d1e9;font-size:12px}
-#health .health-dose-actions{display:flex;gap:6px;align-items:center}
-#health .health-dose-actions .health-inline-edit{background:#2a4265;color:#f8f8ff;border:1px solid #708eb5;border-radius:10px;min-height:44px;min-width:44px;padding:7px;font-size:12px}
-#health .health-history-row{padding:7px 0}
-#health .health-history-row>.health-dose-row{border:0;margin-top:5px}
-#health .health-choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:7px 0 16px}
-#health .health-choice{background:#253953;border:1px solid #52698c;border-radius:13px;color:#f1f6ff;min-height:47px;padding:9px;font-size:13px;line-height:1.3;text-align:left;white-space:normal}
-#health .health-choice.chosen{background:#665070;border-color:#f2abd2;box-shadow:inset 0 0 0 1px #e8a8d2}
-#health .health-group-title{font-size:14px;font-weight:700;margin-top:10px;color:#ecddf5}
-#health .health-day.pms{box-shadow:inset 0 -3px #da96c1}
-#health .health-day-mood{position:absolute;left:1px;bottom:0;font-size:13px;line-height:14px}
-#health [hidden]{display:none!important}
-#health .health-advanced summary{cursor:pointer;font-weight:700;padding:5px 0}
-#health .health-advanced form{margin-top:11px}
-@media(max-width:350px){#health .health-choice-grid{grid-template-columns:1fr}}
+#lifesims-health-mount .health-med-checklist{display:grid;gap:7px;margin-top:12px}
+#lifesims-health-mount .health-dose-checkrow{display:flex;align-items:center;gap:8px;border:1px solid #4d6489;background:#1a2b46;border-radius:12px;padding:8px}
+#lifesims-health-mount label.health-dose-checklabel{display:flex;align-items:center;gap:11px;margin:0;flex:1;min-width:0;cursor:pointer}
+#lifesims-health-mount .health-taken-check{width:25px;height:25px;min-width:25px;accent-color:#59e5b8;cursor:pointer}
+#lifesims-health-mount .health-taken-check:disabled{opacity:.45;cursor:not-allowed}
+#lifesims-health-mount .health-dose-description{display:grid;gap:3px;min-width:0;overflow-wrap:anywhere}
+#lifesims-health-mount .health-dose-description strong{font-size:14px;line-height:1.35}
+#lifesims-health-mount .health-dose-description small{color:#c0d1e9;font-size:12px}
+#lifesims-health-mount .health-dose-actions{display:flex;gap:6px;align-items:center}
+#lifesims-health-mount .health-dose-actions .health-inline-edit{background:#2a4265;color:#f8f8ff;border:1px solid #708eb5;border-radius:10px;min-height:44px;min-width:44px;padding:7px;font-size:12px}
+#lifesims-health-mount .health-history-row{padding:7px 0}
+#lifesims-health-mount .health-history-row>.health-dose-row{border:0;margin-top:5px}
+#lifesims-health-mount .health-choice-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:7px 0 16px}
+#lifesims-health-mount .health-choice{background:#253953;border:1px solid #52698c;border-radius:13px;color:#f1f6ff;min-height:47px;padding:9px;font-size:13px;line-height:1.3;text-align:left;white-space:normal}
+#lifesims-health-mount .health-choice.chosen{background:#665070;border-color:#f2abd2;box-shadow:inset 0 0 0 1px #e8a8d2}
+#lifesims-health-mount .health-group-title{font-size:14px;font-weight:700;margin-top:10px;color:#ecddf5}
+#lifesims-health-mount .health-day.pms{box-shadow:inset 0 -3px #da96c1}
+#lifesims-health-mount .health-day-mood{position:absolute;left:1px;bottom:0;font-size:13px;line-height:14px}
+#lifesims-health-mount [hidden]{display:none!important}
+#lifesims-health-mount .health-advanced summary{cursor:pointer;font-weight:700;padding:5px 0}
+#lifesims-health-mount .health-advanced form{margin-top:11px}
+@media(max-width:350px){#lifesims-health-mount .health-choice-grid{grid-template-columns:1fr}}
+
+/* Health diary is mounted inside the Health resource detail dialog. */
+#lifesims-health-mount{display:block;width:100%;color:#f6f8ff}
+#lifesims-health-mount .health-legacy-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+#lifesims-health-mount .health-history-row{display:flex;align-items:flex-start;flex-direction:column;gap:4px}
+#lifesims-health-mount .health-history-row .health-dose-row{width:100%}
+#lifesims-health-mount .health-legacy-entry{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:7px 0}
+#lifesims-health-mount .health-legacy-entry .health-dose-row{flex:1}
+#lifesims-health-mount .health-legacy-form{border:1px solid #5b7196;border-radius:14px;padding:10px;margin-top:8px;background:#152944}
+#lifesims-health-mount .health-legacy-preview{font-size:12px;color:#d9dfed}
+#lifesims-health-mount .health-effect-positive{color:#a2efd0}
+#lifesims-health-mount .health-effect-negative{color:#ffb5bb}
+#lifesims-health-mount .health-effect-neutral{color:#b8c9df}
+#lifesims-health-mount .health-effect-row{display:flex;justify-content:space-between;gap:8px;border-bottom:1px solid #3f5576;padding:5px 0;font-size:12px}
+#lifesims-health-mount .health-resource-journal{min-width:0}
+.health-resource-journal{padding:10px 0;border-top:1px solid #4b6387;margin-top:10px}
