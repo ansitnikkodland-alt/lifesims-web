@@ -1,0 +1,112 @@
+name: LifeSims Oura steps fallback and meal time
+on:
+  push:
+    paths:
+      - 'scene/index.html'
+      - 'scene/sw.js'
+      - '.github/workflows/lifesims-oura-steps-meal-smoke.yml'
+  workflow_dispatch:
+jobs:
+  regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 9
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser driver
+        run: npm install --no-save playwright-core@1.56.1
+      - name: Run local website
+        run: |
+          python3 -m http.server 8765 > /tmp/lifesims-steps-http.log 2>&1 &
+          sleep 2
+      - name: Validate fallback, manual zero, meal timer and automatic import
+        run: |
+          cat > /tmp/lifesims-steps-meal.cjs <<'JS'
+          const {chromium}=require(process.cwd()+'/node_modules/playwright-core');
+          (async()=>{
+            const browser=await chromium.launch({headless:true,executablePath:'/usr/bin/google-chrome',args:['--no-sandbox']});
+            const errors=[];
+            const context=await browser.newContext({viewport:{width:390,height:844},timezoneId:'Europe/Moscow'});
+            const page=await context.newPage();
+            page.on('pageerror',e=>errors.push(e.message));
+            await page.clock.install({time:new Date('2026-11-22T07:00:00+03:00')});
+            await page.goto('http://127.0.0.1:8765/scene/?v=72',{waitUntil:'domcontentloaded'});
+            const setup=await page.evaluate(()=>{
+              const b=window.LifeSimsOuraBridge,day=b.today(),y='2026-11-21';
+              b.importDays([{date:y,metrics:{steps:8421},scores:{activity:85}},
+                {date:day,metrics:{steps:0},scores:{activity:0}}]);
+              window.LifeSimsLiveMetrics.refresh();
+              return {day};
+            });
+            let activity=await page.locator('#needsGrid .meter').filter({hasText:'Активность'}).innerText();
+            if(!activity.includes('8 421')&&!activity.includes('8 421'))throw Error('Did not fall back to yesterday: '+activity);
+            if(!activity.includes('вчера'))throw Error('Missing yesterday attribution: '+activity);
+            console.log('PROVISIONAL ZERO FALLS BACK TO YESTERDAY: PASS',activity);
+            await page.evaluate(()=>{
+              const b=window.LifeSimsTaskBridge,day=b.today(),r=b.read().days[day];
+              r.ouraFields=(r.ouraFields||[]).filter(k=>k!=='steps');
+              r.steps=0;
+              window.LifeSimsLiveMetrics.refresh();
+            });
+            activity=await page.locator('#needsGrid .meter').filter({hasText:'Активность'}).innerText();
+            if(!activity.includes('0 / 10 000 шагов')||activity.includes('вчера'))throw Error('Manual zero should be retained: '+activity);
+            console.log('EXPLICIT MANUAL ZERO: PASS');
+            await page.evaluate(()=>{
+              const b=window.LifeSimsTaskBridge,day=b.today(),r=b.read().days[day];
+              r.ouraFields=['steps'];r.steps=1300;window.LifeSimsLiveMetrics.refresh();
+            });
+            activity=await page.locator('#needsGrid .meter').filter({hasText:'Активность'}).innerText();
+            if(!activity.includes('1 300')&&!activity.includes('1 300'))throw Error('New today steps ignored: '+activity);
+            if(activity.includes('вчера'))throw Error('Old date shown for fresh today record: '+activity);
+            console.log('CURRENT DAY STEPS TAKE PRECEDENCE: PASS');
+            await page.evaluate(()=>{
+              const b=window.LifeSimsFoodBridge;
+              b.upsert({date:'2026-11-21',time:'21:15',title:'Последняя еда',grams:120,kcal:null});
+            });
+            const meal=await page.locator('#hungerMeterOrigin').innerText();
+            if(!meal.includes('9 ч 45 мин')||!meal.includes('вчера'))
+              throw Error('Elapsed meal time missing or excludes food without calories: '+meal);
+            console.log('TIME SINCE LAST MEAL ACROSS MIDNIGHT: PASS',meal);
+            const manual=await page.locator('#hungerMeterCard').click();
+            const detail=await page.locator('#singleMetricContent').innerText();
+            if(!detail.includes('9 ч 45 мин'))throw Error('Meal duration missing in detail: '+detail);
+            console.log('MEAL DETAIL TIMER: PASS');
+
+            // A new day forces a real automatic read despite a successful check
+            // five minutes before midnight. The API is fully mocked here.
+            const auto=await browser.newContext({viewport:{width:390,height:844},timezoneId:'Europe/Moscow'});
+            const autopage=await auto.newPage();
+            autopage.on('pageerror',e=>errors.push(e.message));
+            await autopage.clock.install({time:new Date('2026-11-22T00:03:00+03:00')});
+            await autopage.addInitScript(()=>{
+              const now=Date.now();
+              const expiry=now+3600000;
+              sessionStorage.setItem('lifesims-oura-session',JSON.stringify({token:'TEST_ONLY',expiry,scopes:['daily']}));
+              localStorage.setItem('lifesims-oura-auto','yes');
+              localStorage.setItem('lifesims-oura-last-core',String(new Date('2026-11-21T23:58:00+03:00').getTime()));
+              localStorage.setItem('lifesims-oura-last-check',String(new Date('2026-11-21T23:58:00+03:00').getTime()));
+            });
+            let requests=0;
+            await autopage.route('**/v1/oura/**',route=>{
+              requests++;
+              const name=route.request().url().split('/v1/oura/')[1].split('?')[0];
+              const data=name==='daily_activity'
+                ?[{day:'2026-11-21',steps:8421,total_calories:1800,score:82},{day:'2026-11-22',steps:0,score:0}]
+                :[];
+              route.fulfill({status:200,contentType:'application/json',body:JSON.stringify({data,next_token:null})});
+            });
+            await autopage.goto('http://127.0.0.1:8765/scene/?v=72&automatic=1',{waitUntil:'domcontentloaded'});
+            await autopage.waitForFunction(()=>window.LifeSimsOuraBridge.getDays()['2026-11-21']?.steps===8421,{timeout:20000});
+            const status=await autopage.locator('#ouraStatus').innerText();
+            if(requests<4)throw Error('Automatic daily fetch did not run: '+requests+' requests');
+            const fallback=await autopage.locator('#needsGrid .meter').filter({hasText:'Активность'}).innerText();
+            if(!fallback.includes('вчера')||(!fallback.includes('8 421')&&!fallback.includes('8 421')))
+              throw Error('Auto import did not refresh step fallback: '+fallback);
+            console.log('AUTO OURA DAY ROLLOVER WITH MOCK RESPONSES: PASS',JSON.stringify({requests,fallback,status}));
+            if(errors.length)throw Error('Browser errors: '+errors.join(' | '));
+            await auto.close();await context.close();await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
+          node /tmp/lifesims-steps-meal.cjs
