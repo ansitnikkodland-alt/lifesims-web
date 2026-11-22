@@ -127,7 +127,7 @@
   <p class="tp-note">Дела «Без срока» всегда остаются во входящих до выполнения. Дата начала не является сроком.</p>`;
   form.insertBefore(panel,before);
   const effort=el('fieldset','tp-editor tp-difficulty-editor');effort.id='tpDifficultyEditor';
-  effort.innerHTML=`<legend>Сложность</legend><label>Уровень усилий<select id="tpDifficulty" aria-label="Сложность дела или привычки"><option value="1">1 · Очень легко</option><option value="2">2 · Легко</option><option value="3" selected>3 · Средне</option><option value="4">4 · Сложно</option><option value="5">5 · Очень сложно</option></select></label><p class="tp-note">Опыт связанного навыка = базовый XP × сложность / 3. Без привязанного навыка опыт не начисляется. Ресурс и потребности не меняются из-за сложности.</p>`;
+  effort.innerHTML=`<legend>Сложность</legend><label>Уровень усилий<select id="tpDifficulty" aria-label="Сложность дела или привычки"><option value="1">1 · Очень легко</option><option value="2">2 · Легко</option><option value="3" selected>3 · Средне</option><option value="4">4 · Сложно</option><option value="5">5 · Очень сложно</option></select></label><p class="tp-note">Опыт связанного ресурса = базовый XP × сложность / 3. Без привязанного ресурса опыт не начисляется. Ресурс и потребности не меняются из-за сложности.</p>`;
   form.insertBefore(effort,before);
   const nature=el('fieldset','tp-editor tp-habit-nature');nature.id='tpHabitNature';
   nature.innerHTML='<legend>Тип привычки</legend><label class="tp-checkbox tp-negative-toggle">'+
