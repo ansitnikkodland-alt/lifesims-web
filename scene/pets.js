@@ -38,10 +38,10 @@
   info.append(el('p','',`❤️ Ласка: ${sc.pet?'была недавно':'котика можно погладить'}`));
   parent.append(info);
   const actions=el('div','pet-action-grid');
-  actions.append(btn('❤️ Погладить',()=>{if(B.pet(pet.id)){notice='❤️ +5 XP к ресурсу «Забота» (за первые 3 поглаживания в день)';draw()}},'pet-action pet-petting'));
+  actions.append(btn('❤️ Погладить',()=>{if(B.pet(pet.id)){notice='❤️ +5 XP к навыку «Забота» (за первые 3 поглаживания в день)';draw()}},'pet-action pet-petting'));
   actions.append(btn('🍽 Покормить',()=>{notice=B.feed(pet.id)?'Кормление учтено как ежедневная привычка':'Не удалось записать кормление';draw()}));
   actions.append(btn('🧹 Убрать общий лоток',()=>{B.cleanLitter();notice='Уборка лотка влияет на обоих котиков';draw()}));
-  actions.append(btn('↗ Ресурс «Забота»',()=>{close();B.openCare()}));
+  actions.append(btn('↗ Навык «Забота»',()=>{close();B.openCare()}));
   parent.append(actions);
   parent.append(el('p','pet-hint','Кристалл зависит от кормления, уборки туалета и поглаживания. Игровое состояние постепенно снижается без ухода.'));
  }
