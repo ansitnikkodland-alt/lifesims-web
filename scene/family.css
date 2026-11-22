@@ -30,3 +30,6 @@
 .family-room-tools{position:absolute;top:7px;right:7px;left:7px;display:flex;gap:6px;justify-content:flex-end;pointer-events:none}
 .family-room-tools button{pointer-events:auto;min-height:44px;font-size:11px;padding:6px 9px;background:#172b49ed;border:1px solid #b8d9ed;border-radius:10px;color:#fff}
 @media(max-width:480px){.family-dialog{inset:auto 2px 2px;width:calc(100% - 4px);max-height:92dvh;padding:12px}.family-nav button{font-size:12px;padding:8px 6px}#familyOpen{font-size:12px;padding:5px 6px}.family-marker{font-size:11px;max-width:99px}.family-room-tools button{font-size:10px;padding:4px 5px}}
+
+.scene.family-room-active .sheetwrap.open{z-index:90!important}
+.scene.family-room-active .sheet{z-index:91!important}
