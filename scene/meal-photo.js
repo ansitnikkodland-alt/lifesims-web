@@ -187,56 +187,136 @@ async function loadOCR(){
  return ocrPromise;
 }
 function extractNutrition(text){
- const full=String(text||'').replace(/\u00a0/g,' ').replace(/ё/g,'е');
- const lines=full.split(/[\n\r]+/).map(x=>x.trim()).filter(Boolean);
- const isPer100=/(?:на|в|per|\/)\s*100\s*(?:г|гр|g|мл|ml)(?![a-zа-я])/i.test(full)||
-  /(?:100\s*(?:г|гр|g|мл|ml))\s*[:\/\-]/i.test(full);
- function item(pattern){
+ const full=String(text||'').replace(/\u00a0/g,' ').replace(/ё/g,'е').replace(/[ \t]+/g,' ');
+ const lines=full.split(/[\n\r]+/).map(line=>line.trim()).filter(Boolean);
+ const per100=/(?:на|в|per|\/)\s*100\s*(?:г|гр|g|мл|ml)\b/i.test(full)||
+  /(?:100\s*(?:г|гр|g|мл|ml))\s*[:/—–-]/i.test(full);
+ const patterns={
+  kcal:/(?:ккал|kcal|калорийность|калории|энергетическая\s+ценность)/i,
+  protein:/(?:белки|белков|белка|proteins?|протеин)/i,
+  fat:/(?:жиры|жиров|жира|fats?|липиды)/i,
+  carbs:/(?:углеводы|углеводов|углевода|carbohydrates?|carbs?)/i
+ };
+ const amount=/(\d{1,5}(?:[.,]\d{1,2})?)/;
+ function getAmount(type){
+  const pattern=patterns[type];
   for(const raw of lines){
    const line=raw.toLowerCase();
    if(!pattern.test(line))continue;
-   let match;
-   if(/ккал|kcal/.test(pattern.source)){
-    match=line.match(/(\d{1,5}(?:[.,]\d{1,2})?)\s*(?:ккал|kcal)/i);
-   }else{
-    match=line.match(new RegExp('(?:'+pattern.source+')\s*[:–-]?\s*(\d{1,5}(?:[.,]\d{1,2})?)\s*(?:г|гр|g)?','i'));
+   if(type==='kcal'){
+    const endUnit=line.match(/(\d{1,5}(?:[.,]\d{1,2})?)\s*(?:ккал|kcal)\b/i);
+    if(endUnit)return number(endUnit[1].replace(',','.'));
    }
-   if(match)return number(match[1].replace(',','.'));
+   const match=pattern.exec(line);
+   const after=line.slice(match.index+match[0].length).replace(/^\s*(?:,?\s*(?:г|гр|g)\s*)?[:—–-]?\s*/i,'');
+   const value=after.match(amount);
+   // A label and a nutritional value must occur together; percentages alone are not fats in grams.
+   if(value&&!/^\s*%/.test(after.slice(value.index+value[0].length)))return number(value[1].replace(',','.'));
   }
   return null;
  }
- const kcal=item(/(?:ккал|kcal)/i);
- const protein=item(/(?:белки|белков|protein)/i);
- const fat=item(/(?:жиры|жиров|fat\b)/i);
- const carbs=item(/(?:углеводы|углеводов|carbohydrates)/i);
- const per100=isPer100&&[kcal,protein,fat,carbs].some(v=>v!==null)?{kcal,protein,fat,carbs}:null;
+ const extracted={kcal:getAmount('kcal'),protein:getAmount('protein'),fat:getAmount('fat'),carbs:getAmount('carbs')};
+ // OCR may display "ккал 210" on a separate row without a value directly before the word.
+ if(extracted.kcal==null){
+  for(const l of lines){
+   const m=l.match(/(?:калорийность|калории|ккал|kcal)\s*[:\-]?\s*(\d{1,5}(?:[.,]\d{1,2})?)/i);
+   if(m){extracted.kcal=number(m[1].replace(',','.'));break}
+  }
+ }
+ const composition=/(?:^|\n)\s*(?:состав(?:\s+продукта)?|ингредиенты|ingredients)\s*[:\-—]?\s*([^\n]*)/i.exec(full);
+ let ingredients='';
+ if(composition){
+  const index=full.slice(0,composition.index+composition[0].length).split(/\n/).length-1;
+  const tail=[composition[1],...lines.slice(index+1,index+5)]
+   .map(s=>s.trim()).filter(Boolean);
+  ingredients=bounded(tail.slice(0,Math.max(1,tail.findIndex((x,i)=>i>0&&/^(?:пищевая|энергетическая|белки|жиры|углеводы|калори|nutrition|хранить|срок годности|масса|изготов|производител|на 100)/i.test(x))<0?tail.length:tail.findIndex((x,i)=>i>0&&/^(?:пищевая|энергетическая|белки|жиры|углеводы|калори|nutrition|хранить|срок годности|масса|изготов|производител|на 100)/i.test(x)))).join(' '),700)
+    .replace(/[.;,:]\s*$/,'');
+ }
+ const skip=/^(?:состав|ингредиенты|ingredients|хранить|изготовлено|энергетическая|пищевая|nutrition|белки|белка|жиры|углеводы|ккал|калорийность|изготовитель|на\s*100|100\s*г|производитель|порция|масса нетто)/i;
  let title='';
- const skip=/^(?:состав|ingredients|хранить|изготовлено|энергетическая|пищевая|nutrition|белки|жиры|углеводы|ккал|изготовитель|в\s*100|100\s*г|производитель)/i;
  for(const line of lines.slice(0,14)){
-  if(line.length<5||line.length>64||skip.test(line)||/^\d/.test(line)||/\d{4,}/.test(line))continue;
+  if(line.length<4||line.length>90||skip.test(line)||/^\d/.test(line)||/\d{4,}/.test(line))continue;
   if(/[А-Яа-яA-Za-z]{3,}/.test(line)){title=line;break}
  }
- return {title,per100,lines,per100Confirmed:isPer100};
+ const labels=Object.values(patterns).filter(re=>re.test(full)).length;
+ const containsNutrition=Object.values(extracted).some(v=>v!=null);
+ const isLabel=!!composition||labels>=2||(per100&&labels>=1);
+ return {title,ingredients,per100:per100&&containsNutrition?extracted:null,
+  detectedNutrition:extracted,lines,per100Confirmed:per100,isLabel,
+  hasNutrition:containsNutrition};
 }
-async function analyzePackage(file,onStatus){
- report(onStatus,'Ищу штрихкод на фотографии…');
- const barcode=await barcodeFromPhoto(file);
- if(barcode){
-  report(onStatus,'Штрихкод '+barcode+' найден. Проверяю продукт в Open Food Facts…');
-  try{return await productByBarcode(barcode)}
-  catch(error){report(onStatus,error.message+' Перехожу к чтению этикетки…')}
- }
- report(onStatus,'Распознаю текст этикетки на устройстве. Для первого запуска загружается OCR-модель…');
+async function readLabel(file,onStatus){
+ report(onStatus,'Читаю этикетку (OCR на устройстве): первое распознавание требует загрузки модели…');
  const T=await loadOCR();
  let data;
- try{data=await T.recognize(file,'rus+eng')}catch(error){throw Error('Не удалось прочитать этикетку: '+error.message)}
- const raw=String(data?.data?.text||''),found=extractNutrition(raw);
- if(!found.title&&!found.per100)throw Error('Не удалось уверенно прочитать название и калории на 100 г. Сфотографируй таблицу пищевой ценности без бликов или введи данные вручную.');
- return {kind:'package',source:'OCR этикетки',barcode:barcode||null,
-  title:found.title,ingredients:'',per100:found.per100,
-  labelText:raw.slice(0,2400),
-  confidence:found.per100Confirmed?'Текст распознан автоматически; проверь цифры и единицы измерения':'Не найдено подтверждение, что данные относятся к 100 г. Числа не применены автоматически'};
+ try{data=await T.recognize(file,'rus+eng')}catch(error){throw Error('Не удалось прочитать текст с фотографии: '+error.message)}
+ const raw=String(data?.data?.text||'');
+ return {raw,found:extractNutrition(raw)};
 }
+function labelResult(barcode,raw,found){
+ return {kind:'package',source:'OCR этикетки',barcode:barcode||null,
+  title:found.title||'',ingredients:found.ingredients||'',
+  per100:found.per100||null,labelText:raw.slice(0,3000),
+  detectedNutrition:found.detectedNutrition,
+  confidence:found.per100?
+   'Распознаны показатели на 100 г/мл. Проверь каждую цифру по этикетке':
+   'Основа пищевой ценности (100 г/мл) не подтверждена — значения не подставлены; посмотри распознанный текст и исправь вручную'};
+}
+async function analyzePackage(file,onStatus){
+ report(onStatus,'Ищу штрихкод на фото упаковки…');
+ const barcode=await barcodeFromPhoto(file);
+ if(barcode){
+  try{return await productByBarcode(barcode)}
+  catch(error){report(onStatus,'Товар не найден в каталоге: '+error.message+'. Прочитаю этикетку.')}
+ }
+ const {raw,found}=await readLabel(file,onStatus);
+ if(!barcode&&!found.isLabel&&!found.title)throw Error('Не удалось прочитать текст упаковки. Сфотографируй таблицу пищевой ценности крупным планом.');
+ return labelResult(barcode,raw,found);
+}
+const TYPICAL_PORTIONS={
+ pizza:150,sushi:180,spaghetti_bolognese:300,spaghetti_carbonara:300,
+ ramen:400,fried_rice:280,omelette:180,scrambled_eggs:170,
+ pancakes:180,waffles:150,french_fries:140,hamburger:200,hot_dog:160,
+ chicken_wings:240,greek_salad:250,caesar_salad:260,steak:220,
+ apple_pie:130,cheesecake:120,ice_cream:120,tiramisu:140,
+ lasagna:320,macaroni_and_cheese:280,chocolate_cake:130,
+ beet_salad:190,dumplings:250,guacamole:100,risotto:270,
+ spring_rolls:180,tacos:200,nachos:160,donuts:85,donut:85,
+ frozen_yogurt:140,grilled_salmon:190,fried_calamari:190,
+ fish_and_chips:300,lobster_roll_sandwich:200,cup_cakes:90,
+ hummus:120,falafel:180,pho:450,bibimbap:350,miso_soup:280,
+ chicken_curry:300,beef_tartare:160,bread_pudding:150,breakfast_burrito:250
+};
+function typicalPortion(label){
+ const key=String(label||'').toLowerCase().replace(/[\s-]+/g,'_');
+ return TYPICAL_PORTIONS[key]||250;
+}
+async function analyzeSmart(file,onStatus){
+ report(onStatus,'Определяю тип фото: проверяю штрихкод…');
+ let barcode=null;
+ try{barcode=await barcodeFromPhoto(file)}
+ catch(error){report(onStatus,'Штрихкод не считан. Проверяю текст…')}
+ if(barcode){
+  report(onStatus,'Найден штрихкод '+barcode+'. Проверяю продукт в каталоге…');
+  try{return await productByBarcode(barcode)}
+  catch(error){report(onStatus,'Товар отсутствует в каталоге. Читаю текст с упаковки…')}
+ }
+ try{
+  const {raw,found}=await readLabel(file,onStatus);
+  if(barcode||found.isLabel){
+   report(onStatus,'Похоже, это этикетка. Извлекаю состав и пищевую ценность…');
+   return labelResult(barcode,raw,found);
+  }
+ }catch(error){
+  report(onStatus,'Не удалось прочитать текст: '+error.message+'. Проверяю, изображена ли еда…');
+  if(barcode)return {kind:'package',source:'Штрихкод без карточки продукта',
+   barcode,title:'',ingredients:'',per100:null,
+   confidence:'Продукт не найден, этикетка не распознана. Введи название и БЖУ вручную'};
+ }
+ report(onStatus,'Текст этикетки не обнаружен. Распознаю блюдо…');
+ return analyzeFood(file,onStatus);
+}
+
 async function foodModel(onStatus){
  if(foodPredictor)return foodPredictor;
  if(!foodPredictorPromise){
@@ -257,10 +337,13 @@ async function analyzeFood(file,onStatus){
   const candidates=(results||[]).filter(x=>typeof x.label==='string'&&Number.isFinite(Number(x.score)))
    .map(x=>({title:RU[x.label.toLowerCase()]||x.label.replace(/_/g,' '),score:Number(x.score)}));
   if(!candidates.length)throw Error('Модель не смогла предложить название блюда.');
+  const first=results?.[0]||{},guess=first.score>=.3?typicalPortion(first.label):null;
   return {kind:'meal',source:'Локальная модель Food-101',title:candidates[0].score>=.3?candidates[0].title:'',
-   ingredients:'',candidates,per100:null,
-   confidence:'Это предположение по фотографии. Состав и размер порции определяются неточно'};
+   ingredients:'',candidates,per100:null,gramsEstimate:guess,
+   confidence:guess!=null?
+    'Вес '+guess+' г — приблизительная типичная порция для такого блюда, а не измерение по фото. Проверь и исправь':
+    'Название не определено уверенно. Размер порции и калории оцени самостоятельно'};
  }finally{URL.revokeObjectURL(url)}
 }
-window.LifeSimsMealPhoto={compressedThumbnail,barcodeFromPhoto,startBarcodeScanner,productByBarcode,searchProducts,analyzeFood,analyzePackage};
+window.LifeSimsMealPhoto={compressedThumbnail,barcodeFromPhoto,startBarcodeScanner,productByBarcode,searchProducts,analyzeFood,analyzePackage,analyzeSmart,extractNutrition,typicalPortion};
 })();
