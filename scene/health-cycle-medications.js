@@ -392,7 +392,7 @@ function fillUi(){
  '<div class="health-head"><div><h2>🌸 Дневник здоровья</h2><p>Цикл, лекарства и симптомы · версия журнала 106</p></div></div>',
  '<div class="health-switch"><button id="healthCycleTab" type="button">🌸 Цикл</button><button id="healthPillsTab" type="button">💊 Лекарства</button></div>',
  '<div id="healthNotice" class="health-notice" role="status" aria-live="polite"></div>',
- '<div class="health-panel"><h3>Влияние записей на ресурс «Здоровье»</h3><p class="hint">Автоматическая игровая оценка по прозрачным правилам, а не медицинский диагноз или вывод нейросети. Прогноз ПМС и сами месячные нейтральны.</p><div id="healthEffectList"></div></div>',
+ '<div class="health-panel"><h3>Влияние на физическое состояние</h3><p class="hint">Отмеченные симптомы и заметки изменяют игровое физическое состояние. Лекарства учитываются в журнале, но сам факт приёма не доказывает улучшение. Менструация и прогноз ПМС нейтральны.</p><div id="healthEffectList"></div></div>',
  '<div id="healthCycleView">',
  '<div class="health-panel"><h3 id="healthCycleSummary">Менструация</h3><p id="healthForecastInfo" class="hint"></p><h3>Предполагаемое окно ПМС</h3><p id="healthPmsInfo" class="hint"></p><p class="health-warning">Прогнозы приблизительные. Календарь не определяет наличие ПМС. Прямая синхронизация цикла с Oura недоступна.</p></div>',
  '<div class="health-panel"><div class="health-month-head"><button id="healthPrevMonth" type="button" aria-label="Предыдущий месяц">‹</button><strong id="healthMonthLabel"></strong><button id="healthNextMonth" type="button" aria-label="Следующий месяц">›</button></div><div id="healthMonthGrid" class="health-calendar"></div><p class="health-legend">● менструация &nbsp; ◌ прогноз &nbsp; ◇ возможный ПМС</p></div>',
@@ -771,16 +771,21 @@ function renderMedications(h){
 }
 function renderEffects(){
  const panel=$('healthEffectList');panel.replaceChildren();
- const impacts=B.healthImpacts?.(date)||[],rows=impacts.filter(x=>x.date===date);
- if(!rows.length){panel.append(el('p','hint','На '+dayLabel(date)+' пока нет записей, изменяющих ресурс.'));return}
- const total=rows.reduce((sum,e)=>sum+(Number(e.points)||0),0);
- panel.append(el('strong','',dayLabel(date)+': '+(total>0?'+':'')+total+' XP'));
+ const records=B.healthImpacts?.(date)||[];
+ const rows=records.filter(x=>x.date===date&&
+  (x.name.startsWith('Симптом:')||x.name.startsWith('Записанная боль')||x.name.startsWith('Заметка:')));
+ if(!rows.length){panel.append(el('p','hint','На '+dayLabel(date)+' нет симптомов или заметок, изменяющих игровую шкалу.'));return}
+ const raw=rows.reduce((sum,e)=>sum+(Number(e.points)||0)*2,0);
+ const total=Math.max(-16,Math.min(6,raw));
+ panel.append(el('strong','',dayLabel(date)+': '+(total>0?'+':'')+total+' п. п. к физическому состоянию'));
  for(const effect of rows){
+  const change=Number(effect.points||0)*2;
   const row=el('div','health-effect-row');
-  row.classList.add('health-effect-'+(effect.points>0?'positive':effect.points<0?'negative':'neutral'));
-  row.append(el('span','',effect.name),el('b','',(effect.points>0?'+':'')+effect.points+' XP'));
+  row.classList.add('health-effect-'+(change>0?'positive':change<0?'negative':'neutral'));
+  row.append(el('span','',effect.name),el('b','',(change>0?'+':'')+change+' п. п.'));
   panel.append(row);
  }
+ if(raw!==total)panel.append(el('p','hint','Ограничение суммарной поправки: от −16 до +6 п. п.'));
 }
 function renderMessage(){const out=$('healthNotice');if(out)out.textContent=flash}
 function render(){
