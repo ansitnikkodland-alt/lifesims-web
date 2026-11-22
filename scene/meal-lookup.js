@@ -5,6 +5,12 @@
  const photo=window.LifeSimsMealPhoto,chat=window.LifeSimsMealChat;
  if(!host||!photo||!chat)return;
  const $=id=>document.getElementById(id);
+ const smartCapture=document.createElement('div');
+ smartCapture.className='meal-smart-capture';
+ smartCapture.innerHTML='<button type="button" id="mealSmartCapture">📷 Распознать фото или штрихкод</button>'+
+  '<input type="file" id="mealSmartInput" accept="image/*" hidden>'+
+  '<small>Сфотографируй или выбери изображение. Тип снимка определится автоматически.</small>';
+ $('mealChatPhotoActions').insertAdjacentElement('beforebegin',smartCapture);
  const html=[
   '<div class="meal-lookup-shortcuts">',
   '<button type="button" id="mealLookupSearchOpen">🔎 Найти продукт</button>',
@@ -37,6 +43,8 @@
   '<label>Жиры, г <input id="mealLookupFat" type="number" min="0" max="1000" step="any" placeholder="—"></label>',
   '<label>Углеводы, г <input id="mealLookupCarbs" type="number" min="0" max="1000" step="any" placeholder="—"></label>',
   '</div><p class="meal-lookup-disclaimer">Пустое поле означает «неизвестно», а не ноль. Проверь значения по упаковке.</p>',
+  '<p id="mealLookupDetected" hidden></p>',
+  '<details id="mealLookupRawDetails" hidden><summary>Распознанный текст этикетки</summary><pre id="mealLookupRawText"></pre></details>',
   '<button id="mealLookupClear" type="button">Убрать данные продукта</button>',
   '</section>'
  ].join(''));
@@ -59,6 +67,7 @@
  }
  function reset(){
   selected=null;stopScan();
+  $('mealLookupRawDetails').hidden=true;$('mealLookupDetected').hidden=true;
   $('mealLookupPanel').hidden=true;
   $('mealLookupNutrition').hidden=true;
   $('mealLookupResults').replaceChildren();
@@ -77,6 +86,16 @@
   $('mealLookupGrams').value=100;$('mealChatPhotoGrams').value=100;
   const oldPortion=$('mealChatPhotoGrams').closest('.meal-chat-photo-portion');
   if(oldPortion)oldPortion.hidden=true;
+  const rawText=String(result.labelText||'').trim();
+  $('mealLookupRawDetails').hidden=!rawText;
+  $('mealLookupRawText').textContent=rawText;
+  const rawN=result.detectedNutrition||{},needBasis=!result.per100;
+  const found=Object.entries(rawN).filter(([key,value])=>value!=null);
+  const labels={kcal:'ккал',protein:'белки',fat:'жиры',carbs:'углеводы'};
+  const note=$('mealLookupDetected');
+  note.hidden=!needBasis||!found.length;
+  if(!note.hidden)note.textContent='На фото прочитано: '+found.map(([key,value])=>labels[key]+': '+value).join(' · ')+
+   '. Основа (на 100 г/мл) не определена — значения не сохранены автоматически.';
   if(result.barcode)$('mealLookupBarcode').value=result.barcode;
   if(result.title)$('mealLookupName').value=result.title;
   for(const [key,id] of Object.entries(nutritionKeys)){
@@ -138,6 +157,14 @@
    }
   }
  }
+ $('mealSmartCapture').onclick=()=>$('mealSmartInput').click();
+ $('mealSmartInput').addEventListener('change',async event=>{
+  const file=event.target.files?.[0];
+  event.target.value='';
+  if(!file)return;
+  hidePanel();
+  await chat.recognizeSmartPhoto(file);
+ });
  $('mealLookupSearchOpen').onclick=()=>{stopScan();showPanel();$('mealLookupName').focus()};
  $('mealLookupScanOpen').onclick=openScanner;
  $('mealLookupStop').onclick=stopScan;
