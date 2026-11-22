@@ -1093,6 +1093,7 @@ const defs=[
 {id:'bed_sleep',object:'bed',name:'Записать сон',xp:0,repeat:'daily',skill:'Здоровье',open:'state'},
 {id:'sink_hands',object:'sink',name:'Вымыть руки',xp:5,repeat:'daily',skill:'Здоровье'},
 {id:'hygiene_antiperspirant',object:'shower',name:'Нанести антиперспирант',xp:5,repeat:'daily',skill:'Здоровье'},
+{id:'to_poop',object:'toilet',name:'to poop',xp:5,repeat:'daily',skill:'Здоровье',habitUnit:'раз'},
 {id:'sink_dishes',object:'sink',name:'Помыть посуду',xp:10,repeat:'daily',skill:'Экономика'},
 {id:'books_read',object:'books',name:'Читать',xp:15,repeat:'daily',skill:'Психология'},
 {id:'books_tidy',object:'books',name:'Разобрать книжную полку',xp:10,repeat:'weekly',skill:'Экономика'},
@@ -1102,7 +1103,7 @@ const defs=[
 {id:'sim_diary',object:'sim',name:'Записать в дневник',xp:0,repeat:'daily',open:'diary'},
 {id:'sofa_rest',object:'sofa',name:'Отдохнуть',xp:5,repeat:'daily',skill:'Здоровье'}];
 const labels={window:'🪟 Окно · мероприятия',bed:'🛏 Кровать',books:'📚 Книжная полка',desk:'💻 Компьютер',phone:'📱 Телефон',tableBook:'📖 Книга на столике',fridge:'🧊 Холодильник',coffee:'☕ Кофе',clutter:'🧹 Уборка',sink:'🚰 Раковина',sim:'👤 Персонаж',sofa:'🛋 Диван',shower:'🚿 Ванная',toilet:'🚽 Туалет',catLitter:'🐈 Туалет котиков'};
-const base=()=>({schema:VERSION,createdAt:new Date().toISOString(),days:{},activities:[...defs.filter(a=>a.xp>0).map(a=>({...a,kind:'habit',difficulty:3,completions:[]})),{id:'coffee_habit',kind:'habit',name:'Кофе',xp:0,skill:null,repeat:'daily',difficulty:3,habitUnit:'чаш.',completions:[]}],events:[],schedule:[],googleHidden:[],foodMeals:[],foodTemplates:[],financeChecks:[],room:{work:null,lastShowerDateReported:'2026-11-18',antiperspirantInitialized:true},legacySkills:{},legacyCopy:null,skillDecaySince:today(),
+const base=()=>({schema:VERSION,createdAt:new Date().toISOString(),days:{},activities:[...defs.filter(a=>a.xp>0).map(a=>({...a,kind:'habit',difficulty:3,createdDate:a.id==='to_poop'?today():undefined,completions:[]})),{id:'coffee_habit',kind:'habit',name:'Кофе',xp:0,skill:null,repeat:'daily',difficulty:3,habitUnit:'чаш.',completions:[]}],events:[],schedule:[],googleHidden:[],foodMeals:[],foodTemplates:[],financeChecks:[],room:{work:null,lastShowerDateReported:'2026-11-18',antiperspirantInitialized:true,poopHabitInitialized:true,illnessEpisodes:[]},legacySkills:{},legacyCopy:null,skillDecaySince:today(),
  taskProjects:[],taskTags:[{id:'tp-family',name:'Семья'},{id:'tp-work',name:'Работа'}],
  habitMeasurements:{},customSkills:[],focusSettings:{focus:25,short:5,long:15},focusTimer:{mode:'focus',running:false,remainingSec:1500,elapsedSec:0,endAt:null,startAt:null,taskId:''}});
 let state,storageOK=true,storageBlocked=false,activeDay=today(),historyView='month',selectedTab='needs';
@@ -1114,6 +1115,16 @@ function normalize(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.
   }
   normalized.room.antiperspirantInitialized=true;
  }
+ if(!raw.room?.poopHabitInitialized){
+  if(!normalized.activities.some(a=>a?.id==='to_poop')){
+   const preset=defs.find(a=>a.id==='to_poop');
+   normalized.activities.push({...preset,kind:'habit',difficulty:3,createdDate:today(),completions:[]});
+  }
+  normalized.room.poopHabitInitialized=true;
+ }
+ normalized.room.illnessEpisodes=Array.isArray(raw.room?.illnessEpisodes)?
+  raw.room.illnessEpisodes.filter(x=>x&&/^\d{4}-\d{2}-\d{2}$/.test(x.start||'')&&
+   (x.end==null||/^\d{4}-\d{2}-\d{2}$/.test(x.end))):[];
  normalized.customSkills=Array.isArray(raw.customSkills)?[...new Set(raw.customSkills.filter(x=>typeof x==='string'&&x.trim()).map(x=>x.trim().slice(0,70)))]:[];
  normalized.taskProjects=Array.isArray(raw.taskProjects)?raw.taskProjects.filter(x=>x&&typeof x.id==='string'&&typeof x.name==='string'):safe.taskProjects;
  normalized.taskTags=Array.isArray(raw.taskTags)?raw.taskTags.filter(x=>x&&typeof x.id==='string'&&typeof x.name==='string'):safe.taskTags;
@@ -1362,7 +1373,10 @@ function complete(a,date){
  if(a.repeat!=='inbox'&&!due(a,date))return toast('Дело ещё не запланировано');
  if(isWeightMeasurementTask(a))return openWeightMeasurement(a,date);
  let xp=0;
- if(transact(()=>{xp=appendActivityCompletion(a,date)}))showCompletion(a,xp);
+ if(transact(()=>{xp=appendActivityCompletion(a,date)})){
+  showCompletion(a,xp);
+  if(a.id===POOP_HABIT_ID)maybeSuggestPoopIllness(date);
+ }
 }
 function openWeightMeasurement(a,date){
  closeOtherMetricPopups();closeSheet();closeDayAgenda();
@@ -1618,7 +1632,9 @@ function setHabitAmount(id,date,value){
  if(!/^\d{4}-\d{2}-\d{2}$/.test(date)||dayStr(asDay(date))!==date||date>today())return toast('Нельзя записывать будущие даты');
  if(!Number.isFinite(amount)||amount<0||amount>100000||Math.round(amount*100)!==amount*100)return toast('Введите число от 0 до 100000 (до двух знаков после запятой)');
  if(!transact(()=>{state.habitMeasurements??={};state.habitMeasurements[id]??={};state.habitMeasurements[id][date]=amount;}))return false;
- renderAll();return true;
+ renderAll();
+ if(id===POOP_HABIT_ID)maybeSuggestPoopIllness(date);
+ return true;
 }
 function recordEspresso(date=today()){
  if(date>today())return toast('Нельзя записать будущий кофе');
@@ -1970,6 +1986,15 @@ if(object==='shower'){
  $('sheetActions').append(shower,hair,wash,ant);
 }
 if(object==='toilet'){
+ const habit=state.activities.find(a=>a.id===POOP_HABIT_ID&&a.kind==='habit');
+ if(habit){
+  const count=habitAmount(POOP_HABIT_ID,today());
+  const status=document.createElement('p');status.className='hint';
+  status.textContent='🚽 to poop · сегодня '+count+' раз'+(count>3?' · можно отметить недомогание':'');
+  const log=document.createElement('button');log.type='button';log.textContent='🚽 to poop · +1';
+  log.onclick=()=>{closeSheet();complete(habit,today())};
+  $('sheetActions').append(status,log);
+ }
  const wash=document.createElement('button');wash.type='button';wash.textContent='🧽 Помыть туалет';
  wash.onclick=()=>{closeSheet();cleanBathroomItem('toilet')};$('sheetActions').append(wash);
 }
@@ -2046,7 +2071,7 @@ b.append(span,sm);b.onclick=()=>{closeSheet();if(c.open){if(c.id==='bed_sleep')o
 // The phone already has a dedicated financial-control editor.
  // Keep a linked "Финансовый контроль" activity in the planner and its history,
  // but do not repeat its action in the phone's contextual menu.
-for(const a of state.activities.filter(a=>a.object===object&&due(a,today())&&a.id!=='hygiene_antiperspirant'&&!(object==='bed'&&a.id==='bed_make')&&
+for(const a of state.activities.filter(a=>a.object===object&&due(a,today())&&a.id!=='hygiene_antiperspirant'&&!(object==='toilet'&&a.id===POOP_HABIT_ID)&&!(object==='bed'&&a.id==='bed_make')&&
  !(object==='phone'&&a.kind==='task'&&String(a.name||'').trim().toLocaleLowerCase('ru')==='финансовый контроль'))){
  const btn=document.createElement('button'),span=document.createElement('span'),small=document.createElement('small');
  span.textContent=a.name;small.textContent=a.kind==='habit'?'Ещё +1 · '+((a.completions||[]).filter(c=>c.date===today()).length)+' раз':done(a,today())?'✓ Уже сделано':'+ '+(a.xp||0)+' XP';
@@ -2238,7 +2263,13 @@ function openSingleMetric(field,date=today()){
  }else if(field==='condition'){
   const score=Number.isFinite(r.ouraScores?.readiness)?r.ouraScores.readiness:state.days[plusDays(date,-1)]?.ouraScores?.readiness;
   if(Number.isFinite(score))addNumber('Oura Readiness (исходный показатель)',score+'/100');
-  note('Физическое состояние — игровая оценка. Ты можешь изменить её вручную, не стирая данные Oura.');
+  note('Физическое состояние — игровая оценка, без изменения Oura. to poop: +3 п. п. за день с отметкой, −3 п. п. за завершённый день без неё. Учитывается скользящая неделя (ограниченный эффект). Это игровое правило, а не медицинская норма.');
+  const bowel=poopHealthEffect(date);
+  note('🚽 to poop: '+habitAmount(POOP_HABIT_ID,date)+' раз за день · недельный эффект '+(bowel.delta>=0?'+':'')+bowel.delta+' п. п.');
+  note(isIllnessActive(date)?'🩺 В игре отмечена болезнь: −20 п. п. к физическому состоянию.':'Болезнь можно отметить самостоятельно, независимо от туалета. Приложение не устанавливает диагноз.');
+  if(date===today())addButton(isIllnessActive(date)?'✓ Закончить болезнь':'🩺 Отметить болезнь (−20 п. п.)',()=>{
+   if(setIllnessActive(!isIllnessActive(today())))dialog.close();
+  });
   const tags=['Сонливость','Усталость','Головная боль','Боль в животе','Слабость','Тошнота','Головокружение','Боль в ноге','Простуда','Бодрость','Бессонница','Другое'];
   const group=document.createElement('fieldset');group.className='physical-tags';
   const legend=document.createElement('legend');legend.textContent='Самочувствие · теги';group.append(legend);
@@ -2609,9 +2640,12 @@ function metricSnapshot(field,ref=today()){
 function physicalSnapshot(ref=today()){
  const observed=latestObserved(r=>Number.isFinite(r?.condition)||Number.isFinite(r?.ouraScores?.readiness),ref);
  const effected=latestResourceEffectDate('condition',ref);
- const date=[observed,effected].filter(Boolean).sort().pop()||null;
+ const bowel=poopHealthEffect(ref),ill=isIllnessActive(ref);
+ const date=[observed,effected,...(bowel.tracked||ill?[ref]:[])].filter(Boolean).sort().pop()||null;
  const base=observed?unadjustedPhysicalCondition(currentRecord(observed),observed):null;
- return {value:actionAdjustedNeed('condition',ref,base),date};
+ const value=actionAdjustedNeed('condition',ref,base);
+ if(!bowel.tracked&&!ill)return {value,date};
+ return {value:Math.max(0,Math.min(100,Math.round((Number.isFinite(value)?value:50)+bowel.delta+(ill?POOP_ILLNESS_POINTS:0)))),date};
 }
 function sleepSnapshot(ref=today()){
  const observed=latestObserved(r=>Number.isFinite(r?.sleepHours),ref);
@@ -2810,8 +2844,52 @@ function unadjustedPhysicalCondition(r,d=today()){
  if(Number.isFinite(previous))return previous;
  return Number.isFinite(r.condition)?r.condition:null;
 }
+const POOP_HABIT_ID='to_poop',POOP_SUCCESS_POINTS=3,POOP_MISSED_POINTS=-3,POOP_ILLNESS_POINTS=-20;
+// Gameplay rule, not a medical normal range. Recomputed from existing dated
+// habit counts: no new saved health values and no writes to Oura data.
+function poopHealthEffect(date=today()){
+ const activity=(state.activities||[]).find(a=>a.id===POOP_HABIT_ID&&a.kind==='habit');
+ if(!activity)return {delta:0,tracked:false,done:0,missed:0};
+ const start=activity.createdDate||String(state.createdAt||'').slice(0,10)||today();
+ if(!/^\d{4}-\d{2}-\d{2}$/.test(start)||date<start)return {delta:0,tracked:false,done:0,missed:0};
+ const week=plusDays(date,-6),first=start>week?start:week;
+ let delta=0,done=0,missed=0;
+ for(let d=first;d<=date;d=plusDays(d,1)){
+  const count=habitAmount(POOP_HABIT_ID,d);
+  if(count>0){done++;delta+=POOP_SUCCESS_POINTS;}
+  else if(d<today()){missed++;delta+=POOP_MISSED_POINTS;}
+ }
+ return {delta:Math.max(-18,Math.min(12,delta)),tracked:done+missed>0,done,missed};
+}
+function isIllnessActive(date=today()){
+ return (state.room?.illnessEpisodes||[]).some(e=>e?.start<=date&&(e.end==null||e.end>date));
+}
+function setIllnessActive(active){
+ const date=today();
+ if(isIllnessActive(date)===active)return false;
+ if(!transact(()=>{
+  state.room??={};state.room.illnessEpisodes??=[];
+  if(active)state.room.illnessEpisodes.push({start:date,end:null});
+  else for(const x of state.room.illnessEpisodes)if(x.start<=date&&x.end==null)x.end=date;
+  state.room.poopIllnessDismissedOn=date;
+ }))return toast('Не удалось записать болезнь');
+ renderAll();
+ toast(active?'🩺 Болезнь отмечена в игре; физическое состояние снижено':'Отметка болезни завершена');
+ return true;
+}
+function maybeSuggestPoopIllness(date=today()){
+ if(date!==today()||habitAmount(POOP_HABIT_ID,date)<=3||isIllnessActive(date)||
+  state.room?.poopIllnessDismissedOn===date)return;
+ const modal=document.getElementById('poopIllnessDialog');
+ if(!modal||modal.open)return;
+ document.getElementById('poopIllnessCount').textContent=String(habitAmount(POOP_HABIT_ID,date));
+ modal.showModal();
+}
 function physicalCondition(r,d=today()){
- return actionAdjustedNeed('condition',d,unadjustedPhysicalCondition(r,d));
+ const base=actionAdjustedNeed('condition',d,unadjustedPhysicalCondition(r,d));
+ const bowel=poopHealthEffect(d),ill=isIllnessActive(d);
+ if(!bowel.tracked&&!ill)return base;
+ return Math.max(0,Math.min(100,Math.round((Number.isFinite(base)?base:50)+bowel.delta+(ill?POOP_ILLNESS_POINTS:0))));
 }
 function showerReference(){
  // A date supplied by the user can be used without fabricating a time of day.
@@ -4520,6 +4598,21 @@ $('showerCabin').onclick=()=>openObject('shower',$('showerCabin'));
 $('scenePhone').onclick=()=>openObject('phone',$('scenePhone'));
 $('sceneFridge').onclick=()=>openObject('fridge',$('sceneFridge'));
 $('sceneToilet').onclick=()=>openObject('toilet',$('sceneToilet'));
+// Reaching four entries only *offers* an illness marker; it never diagnoses.
+const poopIllnessDialog=document.createElement('dialog');
+poopIllnessDialog.id='poopIllnessDialog';
+poopIllnessDialog.setAttribute('aria-labelledby','poopIllnessTitle');
+poopIllnessDialog.style.cssText='max-width:min(92vw,440px);border:1px solid #779db6;border-radius:18px;background:#1d2c48;color:#f5f8ff;padding:20px;box-shadow:0 16px 55px #0009';
+poopIllnessDialog.innerHTML='<h3 id="poopIllnessTitle">🩺 Проверить самочувствие?</h3><p>Сегодня отмечено <strong id="poopIllnessCount"></strong> посещений туалета. Можно отметить «Болезнь» и понизить игровой показатель физического состояния на 20 пунктов. Частота сама по себе не означает диагноз.</p><div class="row" style="gap:8px"><button type="button" class="primary" id="poopIllnessAccept">Отметить болезнь</button><button type="button" class="secondary" id="poopIllnessDecline">Не сейчас</button></div>';
+document.body.append(poopIllnessDialog);
+document.getElementById('poopIllnessAccept').onclick=()=>{
+ poopIllnessDialog.close();setIllnessActive(true);
+};
+document.getElementById('poopIllnessDecline').onclick=()=>{
+ poopIllnessDialog.close();
+ if(transact(()=>{state.room??={};state.room.poopIllnessDismissedOn=today()}))renderAll();
+};
+
 $('sceneCatLitter').onclick=()=>openObject('catLitter',$('sceneCatLitter'));
 function recolorActualRug(){
  const img=$('sceneImage'),out=$('sceneRugColor');
