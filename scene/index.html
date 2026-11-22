@@ -1107,7 +1107,7 @@ const defs=[
 {id:'pet_feed_ginger',object:null,petId:'ginger',name:'Покормить рыжего котика',xp:10,repeat:'daily',skill:'Забота'},
 {id:'pet_feed_black',object:null,petId:'black',name:'Покормить чёрного котика',xp:10,repeat:'daily',skill:'Забота'}];
 const labels={window:'🪟 Окно · мероприятия',bed:'🛏 Кровать',books:'📚 Книжная полка',desk:'💻 Компьютер',phone:'📱 Телефон',tableBook:'📖 Книга на столике',fridge:'🧊 Холодильник',coffee:'☕ Кофе',clutter:'🧹 Уборка',sink:'🚰 Раковина',sim:'👤 Персонаж',sofa:'🛋 Диван',shower:'🚿 Ванная',toilet:'🚽 Туалет',catLitter:'🐈 Туалет котиков'};
-const base=()=>({schema:VERSION,createdAt:new Date().toISOString(),days:{},activities:[...defs.filter(a=>a.xp>0).map(a=>({...a,kind:'habit',difficulty:3,createdDate:a.id==='to_poop'?today():undefined,completions:[]})),{id:'coffee_habit',kind:'habit',name:'Кофе',xp:0,skill:null,repeat:'daily',difficulty:3,habitUnit:'чаш.',habitGoal:{type:'max',value:5},completions:[]}],events:[],schedule:[],googleHidden:[],screenTime:{records:[]},foodMeals:[],foodTemplates:[],financeChecks:[],health:{cycleDays:{},medications:[],medicationLog:[],settings:{cycleLength:28,periodLength:5,reminders:false}},room:{work:null,lastShowerDateReported:'2026-11-18',antiperspirantInitialized:true,poopHabitInitialized:true,petHabitsInitialized:true,illnessEpisodes:[]},pets:{animals:[{id:'ginger',name:'Рыжий котик',activities:[],schedule:[]},{id:'black',name:'Чёрный котик',activities:[],schedule:[]}]},legacySkills:{},legacyCopy:null,skillDecaySince:today(),
+const base=()=>({schema:VERSION,createdAt:new Date().toISOString(),days:{},activities:[...defs.filter(a=>a.xp>0).map(a=>({...a,kind:'habit',difficulty:3,createdDate:a.id==='to_poop'?today():undefined,completions:[]})),{id:'coffee_habit',kind:'habit',name:'Кофе',xp:0,skill:null,repeat:'daily',difficulty:3,habitUnit:'чаш.',habitGoal:{type:'max',value:5},completions:[]}],events:[],schedule:[],googleHidden:[],screenTime:{records:[],rules:[],overrides:[]},foodMeals:[],foodTemplates:[],financeChecks:[],health:{cycleDays:{},medications:[],medicationLog:[],settings:{cycleLength:28,periodLength:5,reminders:false}},room:{work:null,lastShowerDateReported:'2026-11-18',antiperspirantInitialized:true,poopHabitInitialized:true,petHabitsInitialized:true,illnessEpisodes:[]},pets:{animals:[{id:'ginger',name:'Рыжий котик',activities:[],schedule:[]},{id:'black',name:'Чёрный котик',activities:[],schedule:[]}]},legacySkills:{},legacyCopy:null,skillDecaySince:today(),
  taskProjects:[],taskTags:[{id:'tp-family',name:'Семья'},{id:'tp-work',name:'Работа'}],
  habitMeasurements:{},customSkills:[],focusSettings:{focus:25,short:5,long:15},focusTimer:{mode:'focus',running:false,remainingSec:1500,elapsedSec:0,endAt:null,startAt:null,taskId:''}});
 let state,storageOK=true,storageBlocked=false,activeDay=today(),historyView='month',selectedTab='needs';
@@ -1156,10 +1156,16 @@ const taskSkillsPicker=createSkillPicker('taskSkill');
 const eventSkillsPicker=createSkillPicker('eventSkill');
 
 
-function normalize(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.schema!==VERSION||!raw.days||typeof raw.days!=='object'||Array.isArray(raw.days)||!Array.isArray(raw.activities)||!Array.isArray(raw.events))throw Error('Неизвестный или повреждённый формат');const safe=base();const normalized={...safe,...raw,screenTime:{records:Array.isArray(raw.screenTime?.records)?
- raw.screenTime.records.filter(x=>x&&typeof x==='object'&&/^\d{4}-\d{2}-\d{2}$/.test(x.date||'')&&
- typeof x.app==='string'&&x.app.length>0&&x.app.length<=110&&Number.isFinite(x.seconds)&&x.seconds>0&&x.seconds<=86400)
- .slice(0,20000).map(x=>({...x,source:x.source==='android'?'android':'stayfree'})):[]},foodMeals:Array.isArray(raw.foodMeals)?raw.foodMeals.filter(x=>x&&typeof x==='object'&&typeof x.id==='string'&&typeof x.date==='string'):[],foodTemplates:Array.isArray(raw.foodTemplates)?raw.foodTemplates.filter(x=>x&&typeof x==='object'&&typeof x.title==='string'&&x.title.trim().length>0):[],googleHidden:Array.isArray(raw.googleHidden)?raw.googleHidden.filter(x=>x&&typeof x.calendarId==='string'&&typeof x.id==='string').map(x=>({calendarId:x.calendarId,id:x.id,title:typeof x.title==='string'?x.title:'',hiddenAt:typeof x.hiddenAt==='string'?x.hiddenAt:''})):[],schedule:Array.isArray(raw.schedule)?raw.schedule:(Array.isArray(raw.legacyCopy?.events)?raw.legacyCopy.events.map((e,i)=>({id:'legacy-schedule-'+i,title:e.title||'Мероприятие',startsAt:e.startsAt,endsAt:e.endsAt,repeat:e.repeat==='weekly'?'weekly':'none',weekdays:e.repeat==='weekly'&&e.startsAt?[((new Date(e.startsAt.slice(0,10)+'T12:00:00').getDay()+6)%7)+1]:[]})):[]),room:(raw.room&&typeof raw.room==='object'&&!Array.isArray(raw.room))?{...safe.room,...raw.room}:safe.room};
+function normalize(raw){if(!raw||typeof raw!=='object'||Array.isArray(raw)||raw.schema!==VERSION||!raw.days||typeof raw.days!=='object'||Array.isArray(raw.days)||!Array.isArray(raw.activities)||!Array.isArray(raw.events))throw Error('Неизвестный или повреждённый формат');const safe=base();const normalized={...safe,...raw,screenTime:{
+ records:Array.isArray(raw.screenTime?.records)?raw.screenTime.records.filter(x=>x&&typeof x==='object'&&
+  /^\d{4}-\d{2}-\d{2}$/.test(x.date||'')&&typeof x.app==='string'&&x.app.length>0&&
+  x.app.length<=110&&Number.isFinite(x.seconds)&&x.seconds>0&&x.seconds<=86400)
+  .slice(0,20000).map(x=>({...x,source:x.source==='android'?'android':'stayfree'})):[],
+ rules:Array.isArray(raw.screenTime?.rules)?raw.screenTime.rules.filter(x=>x&&typeof x.key==='string'&&x.key.length<=180&&
+  x.link&&typeof x.link==='object').slice(0,1000):[],
+ overrides:Array.isArray(raw.screenTime?.overrides)?raw.screenTime.overrides.filter(x=>x&&typeof x.key==='string'&&
+  x.key.length<=180&&/^\d{4}-\d{2}-\d{2}$/.test(x.date||'')&&x.link&&typeof x.link==='object').slice(0,3000):[]
+},foodMeals:Array.isArray(raw.foodMeals)?raw.foodMeals.filter(x=>x&&typeof x==='object'&&typeof x.id==='string'&&typeof x.date==='string'):[],foodTemplates:Array.isArray(raw.foodTemplates)?raw.foodTemplates.filter(x=>x&&typeof x==='object'&&typeof x.title==='string'&&x.title.trim().length>0):[],googleHidden:Array.isArray(raw.googleHidden)?raw.googleHidden.filter(x=>x&&typeof x.calendarId==='string'&&typeof x.id==='string').map(x=>({calendarId:x.calendarId,id:x.id,title:typeof x.title==='string'?x.title:'',hiddenAt:typeof x.hiddenAt==='string'?x.hiddenAt:''})):[],schedule:Array.isArray(raw.schedule)?raw.schedule:(Array.isArray(raw.legacyCopy?.events)?raw.legacyCopy.events.map((e,i)=>({id:'legacy-schedule-'+i,title:e.title||'Мероприятие',startsAt:e.startsAt,endsAt:e.endsAt,repeat:e.repeat==='weekly'?'weekly':'none',weekdays:e.repeat==='weekly'&&e.startsAt?[((new Date(e.startsAt.slice(0,10)+'T12:00:00').getDay()+6)%7)+1]:[]})):[]),room:(raw.room&&typeof raw.room==='object'&&!Array.isArray(raw.room))?{...safe.room,...raw.room}:safe.room};
  if(!raw.room?.antiperspirantInitialized){
   if(!normalized.activities.some(a=>a?.id==='hygiene_antiperspirant')){
    const item=defs.find(a=>a.id==='hygiene_antiperspirant');
@@ -2852,10 +2858,88 @@ function skillXpBar(score,scale,detail=false){
 }
 // StayFree imports live in a separate, backup-compatible collection.
 // No CSV input is uploaded or converted into Google Calendar events.
+function screenTimeAppKey(row){
+ const pkg=String(row?.packageName||'').trim().toLocaleLowerCase('ru');
+ const name=String(row?.app||'').trim().toLocaleLowerCase('ru');
+ return (pkg||name).slice(0,180);
+}
+function screenTimeLinkNormalize(x){
+ const text=(value,length)=>typeof value==='string'?value.trim().slice(0,length):'';
+ return {
+  skill:text(x?.skill,70),activityId:text(x?.activityId,180),
+  eventId:text(x?.eventId,180),projectId:text(x?.projectId,180),
+  tagId:text(x?.tagId,180),category:text(x?.category,60)
+ };
+}
+function screenTimeLinkFor(row){
+ const key=screenTimeAppKey(row),date=String(row?.date||'');
+ const specific=(state.screenTime?.overrides||[]).findLast(x=>x.key===key&&x.date===date);
+ const defaultRule=(state.screenTime?.rules||[]).findLast(x=>x.key===key);
+ return {link:screenTimeLinkNormalize((specific||defaultRule)?.link||{}),
+  overridden:!!specific,isDefault:!!defaultRule};
+}
+function screenTimeLinkLabel(row){
+ const {link}=screenTimeLinkFor(row),parts=[];
+ if(link.skill)parts.push('↗ '+link.skill);
+ const activity=state.activities.find(x=>x.id===link.activityId);
+ if(activity)parts.push((activity.kind==='habit'?'◇ ':'☑ ')+activity.name);
+ const event=state.schedule?.find(x=>x.id===link.eventId);
+ if(event)parts.push('📅 '+event.title);
+ const project=state.taskProjects?.find(x=>x.id===link.projectId);
+ if(project)parts.push('📂 '+project.name);
+ const tag=state.taskTags?.find(x=>x.id===link.tagId);
+ if(tag)parts.push('#'+tag.name);
+ if(link.category)parts.push(link.category);
+ return parts.join(' · ');
+}
 window.LifeSimsScreenTimeBridge={
  read(date){
   const records=state.screenTime?.records||[];
   return records.filter(x=>!date||x.date===date);
+ },
+ options(date){
+  const d=typeof date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(date)?date:today();
+  return {
+   skills:skillScores().filter(x=>x.name!=='Здоровье').map(x=>x.name),
+   activities:(state.activities||[]).filter(x=>x&&!x.legacyDone&&x.id&&x.name)
+    .map(x=>({id:x.id,name:x.name,kind:x.kind==='habit'?'habit':'task'})),
+   events:scheduleHistoryOccurrences(d,d).map(x=>({id:x.id,name:x.title})).filter(x=>x.id),
+   projects:(state.taskProjects||[]).map(x=>({id:x.id,name:x.name})),
+   tags:(state.taskTags||[]).map(x=>({id:x.id,name:x.name}))
+  };
+ },
+ link:row=>screenTimeLinkFor(row),
+ label:row=>screenTimeLinkLabel(row),
+ saveLink(row,link,scope='default'){
+  if(storageBlocked||!storageOK)return {ok:false,error:'Сохранение LifeSims недоступно'};
+  const key=screenTimeAppKey(row),date=String(row?.date||'');
+  if(!key||!/^d{4}-dd-dd$/.test(date)||key.length>180)return {ok:false,error:'Неизвестное приложение или дата'};
+  if(!['default','date','clear-date','clear-default'].includes(scope))return {ok:false,error:'Неизвестная область'};
+  const entry=screenTimeLinkNormalize(link);
+  const options=this.options(date);
+  const includes=(arr,v)=>!v||arr.some(x=>(typeof x==='string'?x:x.id)===v);
+  if(!includes(options.skills,entry.skill)||!includes(options.activities,entry.activityId)||
+     !includes(options.events,entry.eventId)||!includes(options.projects,entry.projectId)||
+     !includes(options.tags,entry.tagId))return {ok:false,error:'Выбранная связь больше не существует'};
+  const ok=transact(()=>{
+   state.screenTime??={records:[],rules:[],overrides:[]};
+   state.screenTime.rules??=[];state.screenTime.overrides??=[];
+   if(scope==='default'||scope==='clear-default'){
+    state.screenTime.rules=state.screenTime.rules.filter(x=>x.key!==key);
+    if(scope==='default')state.screenTime.rules.push({key,link:entry});
+   }else{
+    state.screenTime.overrides=state.screenTime.overrides.filter(x=>!(x.key===key&&x.date===date));
+    if(scope==='date')state.screenTime.overrides.push({key,date,link:entry});
+   }
+  });
+  if(ok)renderHistory();
+  return ok?{ok:true}:{ok:false,error:'Не удалось сохранить связь'};
+ },
+ skillTime(skill,day=today()){
+  // Screen time is informational only: never awards XP or marks tasks done.
+  const dates=new Set(Array.from({length:7},(_,i)=>plusDays(day,-i)));
+  return (state.screenTime?.records||[]).filter(row=>dates.has(row.date)&&
+    screenTimeLinkFor(row).link.skill===skill).reduce((seconds,row)=>seconds+Number(row.seconds||0),0);
  },
  commit(incoming){
   if(storageBlocked||!storageOK)return {ok:false,error:'Локальное сохранение заблокировано. Сначала восстанови доступ к данным.'};
