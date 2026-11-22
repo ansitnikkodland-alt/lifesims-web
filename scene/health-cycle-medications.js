@@ -285,7 +285,7 @@ function saveMedication(e){
  startDate,endDate:endDate||null,note:$('healthMedNote').value.trim(),active:true};
  if(change(h=>{
   const i=h.medications.findIndex(x=>x.id===med.id);
-  if(i>=0)h.medications[i]={...h.medications[i],...med};else h.medications.push(med);
+  if(i>=0)h.medications[i]={...h.medications[i],...med,active:h.medications[i].active};else h.medications.push(med);
  }))resetMedicationForm();
 }
 function renderMedicationList(h){
@@ -311,10 +311,10 @@ function medicationSlotLine(s,d,compact=false){
  const label=el('label','health-dose-checklabel'),cb=el('input','health-taken-check');
  cb.type='checkbox';cb.checked=taken;cb.disabled=d>nowDay();
  cb.setAttribute('aria-label','Принято: '+s.m.name+' '+s.time+' '+dayLabel(d));
- cb.addEventListener('change',()=>setMedicationStatus(s.m,d,s.time,cb.checked?'taken':null));
+ cb.addEventListener('change',()=>setMedicationStatus(s.m,d,s.time,cb.checked?'taken':(s.entry?'planned':null)));
  label.append(cb);
  const desc=el('span','health-dose-description');
- desc.append(el('strong','',s.m.name+(s.m.dose?' · '+(s.entry?.dose||s.m.dose):'')));
+ desc.append(el('strong','',s.m.name+((s.entry?.dose||s.m.dose)?' · '+(s.entry?.dose||s.m.dose):'')));
  desc.append(el('small','',s.time+' · '+(taken?'Принято':status==='skipped'?'Пропущено':status==='planned'?'Добавлено как вчера':'Не отмечено')));
  label.append(desc);left.append(label);row.append(left);
  if(!compact){
