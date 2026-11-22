@@ -25,13 +25,14 @@ const MOOD_OPTIONS=[
 ];
 const FLOWS={none:'Нет кровотечения',spotting:'Мажущие выделения',light:'Слабые',medium:'Умеренные',heavy:'Обильные'};
 const CONTRACEPTIVE_TYPES=[['pill','Противозачаточные таблетки'],['ring','Контрацептивное кольцо'],['patch','Контрацептивный пластырь'],['injection','Контрацептивная инъекция']];
-let date=nowDay(), month=date.slice(0,7), editingMed='', section='cycle', flash='',draftMood='',draftSymptoms=new Set();
+let date=nowDay(), month=date.slice(0,7), editingMed='', section='cycle', flash='',draftMood='',draftSymptoms=new Set(),showAllLegacy=false,legacyEdit=null;
 function data(){
  const h=B.read()||{};
  return {
   cycleDays:h.cycleDays&&typeof h.cycleDays==='object'&&!Array.isArray(h.cycleDays)?h.cycleDays:{},
   medications:Array.isArray(h.medications)?h.medications:[],
   medicationLog:Array.isArray(h.medicationLog)?h.medicationLog:[],
+  legacyMedicationEdits:h.legacyMedicationEdits&&typeof h.legacyMedicationEdits==='object'&&!Array.isArray(h.legacyMedicationEdits)?h.legacyMedicationEdits:{},
   settings:{cycleLength:28,periodLength:5,reminders:false,periodReminder:false,contraceptionEnabled:false,pmsLeadDays:7,dischargeEnabled:false,...(h.settings||{})}
  };
 }
@@ -70,19 +71,30 @@ function isScheduled(m,d){
  const days=Array.isArray(m.weekdays)?m.weekdays:[0,1,2,3,4,5,6];
  return days.includes(parse(d).getDay());
 }
+function legacyMeds(h,d){
+ const raw=B.legacyMeds?.()?.[d];
+ if(typeof raw!=='string'||!raw.trim())return [];
+ return raw.split(/\r?\n/).map(x=>x.trim()).filter(Boolean).slice(0,80).map((line,index)=>{
+  const id='legacy-meds:'+d+':'+index,edited=h.legacyMedicationEdits?.[id]||{};
+  return {id,name:typeof edited.name==='string'&&edited.name.trim()?edited.name:line,
+   dose:typeof edited.dose==='string'?edited.dose:'',archived:true,legacy:true,sourceDate:d,sourceLine:line};
+ });
+}
 function slots(h,d){
  const map=new Map();
- for(const m of h.medications.filter(m=>isScheduled(m,d)))for(const time of (m.times||[])){
+ for(const m of h.medications.filter(m=>isScheduled(m,d)))for(const time of (m.times||[]))
   map.set(m.id+'@'+time,{m,time,entry:null});
- }
- // Retain logged doses independently of later schedule edits.
+ for(const legacy of legacyMeds(h,d))map.set(legacy.id+'@--:--',{m:legacy,time:'--:--',entry:null});
+ // Logged doses stay visible after schedule edits or medication deletion.
  for(const entry of h.medicationLog.filter(x=>x.date===d)){
+  const over=h.legacyMedicationEdits?.[entry.medicationId]||{};
   const m=h.medications.find(x=>x.id===entry.medicationId)||
-   {id:entry.medicationId,name:entry.medicationName||'Препарат из архива',dose:entry.dose||'',archived:true};
+   {id:entry.medicationId,name:over.name||entry.medicationName||'Препарат из архива',
+    dose:over.dose??entry.dose??'',archived:true,legacy:entry.medicationId.startsWith('legacy-meds:')};
   const key=m.id+'@'+entry.time;
   if(map.has(key))map.get(key).entry=entry;else map.set(key,{m,time:entry.time,entry});
  }
- return [...map.values()].sort((a,b)=>a.time.localeCompare(b.time)||a.m.name.localeCompare(b.m.name));
+ return [...map.values()].sort((a,b)=>a.time.localeCompare(b.time)||a.m.name.localeCompare(b.m.name,'ru'));
 }
 function copyYesterday(){
  if(date>nowDay()){flash='Нельзя переносить приёмы на будущую дату.';renderMessage();return}
@@ -92,12 +104,32 @@ function copyYesterday(){
  const saved=change(h=>{
   for(const s of old){
    const m=h.medications.find(x=>x.id===s.m.id);
-   if(!m||!m.active||slots(h,d).some(x=>x.m.id===m.id&&x.time===s.time))continue;
-   h.medicationLog.push({id:uid(),medicationId:m.id,medicationName:m.name,dose:m.dose||'',date:d,time:s.time,status:'planned',recordedAt:new Date().toISOString()});
+   if(m&&!m.active)continue;
+   if(slots(h,d).some(x=>(x.m.id===s.m.id||x.m.name===s.m.name)&&x.time===s.time))continue;
+   const id=m?m.id:'legacy-copy:'+d+':'+s.m.id;
+   h.medicationLog.push({id:uid(),medicationId:id,medicationName:s.m.name,
+    dose:s.m.dose||'',date:d,time:s.time,status:'planned',recordedAt:new Date().toISOString()});
    added++;
   }
  });
  if(saved){flash=added?'Добавлено как вчера: '+added+'. Галочки не проставлены.':'Препараты уже есть в расписании.';renderMessage()}
+}
+function editLegacyMedication(m,d,time){
+ legacyEdit={id:m.id,date:d,time};$('healthLegacyName').value=m.name;
+ $('healthLegacyDose').value=m.dose||'';$('healthLegacyEditor').hidden=false;
+ $('healthLegacyEditor').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function saveLegacyMedication(e){
+ e.preventDefault();if(!legacyEdit)return;
+ const name=$('healthLegacyName').value.trim(),dose=$('healthLegacyDose').value.trim();
+ if(!name){flash='Укажи название лекарства.';renderMessage();return}
+ const target=legacyEdit;
+ const saved=change(h=>{
+  h.legacyMedicationEdits[target.id]={name,dose};
+  const entry=h.medicationLog.find(x=>x.medicationId===target.id&&x.date===target.date&&x.time===target.time);
+  if(entry){entry.medicationName=name;entry.dose=dose}
+ });
+ if(saved){legacyEdit=null;$('healthLegacyEditor').hidden=true}
 }
 function setMedicationStatus(m,d,time,status){
  if(d>nowDay()){flash='Нельзя заранее отмечать приём выполненным.';render();return}
