@@ -117,3 +117,15 @@
 .meal-lookup-nutrition #mealLookupClear{margin-top:4px;width:100%}
 .meal-chat-photo-portion[hidden]{display:none!important}
 @media(max-width:420px){.meal-lookup-shortcuts button{font-size:11px;padding:6px 3px}.meal-lookup-macros{gap:3px}}
+
+
+/* v88 — one smart image recognition action */
+.meal-lookup-shortcuts,#mealChatPhotoActions,.meal-chat-photo-mode,#mealChatPhotoBarcode{display:none!important}
+.meal-smart-capture{display:flex;flex-direction:column;gap:5px;margin:0 0 10px}
+.meal-smart-capture button{min-height:52px;width:100%;border:1px solid #a1a9b3;border-radius:14px;background:#e2e9e9;color:#17222e;font:700 15px system-ui;cursor:pointer;padding:10px 14px}
+.meal-smart-capture button:focus-visible{outline:3px solid #f7edbd;outline-offset:2px}
+.meal-smart-capture small{font-size:11px;line-height:1.4;color:#bbc7d4}
+.meal-lookup-nutrition #mealLookupDetected{color:#f8e0b7;padding:8px;border:1px solid #8a7153;border-radius:10px;font-size:12px}
+.meal-lookup-nutrition #mealLookupRawDetails{margin:8px 0 10px;font-size:12px;color:#d7e4e9}
+.meal-lookup-nutrition #mealLookupRawDetails summary{min-height:44px;display:flex;align-items:center;cursor:pointer}
+.meal-lookup-nutrition #mealLookupRawDetails pre{white-space:pre-wrap;overflow-wrap:anywhere;background:#171e27;border-radius:10px;padding:10px;color:#f2f4f6;font:12px/1.45 system-ui}
