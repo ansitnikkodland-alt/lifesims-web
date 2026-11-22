@@ -139,6 +139,8 @@ panel.append(el('p','sf-hint','Загрузи экспорт CSV из StayFree. 
 const fileLabel=el('label','sf-label','Выбрать CSV из StayFree');
 const file=el('input');file.type='file';file.accept='.csv,.txt,text/csv,text/plain';file.id='sfFile';fileLabel.append(file);panel.append(fileLabel);
 const options=el('div','sf-import-options');panel.append(options);
+const headerLabel=el('label','sf-label','Строка с названиями колонок');
+const headerSelect=el('select');headerSelect.id='sfHeaderRow';headerLabel.append(headerSelect);options.append(headerLabel);
 const config={};function selectOpt(label,key,values){
  const wrap=el('label','sf-label',label),select=el('select');select.id='sf'+key;
  for(const [value,name] of values){const opt=el('option','',name);opt.value=value;select.append(opt)}
@@ -154,10 +156,11 @@ options.hidden=true;
 const preview=el('div','sf-preview');preview.hidden=true;panel.append(preview);
 const actions=el('div','sf-actions');
 const confirm=button('Импортировать в LifeSims',()=>commit(),'primary');confirm.disabled=true;
-actions.append(confirm);panel.append(actions);
+const view=button('Посмотреть день в календаре',()=>{if(lastImportedDay)bridge.openAgenda(lastImportedDay)},'secondary');
+view.hidden=true;actions.append(confirm,view);panel.append(actions);
 const status=el('p','sf-status');status.setAttribute('role','status');status.setAttribute('aria-live','polite');panel.append(status);
 const calendar=$('calendar');if(calendar)history.insertBefore(panel,calendar);else history.append(panel);
-let parsed=null,headerIndex=0,pending=null,filename='';
+let parsed=null,headerIndex=0,pending=null,filename='',lastImportedDay=null;
 function updateOptions(){
  if(!parsed)return;
  const head=parsed.lines[headerIndex]||[];
@@ -192,23 +195,32 @@ function buildPreview(){
  }catch(e){status.textContent='⚠ '+e.message}
 }
 async function load(){
- pending=null;confirm.disabled=true;preview.hidden=true;parsed=null;
+ pending=null;confirm.disabled=true;preview.hidden=true;parsed=null;lastImportedDay=null;view.hidden=true;
  const chosen=file.files?.[0];if(!chosen){options.hidden=true;return}
  if(chosen.size>4_000_000){status.textContent='CSV больше 4 МБ. Экспортируй меньший диапазон.';return}
  try{
   const raw=await chosen.text();parsed=parseCSV(raw);filename=chosen.name;
   const header=detectHeader(parsed.lines);headerIndex=header.index;
+  headerSelect.replaceChildren();
+  for(let n=0;n<Math.min(16,parsed.lines.length);n++){
+   const cells=parsed.lines[n]||[];
+   const option=el('option','',(n+1)+'. '+cells.slice(0,3).join(' · ').slice(0,110));
+   option.value=String(n);headerSelect.append(option);
+  }
+  headerSelect.value=String(headerIndex);
   options.hidden=false;updateOptions();buildPreview();
   if(header.score<7)status.textContent='Колонки CSV определены неуверенно. Выбери их вручную и проверь предварительный просмотр.';
  }catch(e){status.textContent='⚠ '+e.message;options.hidden=true}
 }
 file.addEventListener('change',()=>{load().catch(e=>status.textContent='⚠ '+e.message)});
 for(const sel of [...Object.values(selects),...Object.values(config)])sel.addEventListener('change',buildPreview);
+headerSelect.addEventListener('change',()=>{headerIndex=Number(headerSelect.value);updateOptions();buildPreview()});
 function commit(){
  if(!pending?.length)return;
  const result=bridge.commit(pending,filename);if(!result?.ok){status.textContent='⚠ '+(result?.error||'Не удалось сохранить данные');return}
  status.textContent='✓ Импорт сохранён: '+result.added+' новых, '+result.updated+' обновлённых, '+result.unchanged+' без изменений.';
- confirm.disabled=true;pending=null;
+ lastImportedDay=pending.reduce((max,x)=>x.date>max?x.date:max,pending[0].date);
+ view.hidden=false;confirm.disabled=true;pending=null;
  bridge.refresh();
 }
 function entriesForDate(date){return (bridge.read(date)||[]).filter(x=>x?.source==='stayfree').sort((a,b)=>b.seconds-a.seconds)}
