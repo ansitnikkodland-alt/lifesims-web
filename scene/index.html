@@ -794,7 +794,7 @@ body{background:#091428}
 #localDataReport .recovery-result small{display:block;color:#bed3e4;font-size:12px}
 #localDataReport button{min-height:44px}
 </style></head>
-<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v71</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
+<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v72</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
 <img id="sceneRugColor" class="rug-color-layer" alt="" aria-hidden="true">
 <span id="sceneCrystalTint" aria-hidden="true"></span>
@@ -2027,7 +2027,13 @@ function openSingleMetric(field,date=today()){
  }else if(field==='hunger'){
   const calc=satietyAssessment(date);
   addNumber('Расчётная сытость',calc.value==null?null:calc.value+'%');
-  if(calc.date)note('Последняя запись: '+freshnessLabel(calc.date,date)+'.');
+  const lastMeal=lastRecordedMeal(date===today()?new Date():new Date(date+'T23:59:59'));
+  if(lastMeal){
+   const elapsed=(date===today()?Date.now():new Date(date+'T23:59:59').getTime())-lastMeal.at;
+   addNumber('После последней еды',Math.floor(elapsed/3600000)+' ч '+String(Math.floor((elapsed%3600000)/60000)).padStart(2,'0')+' мин');
+   note('Последний приём пищи: '+freshnessLabel(lastMeal.date,date)+' в '+lastMeal.time);
+  }else note('Последний приём пищи пока не записан.');
+  if(calc.date)note('Последняя запись, влияющая на сытость: '+freshnessLabel(calc.date,date)+'.');
   addButton('🍽 Поесть — записать еду',()=>{dialog.close();openCalorieBalance(date)});
    note('Это игровая шкала сытости: чем больше заполнение, тем выше сытость. Условно 600 ккал дают 100% сразу после еды. Значение плавно уменьшается до нуля за 16 часов. Это не медицинская оценка и не рекомендация по питанию.');
   if(date>today())note('Нельзя редактировать сытость за будущую дату.');
@@ -2240,6 +2246,20 @@ function freshnessLabel(day,ref=today()){
 }
 function latestObserved(check,ref=today()){
  return Object.keys(state.days||{}).filter(day=>day<=ref&&/^\d{4}-\d\d-\d\d$/.test(day)&&check(state.days[day],day)).sort().pop()||null;
+}
+function stepsSnapshot(ref=today()){
+ const todayRecord=state.days?.[ref]||{};
+ const todaySteps=todayRecord.steps,ouraSteps=Array.isArray(todayRecord.ouraFields)&&todayRecord.ouraFields.includes('steps');
+ // Oura can report zero for an incomplete current day. Prefer an earlier
+ // recorded value; preserve a zero entered explicitly by the user.
+ if(Number.isFinite(todaySteps)&&todaySteps>=0&&(todaySteps>0||!ouraSteps))
+  return {value:todaySteps,date:ref,provisional:false};
+ const prior=latestObserved((r,day)=>day<ref&&Number.isFinite(r?.steps)&&r.steps>=0,ref);
+ if(prior)return {value:state.days[prior].steps,date:prior,
+  provisional:ouraSteps&&todaySteps===0,missingToday:true};
+ if(Number.isFinite(todaySteps)&&todaySteps===0)
+  return {value:0,date:ref,provisional:ouraSteps,missingToday:ouraSteps};
+ return {value:null,date:null,provisional:false,missingToday:true};
 }
 function metricSnapshot(field,ref=today()){
  const observed=latestObserved(r=>Number.isFinite(r?.[field]),ref);
@@ -2561,6 +2581,14 @@ function render24CalorieCard(){
   ' — '+to.toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
  card.replaceChildren(row,track,details,source,period);
 }
+function lastRecordedMeal(now=new Date()){
+ const currentMs=now.getTime();
+ return (state.foodMeals||[]).filter(m=>m&&/^\d{4}-\d{2}-\d{2}$/.test(m.date||'')&&
+  /^(?:[01]\d|2[0-3]):[0-5]\d$/.test(m.time||''))
+  .map(m=>({...m,at:new Date(m.date+'T'+m.time+':00').getTime()}))
+  .filter(m=>Number.isFinite(m.at)&&m.at<=currentMs)
+  .sort((a,b)=>b.at-a.at)[0]||null;
+}
 function renderHungerMeter(){
  const val=$('hungerMeterValue'),track=$('hungerMeterTrack'),note=$('hungerMeterOrigin');
  if(!val||!track||!note)return;
@@ -2574,11 +2602,14 @@ function renderHungerMeter(){
   fill.style.setProperty('--meter-color',meterColor(level));
   track.append(fill);
  }
- const last=Number.isFinite(calc.sourceAt)?new Date(calc.sourceAt):null;
+ const last=lastRecordedMeal(new Date(calc.asOf||Date.now()));
  const time=new Date(calc.asOf||Date.now());
  const clock=d=>d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
- note.textContent=calc.date?freshnessLabel(calc.date)+(last?' · запись '+clock(last):'')+
-  ' · расчёт на '+clock(time)+' · спад за 16 ч':'Нет данных о еде · нажми «Поесть»';
+ const hours=last?Math.floor((time.getTime()-last.at)/3600000):null;
+ const minutes=last?Math.floor(((time.getTime()-last.at)%3600000)/60000):null;
+ const sinceMeal=last?'С последней еды: '+hours+' ч '+String(minutes).padStart(2,'0')+' мин':'Время последней еды неизвестно';
+ note.textContent=sinceMeal+(last?' · '+freshnessLabel(last.date)+' в '+clock(new Date(last.at)):'')+
+  ' · расчёт на '+clock(time)+' · спад за 16 ч';
 }
 function removeFoodEntry(id){
  const entry=(state.foodMeals||[]).find(m=>m.id===id);
@@ -2597,7 +2628,7 @@ function renderNeeds(){
  const d=today(),r=currentRecord(d),g=$('needsGrid');
  g.replaceChildren();
  const sleep=sleepSnapshot(d),mood=metricSnapshot('mood',d),physical=physicalSnapshot(d);
- const hygiene=hygieneSnapshot(d),steps=metricSnapshot('steps',d),hunger=satietyAssessment(d);
+ const hygiene=hygieneSnapshot(d),steps=stepsSnapshot(d),hunger=satietyAssessment(d);
  const ouraScoreDate=latestObserved(q=>Number.isFinite(q?.ouraScores?.activity),d);
  const ouraActivity=ouraScoreDate?{value:state.days[ouraScoreDate].ouraScores.activity,date:ouraScoreDate}:{value:null,date:null};
  metric(g,'💤 Потребность во сне',sleep.value,'%',null,'sleepHours',sleep.date);
@@ -2612,11 +2643,15 @@ function renderNeeds(){
  const baseActivity=activityFromSteps?Math.min(100,Math.round(steps.value/10000*100)):ouraActivity.value;
  const activityValue=actionAdjustedNeed('activity',d,baseActivity);
  const isActivityGameEffect=!!latestResourceEffectDate('activity',d);
- const activityDisplay=activityFromSteps?steps.value.toLocaleString('ru-RU')+' / 10 000 шагов':
+ const stepsAge=activityFromSteps&&steps.date!==d?' · '+freshnessLabel(steps.date):'';
+ const activityDisplay=activityFromSteps?steps.value.toLocaleString('ru-RU')+' / 10 000 шагов'+stepsAge:
   ouraActivity.value!=null?'Oura: '+ouraActivity.value+'/100':'—';
  const activityDate=[activityFromSteps?steps.date:ouraActivity.date,latestResourceEffectDate('activity',d)].filter(Boolean).sort().pop()||null;
+ const stepsDetail=activityFromSteps?
+  (steps.date!==d?'последние доступные шаги · сегодня ещё нет подтверждённых данных':'шаги'+(steps.provisional?' · предварительные данные Oura':'')):
+  ouraActivity.value!=null?'оценка активности Oura · шаги недоступны':'ожидаются данные Oura';
  metric(g,'🚶 Активность',activityValue,'%',isActivityGameEffect?String(activityValue)+'% · '+activityDisplay:activityDisplay,'steps',activityDate,
-  isActivityGameEffect?'игровая поправка от дел / привычек':activityFromSteps?'шаги':ouraActivity.value!=null?'оценка активности Oura · шаги недоступны':'ожидаются данные Oura');
+  isActivityGameEffect?'игровая поправка от дел / привычек · '+stepsDetail:stepsDetail);
  if(!activityFromSteps){
   const card=g.lastElementChild;
   const button=document.createElement('button');button.type='button';button.className='secondary activity-sync-detail';
@@ -3835,7 +3870,7 @@ window.LifeSims3DBridge={
 };
 window.addEventListener('resize',()=>{if(currentSheetAnchor)placeSheet(currentSheetAnchor)},{passive:true});
 window.addEventListener('scroll',()=>{if(currentSheetAnchor)placeSheet(currentSheetAnchor)},{passive:true});
-if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=71',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
+if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=72',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 window.LifeSimsCalendarBridge={
   getSchedule:()=>JSON.parse(JSON.stringify(state.schedule||[])),
   getHidden:()=>JSON.parse(JSON.stringify(state.googleHidden||[])),
@@ -5342,14 +5377,24 @@ el('ouraApply').onclick=()=>{
  if(!preview||(!preview.records.length&&!preview.collections?.some(c=>c.items.length))){status('Пока нечего сохранять. Нажми «Проверить данные» и дождись результатов Oura за неделю.');return;}
  apply(false).catch(e=>status('⚠ '+e.message));
 };
-const CORE_PERIOD=30*60*1000,DETAIL_PERIOD=6*60*60*1000;
+const CORE_PERIOD=30*60*1000,MISSING_STEPS_PERIOD=15*60*1000,DETAIL_PERIOD=6*60*60*1000;
 let lastAttempt=0;
 // No hidden-tab polling: mobile OSes can suspend JavaScript in the background.
 // Resuming or reconnecting can restart a due sync; disabled auto-sync is respected.
 function autoSchedule(force=false){
- if(!el('ouraAuto').checked||!connected()||busy||document.hidden||!navigator.onLine)return;
+ if(!el('ouraAuto').checked||busy||document.hidden||!navigator.onLine)return;
+ if(!connected()){
+  status('⚠ Автообновление Oura включено, но доступ истёк или соединение не завершено. Нажми «Подключить Oura», чтобы восстановить синхронизацию.');
+  return;
+ }
  const time=Date.now(),lastCore=Number(setting(CORE_KEY)||0),lastFull=Number(setting(LAST_KEY)||0);
- if(!force&&Number.isFinite(lastCore)&&lastCore>0&&time-lastCore<CORE_PERIOD)return;
+ const d=bridge.today(),current=bridge.getDays()[d]||{};
+ const validSteps=Number.isFinite(current.steps)&&
+  (current.steps>0||!Array.isArray(current.ouraFields)||!current.ouraFields.includes('steps'));
+ const period=validSteps?CORE_PERIOD:MISSING_STEPS_PERIOD;
+ // Check again after midnight even if a sync finished just before it.
+ const checkedToday=lastCore>0&&new Date(lastCore).toDateString()===new Date(time).toDateString();
+ if(!force&&checkedToday&&lastCore>0&&time-lastCore<period)return;
  if(time-lastAttempt<3*60*1000)return;
  lastAttempt=time;
  const short=lastFull>0&&time-lastFull<DETAIL_PERIOD;
@@ -5364,16 +5409,16 @@ window.LifeSimsOuraSync=async()=>{
  // An explicit check fetches the four daily datasets and saves immediately.
  await load(true,true);
 };
-setInterval(()=>autoSchedule(),5*60*1000);
+setInterval(()=>autoSchedule(),60*1000);
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)autoSchedule()});
 window.addEventListener('focus',()=>autoSchedule());
 window.addEventListener('online',()=>autoSchedule());
 window.addEventListener('pageshow',()=>autoSchedule());
 renderToday();
 update();
-if(connected()&&el('ouraAuto').checked)autoSchedule();
-else if(!connected())status('Oura не подключена в этом сеансе. Чтобы загрузить вчерашние шаги, нажми «Подключить Oura» и разреши Daily.');
-window.LifeSimsOuraVersion='oura-v50-auto-30min';
+if(connected()&&el('ouraAuto').checked)autoSchedule(returned);
+else if(!connected())status('Oura не подключена в этом сеансе. Автообновление начнётся после подключения с разрешением Daily; истёкший доступ нужно подтвердить заново.');
+window.LifeSimsOuraVersion='oura-v72-auto-on-open-midnight-15min-missing';
 })();
 </script>
 
