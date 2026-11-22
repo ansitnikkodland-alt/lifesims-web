@@ -117,10 +117,10 @@ dialog.pet-dialog::backdrop{background:#060b21c2}
  background:transparent;
 }
 #scene #scenePets .pet-hotspot.pet-ginger{
- left:55.5%;top:57.5%;width:clamp(78px,13%,112px)
+ left:49.5%;top:57.5%;width:clamp(78px,13%,112px)
 }
 #scene #scenePets .pet-hotspot.pet-black{
- left:71%;top:60%;width:clamp(78px,13%,112px)
+ left:62.5%;top:60%;width:clamp(78px,13%,112px)
 }
 #scene #scenePets .pet-paw{display:none!important}
 #scene #scenePets .pet-realistic-sprite{
@@ -129,6 +129,6 @@ dialog.pet-dialog::backdrop{background:#060b21c2}
  filter:drop-shadow(0 2px 2px rgba(23,12,8,.32));
 }
 @media(max-width:430px){
- #scene #scenePets .pet-hotspot.pet-ginger{left:55.5%;top:57.5%}
- #scene #scenePets .pet-hotspot.pet-black{left:71%;top:60%}
+ #scene #scenePets .pet-hotspot.pet-ginger{left:49.5%;top:57.5%}
+ #scene #scenePets .pet-hotspot.pet-black{left:62.5%;top:60%}
 }
