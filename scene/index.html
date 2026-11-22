@@ -2384,69 +2384,45 @@ function openSingleMetric(field,date=today()){
   note('Сон и корректировка недосыпа — разные данные. Значения из Oura автоматически подставляются, когда доступны.');
   addButton('Сохранить сон',()=>commitValue(['sleepHours','sleepDebtAdjustment']));
  }else if(field==='condition'){
-  const score=Number.isFinite(r.ouraScores?.readiness)?r.ouraScores.readiness:state.days[plusDays(date,-1)]?.ouraScores?.readiness;
-  if(Number.isFinite(score))addNumber('Oura Readiness (исходный показатель)',score+'/100');
-  note('Физическое состояние — игровая оценка, без изменения Oura. to poop: +3 п. п. за день с отметкой, −3 п. п. за завершённый день без неё. Учитывается скользящая неделя (ограниченный эффект). Это игровое правило, а не медицинская норма.');
-  const bowel=poopHealthEffect(date);
-  note('🚽 to poop: '+habitAmount(POOP_HABIT_ID,date)+' раз за день · недельный эффект '+(bowel.delta>=0?'+':'')+bowel.delta+' п. п.');
-  const harm=negativeHabitHealthEffect(date),coffee=state.activities.find(a=>a.id==='coffee_habit'),limit=coffeeHealthLimit(coffee);
-  note('☕ Кофе: '+habitAmount('coffee_habit',date)+' эспрессо · без штрафа до '+limit+' включительно; влияние с '+(limit+1)+'-го.');
-  note('Отрицательные привычки: −'+harm.points+' п. п. к физическому состоянию за 7 дней'+
-   (harm.items.length?' ('+harm.items.map(x=>x.name+': −'+x.points).join('; ')+')':'')+
-   '. −3 п. п. за единицу отрицательной привычки или превышения нормы, максимум −12 за привычку в день и −30 суммарно за неделю. Уже заданные отрицательные эффекты физического состояния не дублируются.');
-  note(isIllnessActive(date)?'🩺 В игре отмечена болезнь: −20 п. п. к физическому состоянию.':'Болезнь можно отметить самостоятельно, независимо от туалета. Приложение не устанавливает диагноз.');
-  if(date===today())addButton(isIllnessActive(date)?'✓ Закончить болезнь':'🩺 Отметить болезнь (−20 п. п.)',()=>{
-   if(setIllnessActive(!isIllnessActive(today())))dialog.close();
-  });
-  const tags=['Сонливость','Усталость','Головная боль','Боль в животе','Слабость','Тошнота','Головокружение','Боль в ноге','Простуда','Бодрость','Бессонница','Другое'];
-  const group=document.createElement('fieldset');group.className='physical-tags';
-  const legend=document.createElement('legend');legend.textContent='Самочувствие · теги';group.append(legend);
-  const selected=new Set((Array.isArray(r.physicalTags)?r.physicalTags:[]).filter(x=>typeof x==='string'));
-  const buttons=document.createElement('div');buttons.className='physical-tag-options';
-  function paintTags(){
-   buttons.replaceChildren();
-   for(const tag of [...new Set([...tags,...selected])]){
-    const button=document.createElement('button');button.type='button';button.className='secondary'+(selected.has(tag)?' chosen':'');
-    button.setAttribute('aria-pressed',String(selected.has(tag)));
-    button.textContent=(selected.has(tag)?'✓ ':'')+tag;
-    button.onclick=()=>{if(selected.has(tag))selected.delete(tag);else selected.add(tag);paintTags()};
-    buttons.append(button);
-   }
-  }
-  paintTags();group.append(buttons);
-  const custom=document.createElement('div');custom.className='physical-tag-custom';
-  const extra=document.createElement('input');extra.placeholder='Свой симптом или ощущение';extra.maxLength=45;
-  extra.setAttribute('aria-label','Добавить свой тег самочувствия');
-  const add=document.createElement('button');add.type='button';add.className='secondary';add.textContent='+ Тег';
-  add.onclick=()=>{const tag=extra.value.trim();if(tag){selected.add(tag);extra.value='';paintTags()}};
-  custom.append(extra,add);group.append(custom);root.append(group);
-  const label=document.createElement('label');label.className='field';label.textContent='Заметка о физическом состоянии';
-  const memo=document.createElement('textarea');memo.rows=3;memo.maxLength=600;memo.value=r.physicalNote||'';
-  label.append(memo);root.append(label);
+  // Keep the manually editable scale, but replace the legacy tags and verbose
+  // gameplay descriptions with the same symptom diary used by Health.
+  const readiness=Number.isFinite(r.ouraScores?.readiness)?r.ouraScores.readiness:
+   state.days[plusDays(date,-1)]?.ouraScores?.readiness;
+  if(Number.isFinite(readiness))addNumber('Oura Readiness',readiness+'/100');
   singleMetricField(date,'condition');
-  // Display the actual current state, including Oura, until the user moves the slider.
   const input=$('singleMetricValue_condition'),unknown=$('singleMetricUnknown_condition');
-  if(Number.isFinite(physicalCondition(r,date))){
-   input.value=String(Math.round(physicalCondition(r,date)));unknown.checked=false;input.disabled=false;
+  const physical=physicalCondition(r,date);
+  if(Number.isFinite(physical)){
+   input.value=String(Math.round(physical));unknown.checked=false;input.disabled=false;
    $('singleMetricPercent_condition').textContent=input.value+'%';paintSlider(input,input.value);
   }
-  let adjusted=false;
-  input.addEventListener('input',()=>{adjusted=true;unknown.checked=false});
-  unknown.addEventListener('change',()=>{adjusted=true});
-  addButton('Сохранить состояние и теги',()=>{
-   const old=currentRecord(date),value=unknown.checked?null:Number(input.value);
-   if(value!==null&&(!Number.isFinite(value)||value<0||value>100))return message.textContent='Укажи значение от 0 до 100%.';
-   const next={...old,physicalTags:[...selected].slice(0,25),physicalNote:memo.value.trim(),updatedAt:new Date().toISOString()};
-   if(adjusted){next.condition=value;next.conditionManual=value!==null;setResourceManualMarkers(next,old,date,['condition'])}
-   if(setDay(date,next)){renderAll();dialog.close();toast('Самочувствие и теги сохранены')}
+  let edited=false;
+  input.addEventListener('input',()=>{edited=true;unknown.checked=false});
+  unknown.addEventListener('change',()=>{edited=true});
+  addButton('Сохранить шкалу вручную',()=>{
+   if(!edited){message.textContent='Измени ползунок, чтобы сохранить ручную оценку.';return}
+   const value=unknown.checked?null:Number(input.value);
+   if(value!==null&&(!Number.isFinite(value)||value<0||value>100)){
+    message.textContent='Выбери значение от 0 до 100%.';return;
+   }
+   const old=currentRecord(date);
+   const updated={...old,condition:value,conditionManual:value!==null,updatedAt:new Date().toISOString()};
+   setResourceManualMarkers(updated,old,date,['condition']);
+   if(setDay(date,updated)){renderAll();dialog.close();toast('Физическое состояние сохранено')}
    else message.textContent='Не удалось сохранить состояние.';
   });
-  if(Number.isFinite(score)&&r.conditionManual){
-   addButton('Вернуть оценку Oura',()=>{
-    const next={...currentRecord(date),conditionManual:false,updatedAt:new Date().toISOString()};
-    if(setDay(date,next)){renderAll();dialog.close();toast('Восстановлена оценка Oura')}
+  const picker=document.createElement('section');
+  picker.className='physical-symptom-editor';
+  root.append(picker);
+  if(window.LifeSimsHealth?.mountPhysicalSymptoms)
+   window.LifeSimsHealth.mountPhysicalSymptoms(picker,date);
+  else note('Редактор симптомов недоступен. Обнови версию LifeSims.');
+  if(date===today()){
+   addButton(isIllnessActive(date)?'✓ Завершить болезнь':'🩺 Отметить болезнь вручную',()=>{
+    if(setIllnessActive(!isIllnessActive(today())))dialog.close();
    });
   }
+  note('Болезнь в LifeSims — игровой статус, не медицинский диагноз. Симптомы из этого окна также видны в ресурсе «Здоровье».');
  }else if(field==='hygiene'){
   addNumber('Текущая гигиена',hygieneCondition(r,date)==null?null:hygieneCondition(r,date)+'%');
   addNumber('Гигиена головы',hairHygieneValue(date)==null?'нет записи о мытье':hairHygieneValue(date)+'%');
@@ -5169,6 +5145,7 @@ window.LifeSimsHealthBridge={
    /^\d{4}-\d{2}-\d{2}$/.test(d)&&typeof row?.meds==='string'&&row.meds.trim()
  ).map(([d,row])=>[d,row.meds])),
  healthImpacts:(day)=>healthImpactHistory(day),
+ legacyPhysicalTags:(d)=>Array.isArray(state.days?.[d]?.physicalTags)?[...state.days[d].physicalTags]:[],
  illnessSuggestion(date,symptoms){
   const assessment=assessHealthIllnessSymptoms(symptoms);
   const active=isIllnessActive(date),declined=state.room?.healthIllnessDeclinedOn===date;
