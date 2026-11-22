@@ -2198,8 +2198,10 @@ function openSingleMetric(field,date=today()){
    note('Последний приём пищи: '+freshnessLabel(lastMeal.date,date)+' в '+lastMeal.time);
   }else note('Последний приём пищи пока не записан.');
   if(calc.date)note('Последняя запись, влияющая на сытость: '+freshnessLabel(calc.date,date)+'.');
+  if(calc.missingMacroCount)note('Записей без БЖУ: '+calc.missingMacroCount+'. Их калории сохранены, но влияние на сытость не определено. Внеси БЖУ в редакторе питания.');
+  if(calc.incompleteMacroCount)note('Неполные БЖУ: '+calc.incompleteMacroCount+' записей. Рассчитан вклад только известных макронутриентов.');
   addButton('🍽 Поесть — записать еду',()=>{dialog.close();openCalorieBalance(date)});
-   note('Это игровая шкала сытости: чем больше заполнение, тем выше сытость. Условно 600 ккал еды дают 100% сразу после приёма пищи. Напитки дают 2–6% за запись, суммарно не больше 18% без еды; их калории учитываются полностью. Значение плавно уменьшается до нуля за 16 часов. Это не медицинская оценка и не рекомендация по питанию.');
+   note('Это игровая шкала сытости: чем больше заполнение, тем выше сытость. Сытость рассчитывается по записанным БЖУ (белки влияют сильнее углеводов и жиров); напитки дают лишь 20% обычного эффекта при том же составе, максимум 6% за запись и 18% суммарно. Вода и напитки без БЖУ не прибавляют сытость. Если БЖУ неизвестны, приложение не заменяет их калориями и не выдумывает сытость. Калорийность учитывается отдельно. Значение плавно уменьшается до нуля за 16 часов. Это не медицинская оценка и не рекомендация по питанию.');
   if(date>today())note('Нельзя редактировать сытость за будущую дату.');
   else{
    const input=document.createElement('input');input.type='range';input.min='0';input.max='100';
@@ -2685,25 +2687,45 @@ function isDrinkMeal(meal){
  if(/(?:булочк|пирожн|круассан|печень|бутерброд|сэндвич|сендвич|торт|пицц|яйц|каша|сырник|пирог|омлет|тост|салат|суп|шоколадк|батончик)/u.test(title))return false;
  return /^(?:кофе|эспрессо|экспрессо|американо|капучино|капуччино|латте|раф|флэт\s*уайт|флет\s*уайт|макиато|моккачино|мокко|матча|чай|вода|минералка|минеральная\s+вода|сок|фреш|нектар|морс|компот|кисель|лимонад|газировка|кола|кока[\s-]?кола|пепси|фанта|спрайт|тоник|квас|смузи|шейк|шейкер|молочный\s+коктейль|протеиновый\s+(?:коктейль|напиток|шейк)|коктейль|напиток|энергетик|какао|горячий\s+шоколад|молоко|кефир|ряженка|айран|тан|питьевой\s+йогурт|пиво|сидр|вино|шампанское|просекко|спиртное|водка|виски|ром|джин|ликер|ликёр)(?=$|[\s\d.,:;()\/-])/u.test(title);
 }
-// Game-only satiety: a regular meal adds up to 100% (600 kcal corresponds to 100%),
-// with a 16-hour linear fade AFTER each event. Clamp before advancing time:
-// summing individual meal contributions without capping used to leave satiety
-// at 100% the next morning even when many hours had elapsed.
+// Gameplay model, not a clinical satiety score: each logged macronutrient
+// contributes to fullness. Protein weighs more than carbs and fat; liquids
+// receive a separate reduction. Kcal is kept for energy accounting only.
+// The coefficients below are UX tuning parameters, not biomedical estimates.
+function macroSatietyContribution(meal){
+ const read=key=>{
+  const value=meal?.[key];
+  return value==null||value===''||!Number.isFinite(Number(value))||Number(value)<0?null:Number(value);
+ };
+ const protein=read('protein'),fat=read('fat'),carbs=read('carbs');
+ if(protein===null&&fat===null&&carbs===null)return null;
+ const raw=((protein||0)*2.0+(fat||0)*1.15+(carbs||0)*0.65)/1.35;
+ const drink=isDrinkMeal(meal);
+ return {amount:Math.min(drink?6:100,Math.max(0,raw*(drink?0.2:1))),
+  kind:drink?'drink':'meal',
+  incomplete:[protein,fat,carbs].some(x=>x===null)};
+}
+// Game-only satiety fades continuously over 16 hours after actual intake.
+// Each timestamp is counted once; editing stored food automatically recalculates
+// the result without adding simulated meals or changing the food records.
 function satietyAssessment(ref=today(),now=new Date()){
  const instant=ref===today()?now:new Date(ref+'T23:59:59');
  const ms=instant.getTime(),period=16*60*60*1000,from=ms-period;
  const events=[],sources=[];
+ let missingMacroCount=0,incompleteMacroCount=0;
  for(const m of state.foodMeals||[]){
   if(typeof m?.date!=='string'||m.date>ref||typeof m.time!=='string'||
      !/^(?:[01]\d|2[0-3]):[0-5]\d$/.test(m.time))continue;
-  const drink=isDrinkMeal(m);
-  if(!drink&&!Number.isFinite(m.kcal))continue;
   const at=Date.parse(m.date+'T'+m.time+':00');
   if(!Number.isFinite(at)||at>ms)continue;
-  sources.push({at,date:m.date,kind:drink?'drink':'meal'});
-  const amount=drink?Math.min(6,Math.max(2,Number.isFinite(m.kcal)?Number(m.kcal)/100:2)):
-   Math.min(100,Math.max(0,Number(m.kcal)/600*100));
-  if(at>=from)events.push({at,mode:'delta',amount,priority:1,kind:drink?'drink':'meal'});
+  const contribution=macroSatietyContribution(m);
+  if(!contribution){
+   missingMacroCount++; // Do not invent satiety using kcal if BJU is missing.
+   continue;
+  }
+  if(contribution.incomplete)incompleteMacroCount++;
+  sources.push({at,date:m.date,kind:contribution.kind});
+  if(at>=from)events.push({at,mode:'delta',amount:contribution.amount,
+   priority:1,kind:contribution.kind});
  }
  // The last manual adjustment is a point-in-time correction. It continues to
  // decay across midnight; it must not reappear as a new 100% each morning.
@@ -2741,6 +2763,7 @@ function satietyAssessment(ref=today(),now=new Date()){
  else if(sources.length)value=0; // Data exists, but the last event has fully faded.
  const newest=sources.sort((a,b)=>b.at-a.at)[0];
  return {value:value==null?null:Math.round(value),date:newest?.date||null,
+  missingMacroCount,incompleteMacroCount,
   detail:newest?.kind==='effect'?'влияние дела / привычки · спад за 16 ч':
    newest?.kind==='manual'?'ручная оценка · спад за 16 ч':
    newest?.kind==='drink'?'напиток · небольшой бонус, спад за 16 ч':'игровая сытость · спад за 16 ч',
@@ -2973,7 +2996,9 @@ function renderHungerMeter(){
  const minutes=last?Math.floor(((time.getTime()-last.at)%3600000)/60000):null;
  const sinceMeal=last?'С последней еды: '+hours+' ч '+String(minutes).padStart(2,'0')+' мин':'Время последней еды неизвестно';
  note.textContent=sinceMeal+(last?' · '+freshnessLabel(last.date)+' в '+clock(new Date(last.at)):'')+
-  ' · расчёт на '+clock(time)+' · спад за 16 ч';
+  ' · по БЖУ · спад за 16 ч'+
+  (calc.missingMacroCount?' · '+calc.missingMacroCount+' записей без БЖУ не учтено':'')+
+  (calc.incompleteMacroCount?' · '+calc.incompleteMacroCount+' с неполными БЖУ':'');
 }
 function removeFoodEntry(id){
  const entry=(state.foodMeals||[]).find(m=>m.id===id);
