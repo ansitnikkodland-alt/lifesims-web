@@ -62,7 +62,7 @@ async function barcodeFromPhoto(file){
    if(allowed.length){
     bitmap=await createImageBitmap(file);
     const result=await new BarcodeDetector({formats:allowed}).detect(bitmap);
-    const matched=result.find(r=>/^\\d{8,14}$/.test(r.rawValue));
+    const matched=result.find(r=>/^\d{8,14}$/.test(r.rawValue));
     if(matched)return matched.rawValue;
    }
   }catch(_){}
@@ -76,7 +76,7 @@ async function barcodeFromPhoto(file){
   url=URL.createObjectURL(file);
   const found=await reader.decodeFromImageUrl(url);
   const code=found?.getText?.()||'';
-  return /^\\d{8,14}$/.test(code)?code:null;
+  return /^\d{8,14}$/.test(code)?code:null;
  }catch(_){return null}
  finally{if(url)URL.revokeObjectURL(url)}
 }
@@ -90,7 +90,7 @@ async function startBarcodeScanner(video,onCode,onError){
   video.pause?.();video.srcObject=null;
  };
  const emit=code=>{
-  if(ended||!/^\\d{8,14}$/.test(String(code||'')))return;
+  if(ended||!/^\d{8,14}$/.test(String(code||'')))return;
   stop();onCode(String(code));
  };
  try{
@@ -107,7 +107,7 @@ async function startBarcodeScanner(video,onCode,onError){
      if(ended)return;
      try{
       const results=await detector.detect(video);
-      const match=results.find(x=>/^\\d{8,14}$/.test(x.rawValue));
+      const match=results.find(x=>/^\d{8,14}$/.test(x.rawValue));
       if(match){emit(match.rawValue);return}
      }catch(_){}
      if(!ended)frame=setTimeout(tick,250);
@@ -150,8 +150,8 @@ async function fetchJSON(url,timeout=16000){
  }finally{clearTimeout(timer)}
 }
 async function productByBarcode(code){
- code=String(code||'').replace(/\\s/g,'');
- if(!/^\\d{8,14}$/.test(code))throw Error('Штрихкод должен содержать 8–14 цифр.');
+ code=String(code||'').replace(/\s/g,'');
+ if(!/^\d{8,14}$/.test(code))throw Error('Штрихкод должен содержать 8–14 цифр.');
  const url='https://world.openfoodfacts.org/api/v2/product/'+encodeURIComponent(code)+'?fields='+encodeURIComponent(PRODUCT_FIELDS);
  const data=await fetchJSON(url);
  if(!data||Number(data.status)!==1||!data.product)throw Error('В Open Food Facts этот штрихкод пока не найден. Можно найти по названию или заполнить этикетку вручную.');
@@ -199,7 +199,7 @@ function extractNutrition(text){
    if(/ккал|kcal/.test(pattern.source)){
     match=line.match(/(\d{1,5}(?:[.,]\d{1,2})?)\s*(?:ккал|kcal)/i);
    }else{
-    match=line.match(new RegExp('(?:'+pattern.source+')\\s*[:–-]?\\s*(\\d{1,5}(?:[.,]\\d{1,2})?)\\s*(?:г|гр|g)?','i'));
+    match=line.match(new RegExp('(?:'+pattern.source+')\s*[:–-]?\s*(\d{1,5}(?:[.,]\d{1,2})?)\s*(?:г|гр|g)?','i'));
    }
    if(match)return number(match[1].replace(',','.'));
   }
