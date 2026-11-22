@@ -7,9 +7,13 @@
  const $=id=>document.getElementById(id);
  const smartCapture=document.createElement('div');
  smartCapture.className='meal-smart-capture';
- smartCapture.innerHTML='<button type="button" id="mealSmartCapture">📷 Распознать фото или штрихкод</button>'+
-  '<input type="file" id="mealSmartInput" accept="image/*" hidden>'+
-  '<small>Сфотографируй или выбери изображение. Тип снимка определится автоматически.</small>';
+ smartCapture.innerHTML='<button type="button" id="mealSmartCapture" aria-expanded="false" aria-controls="mealSmartSources">📷 Распознать фото или штрихкод</button>'+
+  '<div id="mealSmartSources" class="meal-smart-sources" role="group" aria-label="Источник фотографии" hidden>'+
+  '<button type="button" id="mealSmartTakePhoto">📸 Сделать фото</button>'+
+  '<button type="button" id="mealSmartChoosePhoto">🖼 Выбрать из галереи</button></div>'+
+  '<input type="file" id="mealSmartCameraInput" accept="image/*" capture="environment" hidden>'+
+  '<input type="file" id="mealSmartGalleryInput" accept="image/*" hidden>'+
+  '<small>Определю автоматически: еда, этикетка или штрихкод.</small>';
  $('mealChatPhotoActions').insertAdjacentElement('beforebegin',smartCapture);
  const html=[
   '<div class="meal-lookup-shortcuts">',
@@ -157,13 +161,37 @@
    }
   }
  }
- $('mealSmartCapture').onclick=()=>$('mealSmartInput').click();
- $('mealSmartInput').addEventListener('change',async event=>{
-  const file=event.target.files?.[0];
-  event.target.value='';
+ function toggleSmartSources(force){
+  const panel=$('mealSmartSources');
+  const expanded=typeof force==='boolean'?force:panel.hidden;
+  panel.hidden=!expanded;
+  $('mealSmartCapture').setAttribute('aria-expanded',expanded?'true':'false');
+ }
+ $('mealSmartCapture').onclick=()=>toggleSmartSources();
+ $('mealSmartTakePhoto').onclick=()=>{
+  toggleSmartSources(false);
+  // On Android this camera-facing capture input asks the browser to launch the camera.
+  $('mealSmartCameraInput').click();
+ };
+ $('mealSmartChoosePhoto').onclick=()=>{
+  toggleSmartSources(false);
+  $('mealSmartGalleryInput').click();
+ };
+ async function photoSelected(event){
+  const file=event.currentTarget.files?.[0];
+  event.currentTarget.value='';
+  toggleSmartSources(false);
   if(!file)return;
   hidePanel();
   await chat.recognizeSmartPhoto(file);
+ }
+ $('mealSmartCameraInput').addEventListener('change',photoSelected);
+ $('mealSmartGalleryInput').addEventListener('change',photoSelected);
+ document.addEventListener('click',event=>{
+  if(!smartCapture.contains(event.target))toggleSmartSources(false);
+ });
+ document.addEventListener('keydown',event=>{
+  if(event.key==='Escape')toggleSmartSources(false);
  });
  $('mealLookupSearchOpen').onclick=()=>{stopScan();showPanel();$('mealLookupName').focus()};
  $('mealLookupScanOpen').onclick=openScanner;
