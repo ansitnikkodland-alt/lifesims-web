@@ -100,7 +100,7 @@ jobs:
             await page.locator('#calendarTaskPopup').waitFor({state:'visible'});
             await page.locator('#taskTitle').fill('Проверка задания на XP');
             await page.locator('#taskRepeat').selectOption('once');
-            await page.locator('#taskXP').fill('23');
+            await page.locator('#taskXP').selectOption('20');
             await page.locator('#taskSkill').fill('Психология');
             await page.locator('#taskSave').click();
             const taskId=await page.evaluate(()=>{
