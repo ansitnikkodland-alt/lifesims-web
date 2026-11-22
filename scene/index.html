@@ -844,7 +844,7 @@ body{background:#091428}
 #liveEventDialog button{min-height:39px;padding:7px 10px;border-radius:9px}
 #liveEventDialog .live-event-actions button{flex-grow:1}
 </style></head>
-<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v113</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
+<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v114</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
 <img id="sceneRugColor" class="rug-color-layer" alt="" aria-hidden="true">
 <div id="scenePets" class="scene-pets" aria-label="Два питомца на ковре"></div>
@@ -2948,7 +2948,7 @@ function metric(el,name,value,suffix='%',displayValue=null,field='',sourceDate=n
  s.append(l,v);
  const bar=document.createElement('div');bar.className='bar';
  if(value==null){const n=document.createElement('div');n.className='empty';bar.append(n)}
- else{const n=document.createElement('b');n.style.setProperty('--val',Math.max(0,Math.min(100,Number(value)))+'%');n.style.setProperty('--meter-color',meterColor(value,field==='entropy'||field==='sleepHours'));bar.append(n)}
+ else{const n=document.createElement('b');n.style.setProperty('--val',Math.max(0,Math.min(100,Number(value)))+'%');n.style.setProperty('--meter-color',meterColor(value));bar.append(n)}
  root.append(s,bar);
  if(sourceDate||detail){const foot=document.createElement('small');foot.className='metric-origin';
   foot.textContent=(sourceDate?freshnessLabel(sourceDate):'')+(detail?(sourceDate?' · ':'')+detail:'');
@@ -5204,7 +5204,7 @@ window.LifeSims3DBridge={
 };
 window.addEventListener('resize',()=>{if(currentSheetAnchor)placeSheet(currentSheetAnchor)},{passive:true});
 window.addEventListener('scroll',()=>{if(currentSheetAnchor)placeSheet(currentSheetAnchor)},{passive:true});
-if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=113',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
+if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=114',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 window.LifeSimsCalendarBridge={
   getSchedule:()=>JSON.parse(JSON.stringify(state.schedule||[])),
   getHidden:()=>JSON.parse(JSON.stringify(state.googleHidden||[])),
