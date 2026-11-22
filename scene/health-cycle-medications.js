@@ -13,18 +13,26 @@ const nowDay=()=>format(new Date());
 const validDay=d=>/^\d{4}-\d{2}-\d{2}$/.test(d)&&format(parse(d))===d;
 const dayLabel=d=>parse(d).toLocaleDateString('ru-RU',{day:'numeric',month:'short'});
 const uid=()=>String(Date.now())+'-'+Math.random().toString(36).slice(2);
-const SYMPTOMS=['Боль внизу живота','Боль в груди','Головная боль','Вздутие','Тошнота','Усталость','Акне','Перепады настроения','Боль в пояснице','Отёчность','Повышенный аппетит','Раздражительность','Сонливость'];
-const MOODS=['','Спокойствие','Радость','Грусть','Тревога','Раздражение','Энергичность','Апатия'];
+const SYMPTOM_OPTIONS=[
+ ['🌡️','Боль внизу живота'],['💢','Боль в пояснице'],['🤕','Головная боль'],['💗','Боль в груди'],
+ ['🫧','Вздутие'],['🤢','Тошнота'],['🪫','Усталость'],['🥱','Сонливость'],
+ ['🍽️','Повышенный аппетит'],['💧','Отёчность'],['🪞','Акне'],['🌪️','Перепады настроения'],
+ ['😣','Раздражительность'],['😴','Нарушение сна'],['🦵','Мышечная боль']
+];
+const MOOD_OPTIONS=[
+ ['😌','Спокойствие'],['😊','Радость'],['😢','Грусть'],['😟','Тревога'],
+ ['😠','Раздражение'],['⚡','Энергичность'],['😶','Апатия'],['🥹','Чувствительность']
+];
 const FLOWS={none:'Нет кровотечения',spotting:'Мажущие выделения',light:'Слабые',medium:'Умеренные',heavy:'Обильные'};
 const CONTRACEPTIVE_TYPES=[['pill','Противозачаточные таблетки'],['ring','Контрацептивное кольцо'],['patch','Контрацептивный пластырь'],['injection','Контрацептивная инъекция']];
-let date=nowDay(), month=date.slice(0,7), editingMed='', section='cycle', flash='';
+let date=nowDay(), month=date.slice(0,7), editingMed='', section='cycle', flash='',draftMood='',draftSymptoms=new Set();
 function data(){
  const h=B.read()||{};
  return {
   cycleDays:h.cycleDays&&typeof h.cycleDays==='object'&&!Array.isArray(h.cycleDays)?h.cycleDays:{},
   medications:Array.isArray(h.medications)?h.medications:[],
   medicationLog:Array.isArray(h.medicationLog)?h.medicationLog:[],
-  settings:{cycleLength:28,periodLength:5,reminders:false,periodReminder:false,contraceptionEnabled:false,pmsLeadDays:7,...(h.settings||{})}
+  settings:{cycleLength:28,periodLength:5,reminders:false,periodReminder:false,contraceptionEnabled:false,pmsLeadDays:7,dischargeEnabled:false,...(h.settings||{})}
  };
 }
 function change(fn){
@@ -107,20 +115,13 @@ function fillUi(){
  '<div class="health-panel"><h3 id="healthCycleSummary">Менструация</h3><p id="healthForecastInfo" class="hint"></p><h3>Предполагаемое окно ПМС</h3><p id="healthPmsInfo" class="hint"></p><p class="health-warning">Прогнозы приблизительные. Календарь не определяет наличие ПМС. Прямая синхронизация цикла с Oura недоступна.</p></div>',
  '<div class="health-panel"><div class="health-month-head"><button id="healthPrevMonth" type="button" aria-label="Предыдущий месяц">‹</button><strong id="healthMonthLabel"></strong><button id="healthNextMonth" type="button" aria-label="Следующий месяц">›</button></div><div id="healthMonthGrid" class="health-calendar"></div><p class="health-legend">● менструация &nbsp; ◌ прогноз &nbsp; ◇ возможный ПМС</p></div>',
  '<form id="healthQuickStart" class="health-panel"><h3>Начало менструации</h3><label>Дата начала<input id="healthQuickDate" type="date" required></label><button type="submit" class="primary">Записать начало</button><button id="healthQuickRemove" type="button" class="secondary">Убрать отметку</button><p class="hint">Для прогноза достаточно дат начала месячных. Все прежние записи сохранены.</p></form>',
- '<form id="healthCycleForm" class="health-panel" hidden aria-hidden="true"><h3>Запись за день</h3>',
- '<label>Дата<input id="healthDate" type="date" required></label>',
- '<label>Кровотечение<select id="healthFlow"><option value="none">Нет</option><option value="spotting">Мажущие выделения</option><option value="light">Слабые</option><option value="medium">Умеренные</option><option value="heavy">Обильные</option></select></label>',
- '<label>Боль, 0–10<input id="healthPain" type="number" min="0" max="10" step="1" placeholder="Неизвестно"></label>',
- '<label>Настроение<select id="healthMood"></select></label>',
- '<label>Базальная температура, °C<input id="healthTemperature" type="number" min="30" max="43" step="0.01" inputmode="decimal" placeholder="Неизвестно"></label>',
- '<label>Цервикальная слизь<select id="healthMucus"><option value="">Не отмечено</option><option value="dry">Сухо</option><option value="sticky">Липкая</option><option value="creamy">Кремовая</option><option value="watery">Водянистая</option><option value="eggwhite">Как яичный белок</option></select></label>',
- '<label>Тест на овуляцию<select id="healthOvTest"><option value="">Не проводился</option><option value="negative">Отрицательный</option><option value="positive">Положительный</option></select></label>',
- '<label>Тест на беременность<select id="healthPregTest"><option value="">Не проводился</option><option value="negative">Отрицательный</option><option value="positive">Положительный</option></select></label>',
- '<label>Интимная близость<select id="healthIntimacy"><option value="">Не отмечено</option><option value="yes">Да</option><option value="no">Нет</option></select></label>',
- '<div><strong>Симптомы</strong><div id="healthSymptoms" class="health-chips"></div></div>',
- '<label>Заметка<textarea id="healthCycleNote" rows="2" maxlength="1000"></textarea></label>',
- '<div class="health-actions"><button type="submit" class="primary">Сохранить день</button><button id="healthDeleteCycle" type="button" class="secondary">Очистить запись дня</button></div></form>',
- '<form id="healthCycleSettings" class="health-panel"><h3>Параметры прогноза</h3><label>Окно ПМС, за дней до месячных<input id="healthPmsLead" type="number" min="1" max="14" required></label><div class="health-cols"><label>Длина цикла, дней<input id="healthCycleLength" type="number" min="15" max="90" required></label><label>Менструация, дней<input id="healthPeriodLength" type="number" min="1" max="15" required></label></div><label class="health-inline"><input id="healthPeriodReminder" type="checkbox"> Напомнить за 2 дня до ожидаемого начала</label><button type="submit" class="secondary">Сохранить</button></form>',
+ '<form id="healthCycleForm" class="health-panel"><h3>😊 Настроение и симптомы</h3><label>Дата<input id="healthDate" type="date" required></label>',
+ '<p class="health-group-title">Настроение · выбери одно</p><div id="healthMoodChoices" class="health-choice-grid" role="group" aria-label="Настроение"></div>',
+ '<p class="health-group-title">Симптомы · можно несколько</p><div id="healthSymptoms" class="health-choice-grid" role="group" aria-label="Симптомы"></div>',
+ '<label>Заметка<textarea id="healthCycleNote" rows="2" maxlength="1000" placeholder="Что ещё отметить сегодня?"></textarea></label>',
+ '<div id="healthDischargeFields" hidden><label>Характер выделений<select id="healthMucus"><option value="">Не отмечено</option><option value="dry">Нет, сухо</option><option value="sticky">Липкие</option><option value="creamy">Кремообразные</option><option value="watery">Водянистые</option><option value="eggwhite">Тягучие и прозрачные</option><option value="other">Другие</option></select></label></div>',
+ '<div class="health-actions"><button type="submit" class="primary">Сохранить день</button><button id="healthDeleteCycle" type="button" class="secondary">Очистить настроение и симптомы</button></div></form>',
+ '<details class="health-panel health-advanced"><summary>Настройки цикла</summary><form id="healthCycleSettings"><h3>Параметры прогноза</h3><label>Окно ПМС, за дней до месячных<input id="healthPmsLead" type="number" min="1" max="14" required></label><div class="health-cols"><label>Длина цикла, дней<input id="healthCycleLength" type="number" min="15" max="90" required></label><label>Менструация, дней<input id="healthPeriodLength" type="number" min="1" max="15" required></label></div><label class="health-inline"><input id="healthPeriodReminder" type="checkbox"> Напомнить за 2 дня до ожидаемого начала</label><label class="health-inline"><input id="healthDischargeEnabled" type="checkbox"> Включить учёт выделений и их характера</label><button type="submit" class="secondary">Сохранить</button></form></details>',
  '</div>',
  '<div id="healthPillsView" hidden>',
  '<div class="health-panel"><h3>💊 Таблетки по дням</h3><label>Дата<input id="healthPillsDate" type="date"></label><div class="health-actions"><button id="healthCopyYesterday" type="button" class="secondary">↺ Как вчера</button><button id="healthAddMedication" type="button" class="primary">+ Добавить лекарство</button></div><div id="healthTodaySlots" class="health-med-checklist"></div><p class="hint">Галочка означает фактический приём. Записи прошлых дней можно исправить.</p></div>',
@@ -140,8 +141,6 @@ function fillUi(){
  '</div>',
  '<div class="health-panel"><p class="hint">Данные сохраняются в локальном JSON LifeSims, включая резервные копии. Хранение в браузере не зашифровано отдельно: не используй общий телефон для чувствительных записей.</p></div>'
  ].join('');
- for(const m of MOODS){const op=document.createElement('option');op.value=m;op.textContent=m||'Не отмечено';$('healthMood').append(op)}
- for(const s of SYMPTOMS){const label=el('label');const cb=document.createElement('input');cb.type='checkbox';cb.value=s;label.append(cb,document.createTextNode(s));$('healthSymptoms').append(label)}
  $('healthCycleTab').onclick=()=>{section='cycle';render()};
  $('healthPillsTab').onclick=()=>{section='pills';render()};
  $('healthPrevMonth').onclick=()=>{month=add(month+'-15',-31).slice(0,7);render()};
@@ -160,8 +159,12 @@ function fillUi(){
   delete v.cycleStart;if(Object.keys(v).length===0)delete h.cycleDays[d];
  });
  $('healthCycleForm').onsubmit=saveCycle;
- $('healthDeleteCycle').onclick=()=>change(h=>{delete h.cycleDays[date]});
- $('healthCycleSettings').onsubmit=e=>{e.preventDefault();change(h=>{h.settings.cycleLength=+$('healthCycleLength').value;h.settings.periodLength=+$('healthPeriodLength').value;h.settings.periodReminder=$('healthPeriodReminder').checked;h.settings.pmsLeadDays=+$('healthPmsLead').value})};
+ $('healthDeleteCycle').onclick=()=>change(h=>{
+  const v=h.cycleDays[date];if(!v)return;
+  delete v.mood;delete v.symptoms;delete v.note;
+  if(!Object.keys(v).length)delete h.cycleDays[date];
+ });
+ $('healthCycleSettings').onsubmit=e=>{e.preventDefault();change(h=>{h.settings.cycleLength=+$('healthCycleLength').value;h.settings.periodLength=+$('healthPeriodLength').value;h.settings.periodReminder=$('healthPeriodReminder').checked;h.settings.pmsLeadDays=+$('healthPmsLead').value;h.settings.dischargeEnabled=$('healthDischargeEnabled').checked})};
  $('healthMedRepeat').onchange=()=>{$('healthMedDays').hidden=$('healthMedRepeat').value!=='custom'};
  $('healthMedicationForm').onsubmit=saveMedication;
  $('healthCopyYesterday').onclick=copyYesterday;
@@ -171,26 +174,40 @@ function fillUi(){
  $('healthContraception').onchange=e=>change(h=>{h.settings.contraceptionEnabled=!!e.target.checked});
  $('healthNotifyPermission').onclick=requestPermission;
 }
+function chooseMood(v){draftMood=draftMood===v?'':v;showChoices()}
+function chooseSymptom(v){if(draftSymptoms.has(v))draftSymptoms.delete(v);else draftSymptoms.add(v);showChoices()}
+function showChoices(){
+ const moods=$('healthMoodChoices'),symptoms=$('healthSymptoms');
+ moods.replaceChildren();symptoms.replaceChildren();
+ for(const [emoji,name] of MOOD_OPTIONS){
+  const selected=draftMood===name,b=button(emoji+' '+name,()=>chooseMood(name),'health-choice'+(selected?' chosen':''));
+  b.setAttribute('aria-pressed',String(selected));moods.append(b);
+ }
+ for(const [emoji,name] of SYMPTOM_OPTIONS){
+  const selected=draftSymptoms.has(name),b=button(emoji+' '+name,()=>chooseSymptom(name),'health-choice'+(selected?' chosen':''));
+  b.setAttribute('aria-pressed',String(selected));symptoms.append(b);
+ }
+}
 function saveCycle(e){
- e.preventDefault();
- const row={flow:$('healthFlow').value,pain:$('healthPain').value===''?null:Number($('healthPain').value),
- mood:$('healthMood').value,temperature:$('healthTemperature').value===''?null:Number($('healthTemperature').value),
- mucus:$('healthMucus').value,ovulationTest:$('healthOvTest').value,pregnancyTest:$('healthPregTest').value,
- intimacy:$('healthIntimacy').value,symptoms:[...$('healthSymptoms').querySelectorAll('input:checked')].map(x=>x.value),
- note:$('healthCycleNote').value.trim()};
- if(!validDay(date)||row.pain!=null&&(row.pain<0||row.pain>10)||row.temperature!=null&&(row.temperature<30||row.temperature>43))return;
- change(h=>{h.cycleDays[date]=row});
+ e.preventDefault();const d=$('healthDate').value;
+ if(!validDay(d)||d>nowDay()){flash='Выбери сегодняшнюю или прошедшую дату.';renderMessage();return}
+ date=d;month=date.slice(0,7);
+ change(h=>{
+  const prev=h.cycleDays[d]||{};
+  h.cycleDays[d]={...prev,mood:draftMood,symptoms:[...draftSymptoms],note:$('healthCycleNote').value.trim(),
+    ...(h.settings.dischargeEnabled?{mucus:$('healthMucus').value}:{})};
+ });
 }
 function setCycleFields(h){
  const v=h.cycleDays[date]||{};
  $('healthDate').value=date;
- $('healthFlow').value=v.flow||'none';$('healthPain').value=v.pain??'';
- $('healthMood').value=v.mood||'';$('healthTemperature').value=v.temperature??'';
- $('healthMucus').value=v.mucus||'';$('healthOvTest').value=v.ovulationTest||'';
- $('healthPregTest').value=v.pregnancyTest||'';$('healthIntimacy').value=v.intimacy||'';
+ draftMood=v.mood||'';draftSymptoms=new Set(Array.isArray(v.symptoms)?v.symptoms:[]);
  $('healthCycleNote').value=v.note||'';
- for(const cb of $('healthSymptoms').querySelectorAll('input'))cb.checked=(v.symptoms||[]).includes(cb.value);
- $('healthDeleteCycle').disabled=!h.cycleDays[date];
+ $('healthMucus').value=v.mucus||'';
+ $('healthDischargeFields').hidden=!h.settings.dischargeEnabled;
+ $('healthDischargeEnabled').checked=!!h.settings.dischargeEnabled;
+ $('healthDeleteCycle').disabled=!v.mood&&!(v.symptoms?.length)&&!v.note;
+ showChoices();
 }
 function renderCycle(h){
  const p=forecast(h);
@@ -214,13 +231,14 @@ function renderCycle(h){
  for(let i=1;i<=length;i++){
   const d=month+'-'+pad(i),v=h.cycleDays[d],bleed=!!(v&&(v.cycleStart||v.flow&&v.flow!=='none'));
   const pms=!!(p.expected&&d>=add(p.expected,-pmsLead)&&d<p.expected);
-  const predicted=!v&&p.expected&&Array.from({length:h.settings.periodLength||5},(_,j)=>add(p.expected,j)).includes(d);
+  const predicted=!bleed&&p.expected&&Array.from({length:h.settings.periodLength||5},(_,j)=>add(p.expected,j)).includes(d);
   const hasPills=slots(h,d).some(x=>x.entry?.status==='taken');
   const b=button(String(i),()=>{date=d;render()},'health-day'+(date===d?' selected':'')+(bleed?' bleeding':'')+(predicted?' predicted':'')+(pms?' pms':''));
   if(bleed)b.append(el('span','health-day-icon','●'));
   if(predicted)b.append(el('span','health-day-icon','◌'));
   if(pms)b.append(el('span','health-day-icon','◇'));
   if(hasPills)b.append(el('span','health-day-med','💊'));
+  if(v?.mood)b.append(el('span','health-day-mood',(MOOD_OPTIONS.find(x=>x[1]===v.mood)||['🫶'])[0]));
   if(d===nowDay())b.classList.add('today');
   b.setAttribute('aria-label',d+(bleed?' менструация':'')+(predicted?' прогноз':'')+(pms?' предполагаемый ПМС':'')+(hasPills?' лекарство принято':''));
   grid.append(b);
