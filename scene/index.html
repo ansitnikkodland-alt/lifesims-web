@@ -2195,6 +2195,76 @@ function singleMetricField(date,field){
  item.append(label);root.append(item);
  return {input,empty};
 }
+// The satiety popup surfaces the existing food diary without copying or mutating records.
+function appendSatietyFoodHistory(root,asOfDate,dialog){
+ const section=document.createElement('section');section.className='satiety-food-history';
+ section.setAttribute('aria-label','История питания');
+ const top=document.createElement('div');top.className='satiety-food-history-head';
+ const title=document.createElement('h4');title.textContent='📖 История еды';
+ const summary=document.createElement('small');
+ const meals=(Array.isArray(state.foodMeals)?state.foodMeals:[])
+  .filter(m=>m&&typeof m.date==='string'&&/^\d{4}-\d{2}-\d{2}$/.test(m.date)&&m.date<=asOfDate)
+  .sort((a,b)=>(String(b.date)+' '+String(b.time||'')).localeCompare(String(a.date)+' '+String(a.time||''))||
+    String(b.createdAt||'').localeCompare(String(a.createdAt||'')));
+ const current=meals.filter(m=>m.date===asOfDate);
+ const known=current.filter(m=>m.kcal!=null&&Number.isFinite(Number(m.kcal)));
+ summary.textContent='За выбранный день: '+current.length+' записей'+
+  (known.length?' · '+(known.length===current.length?'':'учтено ')+'≈'+
+   Math.round(known.reduce((sum,m)=>sum+Number(m.kcal),0))+' ккал':'');
+ top.append(title,summary);section.append(top);
+ const list=document.createElement('div');list.className='satiety-food-history-list';section.append(list);
+ const empty=document.createElement('p');empty.className='hint';
+ const more=document.createElement('button');more.type='button';more.className='secondary satiety-food-more';
+ let visible=12;
+ const dayName=d=>{
+  if(d===today())return 'Сегодня · '+d;
+  if(d===plusDays(today(),-1))return 'Вчера · '+d;
+  return new Date(d+'T12:00:00').toLocaleDateString('ru-RU',{day:'numeric',month:'long',weekday:'short'});
+ };
+ function render(){
+  list.replaceChildren();
+  if(!meals.length){
+   empty.textContent='Записей о еде пока нет. После сохранения они появятся здесь.';
+   list.append(empty);more.remove();return;
+  }
+  let lastDay=null;
+  for(const meal of meals.slice(0,visible)){
+   if(meal.date!==lastDay){
+    lastDay=meal.date;
+    const group=document.createElement('h5');group.className='satiety-food-day';
+    group.textContent=dayName(lastDay);list.append(group);
+   }
+   const item=document.createElement('button');item.type='button';item.className='satiety-food-item';
+   item.setAttribute('aria-label','Открыть запись о еде: '+String(meal.title||'Без названия')+', '+meal.date+' '+String(meal.time||''));
+   if(typeof meal.photoThumb==='string'&&/^data:image\/(?:jpeg|webp);base64,/.test(meal.photoThumb)){
+    const thumbnail=document.createElement('img');thumbnail.src=meal.photoThumb;
+    thumbnail.alt='Фото блюда';thumbnail.className='satiety-food-thumb';thumbnail.loading='lazy';
+    item.append(thumbnail);
+   }
+   const body=document.createElement('span');body.className='satiety-food-item-body';
+   const name=document.createElement('strong');name.textContent=meal.title||'Без названия';
+   const description=document.createElement('small');
+   description.textContent=(meal.time||'Время неизвестно')+
+    (meal.grams!=null?' · '+meal.grams+' г':'')+
+    (meal.ingredients?' · '+meal.ingredients:'');
+   const macro=document.createElement('small');macro.className='satiety-food-item-macros';
+   macro.textContent='Б '+(meal.protein??'—')+' · Ж '+(meal.fat??'—')+' · У '+(meal.carbs??'—')+' г';
+   body.append(name,description,macro);
+   const right=document.createElement('span');right.className='satiety-food-item-right';
+   right.textContent=meal.kcal==null?'— ккал':meal.kcal+' ккал';
+   const edit=document.createElement('small');edit.textContent='Изменить ›';right.append(edit);
+   item.append(body,right);
+   item.onclick=()=>{dialog.close();openCalorieBalance(meal.date,meal.id)};
+   list.append(item);
+  }
+  if(meals.length>visible){
+   more.textContent='Показать ещё ('+(meals.length-visible)+')';
+   more.onclick=()=>{visible+=12;render()};
+   if(!more.isConnected)section.append(more);
+  }else more.remove();
+ }
+ render();root.append(section);
+}
 function openSingleMetric(field,date=today()){
  if(field==='nutrition'){closeOtherMetricPopups();window.LifeSimsFood?.open?.();return}
  const titles={
@@ -2264,6 +2334,7 @@ function openSingleMetric(field,date=today()){
  }else if(field==='hunger'){
   const calc=satietyAssessment(date);
   addNumber('Расчётная сытость',calc.value==null?null:calc.value+'%');
+  appendSatietyFoodHistory(root,date,dialog);
   const lastMeal=lastRecordedMeal(date===today()?new Date():new Date(date+'T23:59:59'));
   if(lastMeal){
    const elapsed=(date===today()?Date.now():new Date(date+'T23:59:59').getTime())-lastMeal.at;
