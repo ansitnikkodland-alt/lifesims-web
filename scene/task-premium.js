@@ -27,7 +27,7 @@
  document.body.append(manager);
  let view='list',kind='project';
  const difficultyValue=a=>Number.isInteger(Number(a?.difficulty))&&Number(a.difficulty)>=1&&Number(a.difficulty)<=5?Number(a.difficulty):3;
- const resourceNames={resource:'◆ Ресурс',mood:'☺ Настроение',condition:'♥ Физическое состояние',hygiene:'♨ Гигиена',nutrition:'🍎 Питание',hunger:'🍽 Сытость',sleepNeed:'💤 Потребность во сне',entropy:'🌀 Энтропия',activity:'🚶 Активность'};
+ const resourceNames={resource:'◆ Ресурс',mood:'☺ Настроение',condition:'♥ Физическое состояние',hygiene:'♨ Гигиена',nutrition:'🍎 Питание',hunger:'🍽 Сытость',sleepNeed:'💤 Сон',entropy:'🧹 Порядок',activity:'🚶 Активность'};
  const quadrants=[
   ['I','Срочно и важно','#fa6473'],
   ['II','Не срочно, но важно','#ffc24f'],
@@ -52,8 +52,10 @@
   const info=el('div','tp-info');info.append(el('strong','',a.name));
   const project=data.taskProjects.find(p=>p.id===a.projectId)?.name;
   const tags=(a.tags||[]).map(id=>data.taskTags.find(x=>x.id===id)?.name).filter(Boolean).map(x=>'#'+x);
-  const effect=a.resourceEffect,description=effect&&resourceNames[effect.target]?
-   resourceNames[effect.target]+' '+(effect.mode==='set'?'→ '+effect.amount+'%':(effect.amount>=0?'+':'')+effect.amount+' п. п.'):'';
+  const effect=a.resourceEffect,orderEffect=effect?.target==='entropy';
+  const displayAmount=orderEffect?(effect.mode==='set'?100-effect.amount:-effect.amount):effect?.amount;
+  const description=effect&&resourceNames[effect.target]?
+   resourceNames[effect.target]+' '+(effect.mode==='set'?'→ '+displayAmount+'%':(displayAmount>=0?'+':'')+displayAmount+' п. п.'):'';
   const details=[label(a),project,...tags,'Сложность '+difficultyValue(a)+'/5',Number(a.priority)?'Приоритет '+a.priority:'',description].filter(Boolean);
   info.append(el('small','',details.join(' · ')));row.append(check,info);
   if(mat){
@@ -127,7 +129,7 @@
   <p class="tp-note">Дела «Без срока» всегда остаются во входящих до выполнения. Дата начала не является сроком.</p>`;
   form.insertBefore(panel,before);
   const effort=el('fieldset','tp-editor tp-difficulty-editor');effort.id='tpDifficultyEditor';
-  effort.innerHTML=`<legend>Сложность</legend><label>Уровень усилий<select id="tpDifficulty" aria-label="Сложность дела или привычки"><option value="1">1 · Очень легко</option><option value="2">2 · Легко</option><option value="3" selected>3 · Средне</option><option value="4">4 · Сложно</option><option value="5">5 · Очень сложно</option></select></label><p class="tp-note">Опыт связанного ресурса = базовый XP × сложность / 3. Без привязанного ресурса опыт не начисляется. Ресурс и потребности не меняются из-за сложности.</p>`;
+  effort.innerHTML=`<legend>Сложность</legend><label>Уровень усилий<select id="tpDifficulty" aria-label="Сложность дела или привычки"><option value="1">1 · Очень легко</option><option value="2">2 · Легко</option><option value="3" selected>3 · Средне</option><option value="4">4 · Сложно</option><option value="5">5 · Очень сложно</option></select></label><p class="tp-note">Опыт связанного навыка = базовый XP × сложность / 3. Без привязанного навыка опыт не начисляется. Общий ресурс и потребности не меняются из-за сложности.</p>`;
   form.insertBefore(effort,before);
   const nature=el('fieldset','tp-editor tp-habit-nature');nature.id='tpHabitNature';
   nature.innerHTML='<legend>Тип привычки</legend><label class="tp-checkbox tp-negative-toggle">'+
@@ -144,7 +146,7 @@
   <p class="tp-note">Выше верхней или ниже нижней границы день отмечается красным. Отсутствие записи не считается нулём. Запись количества сама по себе не начисляет XP.</p>`;
   form.insertBefore(goal,before);
   const resource=el('fieldset','tp-editor tp-resource-editor');resource.id='tpResourceEditor';
-  resource.innerHTML="<legend>⚡ Влияние дела или привычки на состояние</legend>\n<label>Какой показатель меняется<select id=\"tpEffectTarget\">\n<option value=\"\">Не влияет</option>\n<option value=\"resource\">◆ Общий ресурс (кристалл)</option>\n<option value=\"mood\">☺ Настроение</option>\n<option value=\"condition\">♥ Физическое состояние</option>\n<option value=\"hygiene\">♨ Гигиена</option>\n<option value=\"nutrition\">🍎 Питание</option>\n<option value=\"hunger\">🍽 Сытость</option>\n<option value=\"sleepNeed\">💤 Потребность во сне</option>\n<option value=\"entropy\">🌀 Энтропия / беспорядок</option>\n<option value=\"activity\">🚶 Активность (игровая)</option>\n</select></label>\n<div id=\"tpEffectFields\" hidden><div class=\"tp-editor-grid\">\n<label>Как изменить<select id=\"tpEffectMode\"><option value=\"delta\">Прибавить / вычесть</option><option value=\"set\">Установить значение</option></select></label>\n<label>На сколько, п. п.<input id=\"tpEffectAmount\" type=\"number\" min=\"-100\" max=\"100\" step=\"1\" value=\"10\" required></label>\n<label>Срок действия<select id=\"tpEffectHours\">\n<option value=\"0\">Только выбранный день</option>\n<option value=\"24\">24 часа</option>\n<option value=\"72\">72 часа</option>\n<option value=\"168\">7 дней</option>\n</select></label></div>\n<p class=\"tp-note\">«+15» добавляет 15 пунктов к игровой шкале. «Установить 100» действует как отдельное событие. Каждый повтор учитывается отдельно. Измерения Oura и ручные записи не изменяются; эффекты исчезают по окончании срока.</p></div>";
+  resource.innerHTML="<legend>⚡ Влияние дела или привычки на состояние</legend>\n<label>Какой показатель меняется<select id=\"tpEffectTarget\">\n<option value=\"\">Не влияет</option>\n<option value=\"resource\">◆ Общий ресурс (кристалл)</option>\n<option value=\"mood\">☺ Настроение</option>\n<option value=\"condition\">♥ Физическое состояние</option>\n<option value=\"hygiene\">♨ Гигиена</option>\n<option value=\"nutrition\">🍎 Питание</option>\n<option value=\"hunger\">🍽 Сытость</option>\n<option value=\"sleepNeed\">💤 Сон</option>\n<option value=\"entropy\">🧹 Порядок / чистота</option>\n<option value=\"activity\">🚶 Активность (игровая)</option>\n</select></label>\n<div id=\"tpEffectFields\" hidden><div class=\"tp-editor-grid\">\n<label>Как изменить<select id=\"tpEffectMode\"><option value=\"delta\">Прибавить / вычесть</option><option value=\"set\">Установить значение</option></select></label>\n<label>На сколько, п. п.<input id=\"tpEffectAmount\" type=\"number\" min=\"-100\" max=\"100\" step=\"1\" value=\"10\" required></label>\n<label>Срок действия<select id=\"tpEffectHours\">\n<option value=\"0\">Только выбранный день</option>\n<option value=\"24\">24 часа</option>\n<option value=\"72\">72 часа</option>\n<option value=\"168\">7 дней</option>\n</select></label></div>\n<p class=\"tp-note\">«+15» добавляет 15 пунктов к игровой шкале. «Установить 100» действует как отдельное событие. Каждый повтор учитывается отдельно. Измерения Oura и ручные записи не изменяются; эффекты исчезают по окончании срока.</p></div>";
   form.insertBefore(resource,before);
   const target=$('tpEffectTarget'),mode=$('tpEffectMode'),amount=$('tpEffectAmount'),settings=$('tpEffectFields');
   const reflect=()=>{
@@ -192,14 +194,18 @@
   const effect=a?.resourceEffect||null;
   $('tpEffectTarget').value=effect?.target||'';
   $('tpEffectMode').value=effect?.mode==='set'?'set':'delta';
-  $('tpEffectAmount').value=effect?.amount!=null&&Number.isFinite(Number(effect.amount))?String(effect.amount):'10';
+  $('tpEffectAmount').value=effect?.amount!=null&&Number.isFinite(Number(effect.amount))?
+   String(effect.target==='entropy'?(effect.mode==='set'?100-Number(effect.amount):-Number(effect.amount)):effect.amount):'10';
   $('tpEffectHours').value=[0,24,72,168].includes(Number(effect?.hours))?String(effect.hours):'24';
   $('tpEffectTarget').onchange();
  }
  function readForm(){
-  const resourceEffect=$('tpEffectTarget')?.value?{
-   target:$('tpEffectTarget').value,mode:$('tpEffectMode').value,
-   amount:Number($('tpEffectAmount').value),hours:Number($('tpEffectHours').value)
+  const target=$('tpEffectTarget')?.value,mode=$('tpEffectMode').value;
+  const display=Number($('tpEffectAmount').value);
+  // The persisted entropy target is legacy disorder, the UI shows Order.
+  const amount=target==='entropy'?(mode==='set'?100-display:-display):display;
+  const resourceEffect=target?{
+   target,mode,amount,hours:Number($('tpEffectHours').value)
   }:null;
   const difficulty=difficultyValue({difficulty:$('tpDifficulty')?.value});
   if($('taskKind').value==='habit')return {resourceEffect,difficulty,negative:!!$('tpNegativeHabit').checked,
