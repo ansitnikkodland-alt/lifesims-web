@@ -253,7 +253,6 @@ function renderMedications(h){
  const scheduled=[];
  for(let i=0;i<30;i++)scheduled.push(...slots(h,add(nowDay(),-i)));
  const taken=scheduled.filter(x=>x.entry?.status==='taken').length;
- const past=scheduled.filter(x=>x.entry?.status==='taken'||x.entry?.status==='skipped'||x.time<=new Date().toTimeString().slice(0,5)&&scheduled.length);
  $('healthAdherence').textContent='По расписанию за 30 дней: '+taken+' принятых отметок из '+scheduled.length+' запланированных. Пропуски, которые не отмечены, не приравниваются к пропущенным дозам.';
  for(const entry of recent.slice(0,100)){
   const m=h.medications.find(x=>x.id===entry.medicationId);
