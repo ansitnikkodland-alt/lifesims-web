@@ -5124,7 +5124,7 @@ window.LifeSimsMoodBridge={
   return {tags,score:Number.isFinite(r.mood)?r.mood:null,source:r.moodSource,recent};
  },
  write(d,tags,score){
-  if(storageBlocked||!storageOK||!/^\\d{4}-\\d{2}-\\d{2}$/.test(d)||d>today()||
+  if(storageBlocked||!storageOK||!/^\d{4}-\d{2}-\d{2}$/.test(d)||d>today()||
    !Array.isArray(tags)||tags.length>90||tags.some(x=>typeof x!=='string'||x.length>70)||
    !(score===null||Number.isFinite(score)&&score>=0&&score<=100))return false;
   const old=currentRecord(d),hadAutoMood=old.moodSource==='moodTags';
