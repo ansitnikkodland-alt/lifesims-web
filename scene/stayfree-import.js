@@ -230,24 +230,49 @@ function entriesForDate(date){
  // Old CSV records stay in backup unchanged for possible review.
  return (android.length?android:all.filter(x=>x.source==='stayfree')).sort((a,b)=>b.seconds-a.seconds);
 }
+function formattedLinks(row){
+ const names=window.LifeSimsScreenTimeLinks?.label?.(row)||'';
+ const info=bridge.link(row);
+ const scope=info.overridden?' · связь за дату':info.isDefault?' · правило по умолчанию':'';
+ return (names?' · '+names:' · нажми, чтобы связать с навыком или делом')+scope;
+}
+function appendIcon(row,target){
+ const icon=window.LifeSimsScreenTimeLinks?.icon?.(row);
+ if(icon)target.append(icon);
+ else target.append(el('span','sf-app-icon sf-generic-icon','📱'));
+}
 function renderAgenda(date,container){
  const rows=entriesForDate(date);if(!rows.length)return 0;
  const heading=el('div','agenda-group-title','📱 Экранное время · '+fmt(rows.reduce((sum,x)=>sum+x.seconds,0)));
  container.append(heading);
  for(const row of rows){
-  const line=el('div','agenda-entry sf-calendar-line');
-  const icon=el('span','agenda-time','📱'),text=el('div','agenda-event-main');
-  text.append(el('div','agenda-event-title',row.app),el('div','agenda-event-meta',fmt(row.seconds)+(row.device?' · '+row.device:'')+' · '+(row.source==='android'?'Android · автоматически':'StayFree · CSV')+' · итог за день'));
-  line.append(icon,text);container.append(line);
+  const line=button('',()=>window.LifeSimsScreenTimeLinks?.open?.(row),'agenda-entry sf-calendar-line sf-app-action');
+  line.setAttribute('aria-label',row.app+' · '+fmt(row.seconds)+' · Настроить связи экранного времени');
+  const main=el('span','agenda-event-main');
+  const heading=el('span','agenda-event-title',row.app);
+  const meta=el('span','agenda-event-meta',fmt(row.seconds)+(row.device?' · '+row.device:'')+
+   ' · '+(row.source==='android'?'Android · автоматически':'StayFree · CSV')+
+   ' · итог за день'+formattedLinks(row));
+  appendIcon(row,line);main.append(heading,meta);line.append(main);
+  container.append(line);
  }
  return rows.length;
 }
 function appendHistory(date,container){
  const rows=entriesForDate(date);if(!rows.length)return 0;
- const part=el('div','history-activity-line sf-summary-line');
- const body=el('div','','📱 Экранное время'+(rows.some(x=>x.source==='android')?' · Android':' · StayFree')+': '+fmt(rows.reduce((sum,x)=>sum+x.seconds,0))+' · '+rows.length+' приложений');
- const view=button('Показать',()=>{const d=$('historyDate');if(d)d.value=date;window.LifeSimsScreenTimeBridge.openAgenda(date)},'secondary');
- part.append(body,view);container.append(part);return rows.length;
+ const details=el('details','history-activity-line sf-usage-list');
+ const summary=el('summary','', '📱 Экранное время: '+fmt(rows.reduce((sum,x)=>sum+x.seconds,0))+
+  ' · '+rows.length+' приложений · нажми для списка');
+ details.append(summary);
+ for(const row of rows){
+  const action=button('',()=>window.LifeSimsScreenTimeLinks?.open?.(row),'sf-history-app');
+  action.setAttribute('aria-label','Связать '+row.app+' с делом, навыком или мероприятием');
+  const box=el('span','sf-history-details');
+  box.append(el('strong','',row.app),el('span','sf-history-meta',fmt(row.seconds)+formattedLinks(row)));
+  appendIcon(row,action);action.append(box);details.append(action);
+ }
+ container.append(details);
+ return rows.length;
 }
 function hasDay(date){return entriesForDate(date).length>0}
 window.LifeSimsScreenTime={parseCSV,detectHeader,parseDate,parseDuration,makeRecords,renderAgenda,appendHistory,hasDay};
