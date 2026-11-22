@@ -1,0 +1,81 @@
+name: Verify LifeSims automatic Android usage import
+on:
+  push:
+    paths:
+      - '.github/workflows/lifesims-android-usage-smoke.yml'
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser driver
+        run: npm install --no-save playwright-core@1.56.1
+      - name: Verify Live LifeSims Android usage bridge and persistence
+        run: |
+          cat > .lifesims-usage-smoke.cjs <<'JS'
+          const {chromium}=require('playwright-core');
+          const assert=require('node:assert/strict');
+          (async()=>{
+            const browser=await chromium.launch({
+              executablePath:'/usr/bin/google-chrome',
+              headless:true,
+              args:['--no-sandbox','--disable-dev-shm-usage']
+            });
+            try{
+              const page=await browser.newPage({viewport:{width:410,height:890}});
+              const faults=[];
+              page.on('pageerror',e=>faults.push(e.message));
+              await page.addInitScript(()=>{
+                const fetch0=window.fetch.bind(window);
+                window.fetch=(resource,init)=>{
+                  if(String(resource).includes('127.0.0.1:18765/v1/usage')){
+                    if(init?.headers?.['X-LifeSims-Key']!=='z'.repeat(43)){
+                      return Promise.resolve(new Response('{"error":"wrong key"}',{status:401}));
+                    }
+                    return Promise.resolve(new Response(JSON.stringify({
+                      version:1,source:'android',device:'Test Android',
+                      records:[{date:'2026-11-22',app:'ChatGPT',
+                        packageName:'com.openai.chatgpt',seconds:1500}]
+                    }),{status:200,headers:{'Content-Type':'application/json'}}));
+                  }
+                  return fetch0(resource,init);
+                };
+              });
+              const url='https://ansitnikkodland-alt.github.io/lifesims-web/scene/?v=116&smoke='+Date.now();
+              const res=await page.goto(url,{waitUntil:'domcontentloaded',timeout:35000});
+              assert(res?.ok(),'public website unavailable');
+              await page.waitForFunction(()=>!!window.LifeSimsScreenTimeBridge,{timeout:25000});
+              assert(await page.locator('#sfImport').count()===1,'StayFree panel missing');
+              assert(await page.locator('.ls-android-usage').count()===1,'Android sync controls missing');
+              const saved=await page.evaluate(()=>{
+                localStorage.setItem('lifesims-android-usage-pairing-v1','z'.repeat(43));
+                localStorage.setItem('lifesims-android-usage-enabled-v1','1');
+                return true;
+              });
+              assert(saved);
+              await page.reload({waitUntil:'domcontentloaded'});
+              await page.waitForFunction(()=>
+                window.LifeSimsScreenTimeBridge?.read('2026-11-22')?.some(x=>
+                  x.source==='android'&&x.seconds===1500),{timeout:25000});
+              let rows=await page.evaluate(()=>window.LifeSimsScreenTimeBridge.read('2026-11-22'));
+              assert.equal(rows.filter(x=>x.source==='android').length,1,'Android data not saved correctly');
+              await page.evaluate(()=>window.LifeSimsAndroidUsageSync.sync(true));
+              rows=await page.evaluate(()=>window.LifeSimsScreenTimeBridge.read('2026-11-22'));
+              assert.equal(rows.filter(x=>x.source==='android').length,1,'Repeated sync creates duplicates');
+              await page.reload({waitUntil:'domcontentloaded'});
+              await page.waitForFunction(()=>!!window.LifeSimsScreenTimeBridge,{timeout:25000});
+              rows=await page.evaluate(()=>window.LifeSimsScreenTimeBridge.read('2026-11-22'));
+              assert.equal(rows.filter(x=>x.source==='android').length,1,'Data disappeared after reload');
+              console.log('LifeSims Android usage UI, synthetic sync, dedup and reload passed.',{faults});
+              if(faults.length)throw new Error('Unexpected JS exceptions: '+faults.join('; '));
+            }finally{await browser.close()}
+          })().catch(e=>{console.error(e);process.exitCode=1});
+          JS
+          node .lifesims-usage-smoke.cjs
