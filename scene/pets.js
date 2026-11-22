@@ -100,7 +100,8 @@
    b.innerHTML=artwork(id);
    b.setAttribute('aria-label','Открыть питомца '+pet.name);
    b.title=pet.name+' · погладить, покормить';
-   const paw=el('span','pet-paw','🐾');paw.setAttribute('aria-hidden','true');b.append(paw);layer.append(b);
+   // The entire cat is the interaction target; no separate paw control.
+   layer.append(b);
   }
   if(dialog.open&&active)draw();
  }
