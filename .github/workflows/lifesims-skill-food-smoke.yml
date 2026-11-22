@@ -59,6 +59,86 @@ jobs:
             if(Math.abs(restored-original)>0.1)
               throw Error('Undo flat XP changed previous skill state: '+restored+' vs '+original);
             console.log('FLAT SKILL XP EDIT + UNDO + NO LEVELS: PASS');
+
+            const skillTrack=page.locator('.skill-clickable').filter({hasText:'Психология'}).locator('.skill-xp-track');
+            const detailTrack=page.locator('#skillDetailBody .skill-xp-track');
+            if(!await skillTrack.isVisible()||!await detailTrack.isVisible())
+              throw Error('Continuous XP progress tracks are missing');
+            const initialWidth=await skillTrack.locator('div').getAttribute('style');
+            if(await skillTrack.getAttribute('role')!=='progressbar'||await detailTrack.getAttribute('role')!=='progressbar')
+              throw Error('Skill XP bar is not accessible');
+            const scale=await page.evaluate(()=>window.LifeSimsSkillBridge.displayScale());
+            if(scale<100||await detailTrack.getAttribute('aria-valuemax')!==String(scale))
+              throw Error('XP scale is not shared between cards and details');
+            await page.locator('#manualSkillExperience').fill('350');
+            await page.locator('#skillDetailBody .skill-manual-save').click();
+            const manualWidth=await skillTrack.locator('div').getAttribute('style');
+            if(initialWidth===manualWidth||await skillTrack.getAttribute('aria-valuenow')!=='350')
+              throw Error('XP progress track did not update after manual save');
+            await page.evaluate(()=>window.LifeSimsSkillBridge.undoScore('Психология'));
+            await page.evaluate(()=>{
+              const slider=document.getElementById('manualSkillXpSlider');
+              slider.value='42.5';slider.dispatchEvent(new Event('input',{bubbles:true}));
+            });
+            if(await page.locator('#manualSkillExperience').inputValue()!=='42.5')
+              throw Error('XP slider did not update exact input');
+            await page.locator('#skillDetailBody .skill-manual-save').click();
+            const sliderValue=await page.evaluate(()=>window.LifeSimsSkillBridge.scores().find(s=>s.name==='Психология').score);
+            if(Math.abs(sliderValue-42.5)>0.05)throw Error('XP slider save failed: '+sliderValue);
+            await page.evaluate(()=>window.LifeSimsSkillBridge.undoScore('Психология'));
+            console.log('XP BARS + EXACT MANUAL FIELD + SLIDER + UNDO: PASS');
+            const habitBefore=await page.evaluate(()=>window.LifeSimsSkillBridge.scores().find(s=>s.name==='Психология').score);
+            await page.evaluate(()=>{
+              window.LifeSimsTaskBridge.complete('books_read',window.LifeSimsSkillBridge.today());
+            });
+            const habitAfter=await page.evaluate(()=>window.LifeSimsSkillBridge.scores().find(s=>s.name==='Психология').score);
+            if(habitAfter<=habitBefore||await skillTrack.getAttribute('aria-valuenow')!==String(habitAfter))
+              throw Error('Linked completed habit did not update skill and XP bar: '+habitBefore+' -> '+habitAfter);
+            console.log('COMPLETED HABIT -> AUTOMATIC SKILL XP BAR: PASS');
+            await page.locator('#skillDetailClose').click();
+            await page.evaluate(()=>window.LifeSimsTaskBridge.create('task'));
+            await page.locator('#calendarTaskPopup').waitFor({state:'visible'});
+            await page.locator('#taskTitle').fill('Проверка задания на XP');
+            await page.locator('#taskRepeat').selectOption('once');
+            await page.locator('#taskXP').fill('23');
+            await page.locator('#taskSkill').fill('Психология');
+            await page.locator('#taskSave').click();
+            const taskId=await page.evaluate(()=>{
+              return window.LifeSimsTaskBridge.read().activities.find(a=>a.name==='Проверка задания на XP')?.id;
+            });
+            if(!taskId)throw Error('Task creation with linked skill failed');
+            const taskBefore=await page.evaluate(()=>window.LifeSimsSkillBridge.scores().find(s=>s.name==='Психология').score);
+            await page.evaluate(id=>window.LifeSimsTaskBridge.complete(id,window.LifeSimsSkillBridge.today()),taskId);
+            const taskAfter=await page.evaluate(()=>window.LifeSimsSkillBridge.scores().find(s=>s.name==='Психология').score);
+            if(taskAfter<=taskBefore||await skillTrack.getAttribute('aria-valuenow')!==String(taskAfter))
+              throw Error('Linked completed task did not update skill bar');
+            console.log('COMPLETED TASK -> AUTOMATIC SKILL XP BAR: PASS');
+            const eventId='xp-skill-event-regression';
+            await page.evaluate(id=>{
+              const day=window.LifeSimsSkillBridge.today();
+              window.LifeSimsCalendarBridge.upsert([{
+                id,title:'Учебное мероприятие по психологии',repeat:'none',
+                startsAt:new Date(day+'T00:01:00').toISOString(),
+                endsAt:new Date(day+'T00:02:00').toISOString(),
+                skill:'Психология',skills:['Психология'],skillXp:2
+              }]);
+            },eventId);
+            const eventAfter=await page.evaluate(()=>window.LifeSimsSkillBridge.scores().find(s=>s.name==='Психология').score);
+            if(Math.abs(eventAfter-taskAfter-2)>0.1)
+              throw Error('Completed calendar event did not yield one +2 XP: '+taskAfter+' -> '+eventAfter);
+            if(await skillTrack.getAttribute('aria-valuenow')!==String(eventAfter))
+              throw Error('Completed calendar event did not refresh XP bar');
+            await page.evaluate(()=>{
+              const past=window.LifeSimsCalendarBridge.getSchedule().find(e=>e.id==='xp-skill-event-regression');
+              window.LifeSimsCalendarBridge.upsert([past]);
+            });
+            const resynced=await page.evaluate(()=>window.LifeSimsSkillBridge.scores().find(s=>s.name==='Психология').score);
+            if(Math.abs(resynced-eventAfter)>0.1)
+              throw Error('Calendar resynchronization duplicated XP');
+            console.log('COMPLETED EVENT -> AUTOMATIC +2 XP BAR, WITHOUT DUPLICATE: PASS');
+            await page.locator('.skill-clickable').filter({hasText:'Психология'}).first().click();
+            await page.locator('#skillDetailDialog').waitFor({state:'visible'});
+
             await page.locator('#skillDetailBody .skill-detail-action').filter({hasText:'Читать'}).first().locator('button').click();
             await page.locator('#calendarTaskPopup').waitFor({state:'visible'});
             if(!await page.locator('#taskSkill').locator('xpath=..').innerText().then(t=>t.includes('Психология')))
