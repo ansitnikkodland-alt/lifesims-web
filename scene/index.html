@@ -2495,6 +2495,45 @@ function skillDayDiff(a,b){
 }
 function fadeSkill(x,start,end){return Math.max(0,x*Math.pow(0.999,skillDayDiff(start,end)))}
 // Recalculate skill experience from dated records, including manual amounts from the habit grid.
+// Transparent, local classification of health diary entries.
+// These are optional game-resource XP signals, never a clinical judgement or medication-effect claim.
+function healthImpactHistory(day=today()){
+ const h=state.health||{},entries=[],moods={
+  'Радость':2,'Энергичность':2,'Спокойствие':1,
+  'Грусть':-1,'Тревога':-2,'Раздражение':-1,'Апатия':-2
+ };
+ let ordinal=0;
+ function push(d,name,points){
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d)||d>day||!Number.isFinite(points)||points===0)return;
+  entries.push({kind:'health_entry',skill:'Здоровье',skills:['Здоровье'],name,date:d,points,
+   at:d+'T15:00:00',automatic:true,manualOrder:ordinal++});
+ }
+ function noteTone(raw){
+  if(typeof raw!=='string'||!raw.trim())return 0;
+  const text=raw.toLocaleLowerCase('ru');
+  // Negation/contradiction/unclear wording: abstain instead of guessing.
+  if(/(?:нет|без|не)\s+(?:бол|боли|тревог|устал|слабост)/u.test(text))return 0;
+  const positive=/(?:хорошо|отлично|лучше|полегчал|выспал|бодр|восстановил|прекрасно)/u.test(text);
+  const negative=/(?:хуже|плохо|болит|болел|болит|боль|тошнит|устал|слабость|разбит|тревожн)/u.test(text);
+  return positive===negative?0:positive?1:-1;
+ }
+ for(const [d,v] of Object.entries(h.cycleDays||{})){
+  if(!v||typeof v!=='object'||d>day)continue;
+  if(Object.prototype.hasOwnProperty.call(moods,v.mood))push(d,'Настроение: '+v.mood,moods[v.mood]);
+  for(const label of [...new Set(Array.isArray(v.symptoms)?v.symptoms.filter(x=>typeof x==='string'):[])].slice(0,20))
+   push(d,'Симптом: '+label,-1);
+  if(Number(v.pain)>0&&Number.isFinite(Number(v.pain)))push(d,'Записанная боль: '+v.pain+'/10',-Math.min(3,Math.ceil(Number(v.pain)/4)));
+  const tone=noteTone(v.note);
+  if(tone)push(d,'Заметка: '+String(v.note).slice(0,80)+' · предварительная оценка',tone);
+  // Menstruation, discharge, contraception and cycle/PMS forecasts are neutral.
+ }
+ for(const entry of h.medicationLog||[]){
+  if(!entry||entry.date>day)continue;
+  if(entry.status==='taken')push(entry.date,'Отмечен приём: '+(entry.medicationName||'лекарство')+' (учёт режима, не эффект препарата)',1);
+  else if(entry.status==='skipped')push(entry.date,'Отмечен пропуск: '+(entry.medicationName||'лекарство'),-1);
+ }
+ return entries;
+}
 function skillImpactHistory(day=today()){
  const activities=new Map(state.activities.map(a=>[a.id,a]));
  const original=new Map(defs.map(a=>[a.id,a]));
@@ -2563,6 +2602,8 @@ function skillImpactHistory(day=today()){
    }
   }
  }
+ // Recorded health signals are derived from saved facts; editing/deleting a record recalculates XP.
+ entries.push(...healthImpactHistory(day));
  // Manual skill edits are absolute, dated settings in the normal XP timeline.
  for(const e of state.events||[]){
   if(e?.kind!=='skill_manual'||typeof e.skill!=='string'||!e.skill.trim()||
