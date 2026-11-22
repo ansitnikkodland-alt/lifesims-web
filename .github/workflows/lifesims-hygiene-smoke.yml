@@ -1,0 +1,84 @@
+name: LifeSims hygiene overnight regression
+on:
+  push:
+    paths:
+      - 'scene/index.html'
+      - '.github/workflows/lifesims-hygiene-smoke.yml'
+  workflow_dispatch:
+jobs:
+  hygiene:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright
+        run: npm install --no-save playwright-core@1.56.1
+      - name: Start site
+        run: |
+          python3 -m http.server 8765 > /tmp/lifesims-hygiene-http.log 2>&1 &
+          sleep 2
+      - name: Test overnight decline, antiperspirant and activity
+        run: |
+          cat > /tmp/lifesims-hygiene.cjs <<'JS'
+          const {chromium}=require(process.cwd()+'/node_modules/playwright-core');
+          (async()=>{
+            const browser=await chromium.launch({executablePath:'/usr/bin/google-chrome',headless:true,args:['--no-sandbox']});
+            const context=await browser.newContext({viewport:{width:390,height:844},timezoneId:'Europe/Moscow'});
+            const page=await context.newPage(),errors=[];
+            page.on('pageerror',e=>errors.push(e.message));
+            await page.clock.install({time:new Date('2026-11-21T14:00:00+03:00')});
+            await page.goto('http://127.0.0.1:8765/scene/?hygiene=smoke',{waitUntil:'domcontentloaded'});
+            const value=async()=>Number((await page.locator('#needsGrid .meter').filter({hasText:'Гигиена'}).first().innerText()).match(/(\d+)%/)?.[1]);
+            await page.locator('#showerCabin').click();
+            await page.locator('#sheetActions > button').filter({hasText:'Помыться'}).first().click();
+            const shower=await value();
+            if(shower!==100)throw Error('Expected 100% just after shower, got '+shower);
+            await page.clock.fastForward('17:00:00');
+            await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+            const overnight=await value();
+            if(!(overnight>=0&&overnight<100))throw Error('No decline overnight: '+overnight);
+            console.log('OVERNIGHT HYGIENE DECAY: PASS',JSON.stringify({shower,overnight}));
+            // Restore the time and check antiperspirant on the same baseline.
+            await page.clock.setFixedTime(new Date('2026-11-21T14:00:00+03:00'));
+            await page.locator('#showerCabin').click();
+            await page.locator('#sheetActions > button').filter({hasText:'Антиперспирант'}).first().click();
+            await page.clock.setFixedTime(new Date('2026-11-22T07:00:00+03:00'));
+            await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+            const protectedValue=await value();
+            if(!(protectedValue>overnight&&protectedValue<100))
+              throw Error('Antiperspirant did not slow, but continue decline: '+JSON.stringify({overnight,protectedValue}));
+            console.log('ANTIPERSPIRANT SLOWS, DOES NOT FREEZE: PASS',JSON.stringify({overnight,protectedValue}));
+            // Simulate high measured step activity on the previous day; faster decay.
+            await page.evaluate(()=>{
+              const b=window.LifeSimsTaskBridge,day='2026-11-21';
+              const days=b.read().days;days[day]={...(days[day]||{}),steps:16000};
+              window.LifeSimsLiveMetrics.refresh();
+            });
+            const activeValue=await value();
+            if(!(activeValue<protectedValue))throw Error('High step count failed to accelerate decay: '+JSON.stringify({protectedValue,activeValue}));
+            console.log('HIGH ACTIVITY ACCELERATES: PASS',JSON.stringify({protectedValue,activeValue}));
+            // A dated manual hygiene snapshot also ages across midnight, even without
+            // a trusted time-of-day in an old backup.
+            const second=await browser.newContext({viewport:{width:390,height:844},timezoneId:'Europe/Moscow'});
+            const other=await second.newPage();
+            await other.clock.install({time:new Date('2026-11-22T07:00:00+03:00')});
+            await other.goto('http://127.0.0.1:8765/scene/?hygiene=legacy',{waitUntil:'domcontentloaded'});
+            const legacy=await other.evaluate(()=>{
+              const d=window.LifeSimsTaskBridge.read().days;
+              d['2026-11-21']={...d['2026-11-21'],hygiene:100};
+              window.LifeSimsLiveMetrics.refresh();
+              return [...document.querySelectorAll('#needsGrid .meter')]
+                .find(x=>x.innerText.includes('Гигиена'))?.innerText||'';
+            });
+            const legacyValue=Number(legacy.match(/(\d+)%/)?.[1]);
+            if(!(legacyValue<100&&legacyValue>0))
+              throw Error('Legacy daily hygiene failed to age: '+legacy);
+            console.log('LEGACY DATE-ONLY HYGIENE DECAYS: PASS',legacyValue);
+            if(errors.length)throw Error('Browser errors: '+errors.join(' | '));
+            await second.close();await context.close();await browser.close();
+          })().catch(e=>{console.error(e);process.exit(1)});
+          JS
+          node /tmp/lifesims-hygiene.cjs
