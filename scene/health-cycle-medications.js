@@ -143,6 +143,7 @@ function fillUi(){
  '<div class="health-head"><div><h2>🌸 Дневник здоровья</h2><p>Цикл, лекарства, настроение и симптомы</p></div></div>',
  '<div class="health-switch"><button id="healthCycleTab" type="button">🌸 Цикл</button><button id="healthPillsTab" type="button">💊 Лекарства</button></div>',
  '<div id="healthNotice" class="health-notice" role="status" aria-live="polite"></div>',
+ '<div class="health-panel"><h3>Влияние записей на ресурс «Здоровье»</h3><p class="hint">Автоматическая игровая оценка по прозрачным правилам, а не медицинский диагноз или вывод нейросети. Прогноз ПМС и сами месячные нейтральны.</p><div id="healthEffectList"></div></div>',
  '<div id="healthCycleView">',
  '<div class="health-panel"><h3 id="healthCycleSummary">Менструация</h3><p id="healthForecastInfo" class="hint"></p><h3>Предполагаемое окно ПМС</h3><p id="healthPmsInfo" class="hint"></p><p class="health-warning">Прогнозы приблизительные. Календарь не определяет наличие ПМС. Прямая синхронизация цикла с Oura недоступна.</p></div>',
  '<div class="health-panel"><div class="health-month-head"><button id="healthPrevMonth" type="button" aria-label="Предыдущий месяц">‹</button><strong id="healthMonthLabel"></strong><button id="healthNextMonth" type="button" aria-label="Следующий месяц">›</button></div><div id="healthMonthGrid" class="health-calendar"></div><p class="health-legend">● менструация &nbsp; ◌ прогноз &nbsp; ◇ возможный ПМС</p></div>',
@@ -412,12 +413,25 @@ function renderMedications(h){
  if(!('Notification' in window))$('healthNotifyStatus').textContent='Уведомления недоступны в этом браузере. Используй журнал приёмов.';
  else $('healthNotifyStatus').textContent='Разрешение браузера: '+(Notification.permission==='granted'?'предоставлено':Notification.permission==='denied'?'запрещено':'не запрашивалось')+'. Надёжной фоновой доставки нет.';
 }
+function renderEffects(){
+ const panel=$('healthEffectList');panel.replaceChildren();
+ const impacts=B.healthImpacts?.(date)||[],rows=impacts.filter(x=>x.date===date);
+ if(!rows.length){panel.append(el('p','hint','На '+dayLabel(date)+' пока нет записей, изменяющих ресурс.'));return}
+ const total=rows.reduce((sum,e)=>sum+(Number(e.points)||0),0);
+ panel.append(el('strong','',dayLabel(date)+': '+(total>0?'+':'')+total+' XP'));
+ for(const effect of rows){
+  const row=el('div','health-effect-row');
+  row.classList.add('health-effect-'+(effect.points>0?'positive':effect.points<0?'negative':'neutral'));
+  row.append(el('span','',effect.name),el('b','',(effect.points>0?'+':'')+effect.points+' XP'));
+  panel.append(row);
+ }
+}
 function renderMessage(){const out=$('healthNotice');if(out)out.textContent=flash}
 function render(){
  const h=data();
  $('healthCycleView').hidden=section!=='cycle';$('healthPillsView').hidden=section!=='pills';
  $('healthCycleTab').classList.toggle('active',section==='cycle');$('healthPillsTab').classList.toggle('active',section==='pills');
- renderCycle(h);renderMedications(h);renderMessage();
+ renderCycle(h);renderMedications(h);renderEffects();renderMessage();
 }
 async function requestPermission(){
  if(!('Notification' in window)){flash='Уведомления не поддерживаются.';renderMessage();return}
