@@ -51,7 +51,18 @@ jobs:
            await page.locator('#mealSmartCapture').waitFor({state:'visible'});
            if(await page.locator('#mealChatPhotoActions').isVisible())throw Error('Legacy photo buttons still visible');
            if(await page.locator('.meal-lookup-shortcuts').isVisible())throw Error('Old 3-way photo actions still visible');
-           console.log('SINGLE SMART PHOTO BUTTON: PASS');
+           if(await page.locator('#mealSmartSources').isVisible())
+            throw Error('Source picker should start closed');
+           if(await page.locator('#mealSmartCameraInput').getAttribute('capture')!=='environment')
+            throw Error('Camera input needs capture=environment');
+           await page.locator('#mealSmartCapture').click();
+           if(!await page.locator('#mealSmartTakePhoto').isVisible()||
+              !await page.locator('#mealSmartChoosePhoto').isVisible())
+            throw Error('One smart button did not reveal camera and gallery');
+           await page.locator('#mealSmartCapture').click();
+           if(await page.locator('#mealSmartSources').isVisible())
+            throw Error('Camera/gallery picker would not close');
+           console.log('SINGLE SMART BUTTON + CAMERA/GALLERY OPTIONS: PASS');
            // Manual product lookup still works under the hood for future text search.
            await page.evaluate(()=>document.getElementById('mealLookupSearchOpen').click());
            await page.locator('#mealLookupName').fill('Творог');
@@ -87,9 +98,10 @@ jobs:
             window.Tesseract={recognize:async()=>({data:{text:
              'Батончик тестовый\nСостав: овес, орехи, мед\nПищевая ценность на 100 г\nБелки 10 г\nЖиры 8 г\nУглеводы 40 г\nКалорийность 272 ккал'}})};
            });
+           await page.locator('#mealSmartCapture').click();
            const [labelPicker]=await Promise.all([
             page.waitForEvent('filechooser'),
-            page.locator('#mealSmartCapture').click()
+            page.locator('#mealSmartChoosePhoto').click()
            ]);
            await labelPicker.setFiles(image);
            await page.locator('#mealLookupNutrition').waitFor({state:'visible',timeout:15000});
@@ -112,9 +124,10 @@ jobs:
              async detect(){return [{rawValue:'4601234567890'}]}
             };
            });
+           await page.locator('#mealSmartCapture').click();
            const [barcodePicker]=await Promise.all([
             page.waitForEvent('filechooser'),
-            page.locator('#mealSmartCapture').click()
+            page.locator('#mealSmartChoosePhoto').click()
            ]);
            await barcodePicker.setFiles(image);
            await page.locator('#mealLookupNutrition').waitFor({state:'visible',timeout:15000});
@@ -131,9 +144,12 @@ jobs:
              async detect(){return [{rawValue:'4600000000000'}]}
             };
            });
+           await page.locator('#mealSmartCapture').click();
            const [unknownPicker]=await Promise.all([
-            page.waitForEvent('filechooser'),page.locator('#mealSmartCapture').click()
+            page.waitForEvent('filechooser'),page.locator('#mealSmartTakePhoto').click()
            ]);
+           if(await unknownPicker.element().then(el=>el.getAttribute('capture'))!=='environment')
+            throw Error('Camera option launched a gallery-only input');
            await unknownPicker.setFiles(image);
            await page.locator('#mealLookupNutrition').waitFor({state:'visible',timeout:15000});
            if(await page.locator('#mealLookupKcal').inputValue()!=='272')
@@ -149,8 +165,9 @@ jobs:
               title:'Омлет',per100:null,gramsEstimate:180,candidates:[],
               confidence:'Типичная порция, не измерена по фото'});
            });
+           await page.locator('#mealSmartCapture').click();
            const [mealPicker]=await Promise.all([
-            page.waitForEvent('filechooser'),page.locator('#mealSmartCapture').click()
+            page.waitForEvent('filechooser'),page.locator('#mealSmartTakePhoto').click()
            ]);
            await mealPicker.setFiles(image);
            await page.locator('#mealChatPhotoPanel').waitFor({state:'visible'});
