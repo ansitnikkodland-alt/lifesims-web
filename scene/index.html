@@ -4453,6 +4453,27 @@ $('entropyRange').onchange=()=>{
 // Keep popup containers out of hidden tab sections and stacking contexts.
 document.body.append($('lifeModalMask'),$('needsEditor'),$('food'),$('diary'),$('sheetWrap'));
 window.LifeSimsCloseOverlays=closeAllLifeOverlays;
+// Native Android month widget deep-link: opens a real LifeSims day, not a static screenshot.
+window.addEventListener('load',()=>{
+ try{
+  const url=new URL(window.location.href);
+  const date=url.searchParams.get('widget_date');
+  const add=url.searchParams.get('widget_new_event')==='1';
+  if(!date&&!add)return;
+  if(date&&!/^\d{4}-\d{2}-\d{2}$/.test(date))return;
+  const chosen=date||today();
+  const parsed=asDay(chosen);
+  if(Number.isNaN(parsed.getTime())||dayStr(parsed)!==chosen)return;
+  $('historyDate').value=chosen;
+  openTab('history',true);
+  if(add)openNewCalendarEvent();
+  else openDayAgenda(chosen);
+  url.searchParams.delete('widget_date');
+  url.searchParams.delete('widget_new_event');
+  window.history.replaceState(null,'',url.pathname+(url.search||'')+(url.hash||''));
+ }catch(error){console.error('LifeSims widget deep-link:',error)}
+},{once:true});
+
 window.LifeSims3DBridge={
  openAction:(action,anchor)=>openObject(action,anchor),
  openCrystal:()=>openSingleMetric('resource',today()),
