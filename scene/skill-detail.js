@@ -130,38 +130,33 @@
  }
  function manualSkillEditor(name,skill,data){
   const panel=make('section','skill-manual-editor');
-  panel.append(make('h4','','✎ Изменить уровень и опыт'));
+  panel.append(make('h4','','✎ Изменить опыт'));
   panel.append(make('p','skill-detail-note',
-   'Задай уровень вручную. Изменение сохранится в истории, а автоматические начисления и ежедневный регресс продолжат работать.'));
+   'Укажи общий XP навыка. Изменение сохранится в истории. Автоматические начисления и регресс без практики продолжат работать.'));
   const fields=make('div','skill-manual-fields');
   const total=Math.max(0,Math.round(skill.score*10)/10);
-  const level=make('input');level.type='number';level.min='1';level.max='10001';
-  level.step='1';level.inputMode='numeric';level.id='manualSkillLevel';
-  level.value=String(Math.floor(total/100)+1);
-  const within=make('input');within.type='number';within.min='0';within.max='99.9';
-  within.step='0.1';within.inputMode='decimal';within.id='manualSkillWithin';
-  within.value=String(Math.round((total%100)*10)/10);
-  const l1=make('label','','Уровень'),l2=make('label','','XP внутри уровня');
-  l1.htmlFor=level.id;l2.htmlFor=within.id;
-  l1.append(level);l2.append(within);fields.append(l1,l2);panel.append(fields);
+  const experience=make('input');experience.type='number';experience.min='0';experience.max='1000000';
+  experience.step='0.1';experience.inputMode='decimal';experience.id='manualSkillExperience';
+  experience.value=String(total);
+  const label=make('label','','Общий опыт, XP');label.htmlFor=experience.id;
+  label.append(experience);fields.append(label);panel.append(fields);
   const preview=make('p','skill-manual-preview');preview.setAttribute('aria-live','polite');
   function previewValue(){
-   const l=Number(level.value),p=Number(within.value);
-   preview.textContent=level.value.trim()&&within.value.trim()&&Number.isInteger(l)&&l>=1&&l<=10001&&
-    Number.isFinite(p)&&p>=0&&p<=99.9?
-    'Общий опыт: '+fmt.format((l-1)*100+p)+' XP':
-    'Укажи уровень от 1 и опыт от 0 до 99,9.';
+   const xp=Number(experience.value);
+   const valid=experience.value.trim()!==''&&Number.isFinite(xp)&&xp>=0&&xp<=1000000&&
+    Math.abs(xp*10-Math.round(xp*10))<0.00001;
+   preview.textContent=valid?'Текущий опыт: '+fmt.format(xp)+' XP':
+    'Введи значение от 0 до 1 000 000 XP с точностью до 0,1.';
   }
-  level.addEventListener('input',previewValue);
-  within.addEventListener('input',previewValue);
+  experience.addEventListener('input',previewValue);
   previewValue();panel.append(preview);
   const actions=make('div','skill-manual-buttons');
   const status=make('p','skill-manual-status');status.setAttribute('role','status');
   status.setAttribute('aria-live','polite');
-  const save=make('button','skill-detail-edit skill-manual-save','Сохранить уровень');
+  const save=make('button','skill-detail-edit skill-manual-save','Сохранить XP');
   save.type='button';save.onclick=()=>{
    try{
-    const result=bridge.setScore(name,level.value,within.value);
+    const result=bridge.setScore(name,experience.value);
     if(!result.changed)status.textContent='Навык уже имеет такое значение.';
    }catch(error){
     status.textContent='⚠ '+String(error?.message||'Не удалось сохранить');
@@ -199,13 +194,11 @@
   const body=$('skillDetailBody');body.replaceChildren();
   const summary=make('div','skill-detail-summary');
   const stats=[
-   ['Уровень',Math.floor(skill.score/100)+1],
-   ['Текущий опыт',fmt.format(skill.score)+' XP'],
+   ['Общий опыт',fmt.format(skill.score)+' XP'],
    ['Накоплено',fmt.format(skill.earned)+' XP'],
    ['Снижение от паузы','−'+fmt.format(skill.loss)+' XP'],
    ['Снижение от отрицательных привычек','−'+fmt.format(skill.harm||0)+' XP'],
    ['Ручные корректировки',(skill.manual>=0?'+':'')+fmt.format(skill.manual||0)+' XP'],
-   ['До следующего уровня',fmt.format(100-(skill.score%100))+' XP'],
    ['Последняя практика',skill.last||'Нет записей'],
    ['Связанные действия',actions.length+linkedEvents.length],
    ['Связанные мероприятия',linkedEvents.length],
@@ -216,8 +209,6 @@
    card.append(make('span','',label),make('strong','',value));summary.append(card);
   }
   body.append(summary);
-  const bar=make('div','skill-detail-progress'),fill=make('b');
-  fill.style.width=(skill.score%100)+'%';bar.append(fill);body.append(bar);
   body.append(manualSkillEditor(selected,skill,data));
   body.append(make('p','skill-detail-note',
    'Начальные значения из прежних данных включены в итог. Ручная корректировка задаёт текущий опыт, не удаляя прежние записи. Положительные действия развивают навык, отрицательные привычки его снижают. Количество из таблицы привычек пересчитывает эффект без двойного учёта. После окончания неотменённого мероприятия связанный навык получает +2 XP; ручная отметка участия заменяет это начисление. Без полезной практики навык уменьшается на 0,1% каждый день.'));
