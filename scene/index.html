@@ -5139,6 +5139,28 @@ window.LifeSimsMoodBridge={
   renderAll();return true;
  }
 };
+// Offer, never auto-create, the existing game's illness state.
+// The combinations are conservative, explicit and not a medical diagnosis.
+// References for symptom patterns: CDC flu symptoms and NIDDK gastroenteritis.
+function assessHealthIllnessSymptoms(raw){
+ const names=new Set(Array.isArray(raw)?raw.filter(x=>typeof x==='string'):[]);
+ const has=(n)=>names.has(n);
+ const reasons=[];
+ if(has('Лихорадка'))reasons.push('отмечена лихорадка');
+ if(has('Грипп'))reasons.push('отмечено гриппоподобное состояние');
+ const systemic=['Тело ломит','Боль в мышцах','Недомогание','Усталость','Головная боль'];
+ if(has('Озноб')&&systemic.some(has))reasons.push('озноб вместе с общим недомоганием или болью');
+ else if(has('Недомогание')&&(has('Тело ломит')||has('Боль в мышцах')))
+  reasons.push('недомогание и ломота в теле');
+ if(has('Диарея')&&(has('Тошнота')||has('Спазмы в животе')))
+  reasons.push('диарея с тошнотой или спазмами');
+ // No inference of illness from PMS, menstruation, fatigue, or isolated
+ // emotional symptoms. New chest pain/confusion calls for medical advice,
+ // not merely an optional in-game illness.
+ const caution=has('Боль в груди')||has('Замешательство')?
+  'Если боль в груди сильная, внезапная или сопровождается затруднением дыхания, либо замешательство возникло внезапно, обратись за неотложной медицинской помощью.':null;
+ return {suggest:reasons.length>0,reasons,caution};
+}
 window.LifeSimsHealthBridge={
  read:()=>JSON.parse(JSON.stringify(state.health||base().health)),
  // Old medicine entries were saved as free text in state.days[YYYY-MM-DD].meds.
@@ -5147,6 +5169,21 @@ window.LifeSimsHealthBridge={
    /^\d{4}-\d{2}-\d{2}$/.test(d)&&typeof row?.meds==='string'&&row.meds.trim()
  ).map(([d,row])=>[d,row.meds])),
  healthImpacts:(day)=>healthImpactHistory(day),
+ illnessSuggestion(date,symptoms){
+  const assessment=assessHealthIllnessSymptoms(symptoms);
+  const active=isIllnessActive(date),declined=state.room?.healthIllnessDeclinedOn===date;
+  return {...assessment,active,declined,canMark:date===today()&&!active&&!declined};
+ },
+ confirmIllness(date){
+  // Explicit user action only. Prevent backdating today's in-game status.
+  return date===today()&&!isIllnessActive(date)&&setIllnessActive(true);
+ },
+ declineIllness(date){
+  if(date!==today()||storageBlocked||!storageOK)return false;
+  const ok=transact(()=>{state.room??={};state.room.healthIllnessDeclinedOn=date});
+  if(ok)renderAll();
+  return ok;
+ },
  openHealthResource:()=>{openTab('skills',true);window.LifeSimsSkillDetail?.open?.('Здоровье')},
  write(next){
   if(storageBlocked||!storageOK||!next||typeof next!=='object'||Array.isArray(next))return false;
