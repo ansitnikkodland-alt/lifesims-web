@@ -76,7 +76,7 @@ const dialog=el('dialog','sf-link-dialog');dialog.id='sfLinkDialog';
 const heading=el('h3','','Связать экранное время');
 const sub=el('p','sf-hint');
 const appHead=el('div','sf-link-app'),fields=el('div','sf-link-grid');
-const explanation=el('p','sf-hint','Вся дневная длительность приложения будет отнесена к выбранным связям. Это учёт времени: выполнение дел и опыт навыков автоматически не начисляются.');
+const explanation=el('p','sf-hint','По образцу Motivate Clock отмечай «Работа» или «Отдых», проект, навык и дело. Сохранение по умолчанию применит правило к прошлым и будущим синхронизациям. Время учитывается, но не отмечает дело выполненным и не начисляет XP.');
 const feedback=el('p','sf-link-feedback');feedback.setAttribute('role','status');
 const controls=el('div','sf-link-controls');
 dialog.append(heading,appHead,sub,fields,explanation,feedback,controls);
@@ -86,10 +86,28 @@ function renderChoices(row){
  fields.replaceChildren();
  const existing=B.link(row),link=existing.link,opts=B.options(row.date);
  const asObjects=xs=>(xs||[]).map(name=>({id:name,name}));
+ inputs.mode=selectField(fields,'Work / Rest',[
+  {id:'work',name:'💼 Работа (Work)'},
+  {id:'rest',name:'☕ Отдых (Rest)'},
+  {id:'other',name:'◌ Другое'}],link.mode,'— Не определено —');
  inputs.skill=selectField(fields,'Навык',asObjects(opts.skills),link.skill);
  inputs.activityId=selectField(fields,'Дело или привычка',(opts.activities||[]).map(x=>({id:x.id,name:(x.kind==='habit'?'◇ ':'☑ ')+x.name})),link.activityId);
  inputs.eventId=selectField(fields,'Мероприятие за выбранную дату',opts.events,link.eventId);
  inputs.projectId=selectField(fields,'Проект',opts.projects,link.projectId);
+ const createRow=el('div','sf-link-new-project');
+ const projectName=el('input');projectName.type='text';projectName.placeholder='Новый проект';projectName.maxLength=65;
+ const create=button('＋ Проект',()=>{
+  const result=B.addProject(projectName.value);
+  if(!result?.ok){feedback.textContent='⚠ '+(result?.error||'Проект не создан');return}
+  const all=B.options(row.date).projects,newItem=all.find(x=>x.id===result.id);
+  if(newItem){
+   const option=el('option','',newItem.name);option.value=newItem.id;
+   if(![...inputs.projectId.options].some(x=>x.value===newItem.id))inputs.projectId.append(option);
+   inputs.projectId.value=newItem.id;projectName.value='';
+   feedback.textContent='Проект добавлен. Сохрани правило, чтобы закрепить за ним экранное время.';
+  }
+ },'secondary');
+ createRow.append(projectName,create);fields.append(createRow);
  inputs.tagId=selectField(fields,'Тег',opts.tags,link.tagId);
  const cats=['Работа','Учёба','Общение','Отдых','Развлечения','Быт','Здоровье','Другое'];
  inputs.category=selectField(fields,'Категория',asObjects(cats),link.category,'— Не указана —');
