@@ -3381,20 +3381,25 @@ function derivedResource(r,d){
 }
 function renderCrystal(){const snapshot=resourceSnapshot(today()),v=snapshot.value;const p=v==null?['#c2e9ff','#76c9ef','#2169b6']:v>65?['#c7fff0','#55dfa5','#0e9874']:v>35?['#fff2b1','#edbf53','#a57a15']:['#ffc2cd','#f4778c','#af405b'];const el=$('plumbob');el.style.setProperty('--gem-light',p[0]);el.style.setProperty('--gem-middle',p[1]);el.style.setProperty('--gem-dark',p[2]);const tint=$('sceneCrystalTint');if(tint)tint.style.setProperty('--crystal-hue',v==null?'0deg':v>65?'-55deg':v>35?'-135deg':'-185deg');el.title=v==null?'Ресурс не записан; нажми, чтобы записать':`Ресурс: ${v}% · ${freshnessLabel(snapshot.date)}`}
 function sleepAssessment(date){
- const dates=Object.keys(state.days).filter(d=>d<=date&&Number.isFinite(state.days[d]?.sleepHours)).sort();
- if(!dates.length)return {need:actionAdjustedNeed('sleepNeed',date,null),debt:null,last:null};
- let debt=0,prev=null,gaps=false;
- for(const d of dates){
-  const rec=state.days[d],hours=Number(rec.sleepHours);
-  if(prev&&plusDays(prev,1)!==d)gaps=true;
-  debt=Math.max(0,debt+7.5-hours);
-  if(rec.sleepDebtAdjustment!=null)debt=Number(rec.sleepDebtAdjustment);
-  prev=d;
- }
- const last=Number(state.days[dates[dates.length-1]].sleepHours);
- if(dates[dates.length-1]!==date)return {need:actionAdjustedNeed('sleepNeed',date,null),debt:gaps?null:debt,last};
- const need=Math.max(0,Math.min(100,Math.round(Math.max(0,7.5-last)*12+(gaps?0:Math.min(debt,20)*4))));
- return {need:actionAdjustedNeed('sleepNeed',date,need),debt:gaps?null:debt,last,partial:gaps};
+ const observed=state.days?.[date],hours=Number(observed?.sleepHours);
+ const recorded=observed?.sleepHours!=null&&Number.isFinite(hours)&&hours>=0&&hours<=24;
+ const raw=recorded?Math.round(Math.max(0,Math.min(100,hours/8*100))):null;
+ const adjusted=actionAdjustedNeed('sleepNeed',date,raw);
+ const from=plusDays(date,-13),lastGood=plusDays(date,-3);
+ const nights=Object.entries(state.days||{}).filter(([day,row])=>
+   day>=from&&day<=date&&Number.isFinite(row?.sleepHours)&&row.sleepHours>=0&&row.sleepHours<=24&&
+   Array.isArray(row.ouraFields)&&row.ouraFields.includes('sleepHours'))
+   .sort(([a],[b])=>a.localeCompare(b));
+ const latest=nights.length?nights[nights.length-1][0]:null;
+ const eligible=nights.length>=5&&latest>=lastGood;
+ const estimate=eligible?Math.max(0,nights.reduce((sum,[,row])=>sum+(8-Number(row.sleepHours)),0)):null;
+ const override=observed?.sleepDebtAdjustment;
+ const manual=override!=null&&Number.isFinite(Number(override))&&Number(override)>=0;
+ const debt=manual?Number(override):estimate;
+ return {score:adjusted,need:adjusted==null?null:100-adjusted,debt,
+  estimatedDebt:estimate,sourceDate:latest,ouraNights:nights.length,
+  debtSource:manual?'ручная корректировка':eligible?'оценка по синхронизированным ночам Oura':'нет достаточных данных Oura',
+  last:recorded?hours:null,partial:!eligible};
 }
 window.LifeSimsOpenCalories=(date)=>openSingleMetric('totalCalories',date);
 function openCalorieBalance(day=today(),mealId=null){
