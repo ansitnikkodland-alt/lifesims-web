@@ -17,3 +17,11 @@
 .meal-live-actions button:first-child{grid-column:1/-1;background:#d2ece0;color:#123228}
 .meal-live-actions button:disabled{opacity:.48;cursor:not-allowed}
 .meal-live-disclaimer{font-size:11px;line-height:1.4;color:#bed0df}
+
+/* Camera fallback and explicit still-frame plate recognition. */
+.meal-live-actions{grid-template-columns:repeat(2,minmax(0,1fr))}
+#mealLiveFoodPhoto{border-color:#68d69e;background:#134e3c;color:#e5fff0}
+.meal-live-reticle::after{
+ content:'';position:absolute;left:4%;right:4%;top:50%;
+ border-top:2px solid #f66b6b;box-shadow:0 0 4px #cb1b1b87;pointer-events:none
+}
