@@ -16,7 +16,7 @@
  function fraction(ts,hours,now){return ts?Math.max(0,Math.min(1,1-Math.max(0,now-ts)/(hours*3600000))):0}
  function score(s,id){
   const now=Date.parse(s.now)||Date.now(),activity=(s.activities||[]).find(a=>a.id==='pet_feed_'+id);
-  const fed=fraction(Date.parse(s.feedingTimes?.[id]||''),48,now),feed=Math.max(fed,activity?.completedToday?1:0);
+  const fed=fraction(Date.parse(s.feedingTimes?.[id]||''),12,now),feed=fed;
   const litter=fraction(Date.parse(s.lastCatLitterAt||''),72,now);
   const pet=fraction(stampFrom(s.events||[],e=>e.kind==='pet_care'&&e.action==='pet'&&e.petId===id),36,now);
   return {value:Math.round(15+38*feed+30*litter+17*pet),fed:feed>0,litter:litter>0,pet:pet>0,fedToday:!!activity?.completedToday};
@@ -24,7 +24,7 @@
  const dialog=el('dialog','pet-dialog');dialog.id='lifePetsDialog';dialog.setAttribute('aria-label','Питомцы');document.body.append(dialog);
  dialog.addEventListener('close',()=>{active=null;notice=''});
  const close=()=>{if(dialog.open)dialog.close()};
- function open(id){if(!ids.includes(id))return;active=id;tab='care';notice='';draw();if(!dialog.open)dialog.showModal()}
+ function open(id){if(!ids.includes(id))return;if(window.LifeSimsCloud?.isActive?.()){window.LifeSimsHousehold?.open?.('pets');return}active=id;tab='care';notice='';draw();if(!dialog.open)dialog.showModal()}
  function avatar(id){const a=el('span','pet-avatar');a.innerHTML=artwork(id);return a}
  function care(parent,pet,s,sc){
   const bar=el('div','pet-crystal-row');

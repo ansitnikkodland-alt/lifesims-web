@@ -10,15 +10,27 @@ const DEADLINE='23 декабря 2026';
 function readSession(){
  try{const x=JSON.parse(sessionStorage.getItem(SESSION)||'null');if(!x||!x.token||!x.account?.id||!/^[0-9a-f-]{36}$/i.test(x.account.id))return null;return x}catch(_){return null}
 }
-let session=readSession(),revision=null,remote=null,syncArmed=false,queued=null,saving=false,timer=0,bonus=0,bonusAsOf=0,dialog,section='save',status='',children=[];
+let session=readSession(),revision=null,remote=null,syncArmed=false,queued=null,saving=false,timer=0,bonus=0,bonusAsOf=0,dialog,section='save',status='',children=[],familyMetrics={},familyAsOf=0;
 const isActive=()=>!!session,activeId=()=>session?.account?.id||null;
 function activeStore(){return session?'lifesims-cloud-'+session.account.id:null}
+function setFamilyEffects(metrics){familyMetrics=metrics&&typeof metrics==='object'?metrics:{};familyAsOf=Date.now();window.LifeSimsCloudBridge?.refresh?.()}
+function metricBonus(metric,day){
+ const now=new Date();
+ const today=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
+ const key=metric==='condition'?'physical':metric;
+ return session&&day===today&&Date.now()-familyAsOf<600000?Math.max(0,Number(familyMetrics[key])||0):0;
+}
+function openSection(name){
+ section=name||'save';
+ if(!dialog)return;
+ render();if(!dialog.open)dialog.showModal();
+}
 function resourceBonus(d){
  const now=new Date();
  const today=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
- return session&&d===today&&Date.now()-bonusAsOf<600000?bonus:0;
+ return (session&&d===today&&Date.now()-bonusAsOf<600000?bonus:0)+metricBonus('resource',d);
 }
-window.LifeSimsCloud={isActive,activeId,activeStore,resourceBonus,onLocalSave};
+window.LifeSimsCloud={isActive,activeId,activeStore,resourceBonus,onLocalSave,request,account:()=>session?.account||null,openSection,metricBonus,setFamilyEffects};
 async function request(path,method='GET',payload){
  const controller=new AbortController();
  const timeout=setTimeout(()=>controller.abort(),30000);
@@ -83,6 +95,7 @@ async function load(){
   const [data,effects]=await Promise.all([request('/v1/me/save'),request('/v1/me/effects')]);
   revision=data.revision;remote=data.payload;bonus=effects.resourceBonus||0;bonusAsOf=Date.now();
   window.LifeSimsCloudBridge?.refresh?.();
+  window.LifeSimsHousehold?.refreshEffects?.().catch?.(()=>{});
   if(revision===0&&!localStorage.getItem(activeStore())){
    syncArmed=true;setStatus('Облачное сохранение пока пусто. Новые записи будут сохраняться автоматически в тестовую базу.');
   }else{
@@ -96,11 +109,12 @@ function render(){
  if(!dialog)return;
  const body=dialog.querySelector('#cloudBody'),nav=dialog.querySelector('#cloudNav');
  body.replaceChildren();nav.replaceChildren();
+ if(!['pets','care','chat','places'].includes(section))window.LifeSimsHousehold?.leave?.();
  if(!session){guest(body);return}
  const me=session.account;
  body.append(el('p','Аккаунт: '+me.displayName+' · '+(me.role==='child'?'детский':'взрослый'),'cloud-muted'));
  body.append(warning());
- const tabs=[['save','Прогресс'],['children','Дети'],['links','Связи'],['appearance','Фото']];
+ const tabs=[['save','Прогресс'],['children','Дети'],['links','Связи'],['appearance','Фото'],['pets','Котики'],['care','Забота'],['chat','Чат'],['places','Места']];
  for(const [id,label] of tabs){
   if(id==='children'&&me.role!=='adult')continue;
   const b=btn(label,()=>{section=id;render()},section===id?'primary':'secondary');nav.append(b);
@@ -109,6 +123,10 @@ function render(){
  if(section==='children'&&me.role==='adult')family(body);
  if(section==='links')connections(body);
  if(section==='appearance')appearance(body);
+ if(['pets','care','chat','places'].includes(section)){
+  if(window.LifeSimsHousehold?.render)window.LifeSimsHousehold.render(section,body).catch(err=>setStatus('⚠ Семья: '+err.message));
+  else body.append(el('p','Семейные функции ещё загружаются.','cloud-muted'));
+ }
  const deletion=el('details',null,'cloud-delete-section');
  deletion.append(el('summary','Удалить мой облачный аккаунт'));
  deletion.append(el('p',session.account.role==='adult'?'Удаление взрослого аккаунта также удалит все управляемые детские аккаунты и их облачные записи.':'Удаление уничтожит облачное сохранение и связи этого персонажа.','cloud-warning'));
