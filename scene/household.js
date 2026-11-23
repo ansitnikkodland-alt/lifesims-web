@@ -32,6 +32,7 @@ async function refreshEffects(){
  return effects;
 }
 function stopTimers(){if(chatTimer){clearInterval(chatTimer);chatTimer=0}if(petTimer){clearInterval(petTimer);petTimer=0}}
+function leave(){tab='';root=null;stopTimers()}
 function open(section='pets'){cloud()?.openSection?.(section)}
 function header(parent,title,subtitle){parent.append(E('h3',title,'house-title'));if(subtitle)parent.append(E('p',subtitle,'house-note'))}
 function row(parent,label,value){const c=E('div',null,'house-line');c.append(E('span',label),E('strong',value));parent.append(c);return c}
@@ -300,7 +301,7 @@ function stopWatch(){
 document.addEventListener('visibilitychange',()=>{
  if(document.visibilityState!=='visible'&&watchId!=null){stopWatch();notice('Передача приостановлена при сворачивании; для возобновления нажми «Начать передачу».')}
 });
-window.LifeSimsHousehold={render,open,refreshEffects,petAction,stopWatch};
+window.LifeSimsHousehold={render,open,leave,refreshEffects,petAction,stopWatch};
 document.addEventListener('DOMContentLoaded',()=>{
  setInterval(()=>{if(signed()&&document.visibilityState==='visible')refreshEffects().catch(()=>{})},300000);
 });
