@@ -1126,7 +1126,8 @@ function skillNames(values){
  return out;
 }
 function skillsOf(item){
- return Array.isArray(item?.skills)?skillNames(item.skills):skillNames(item?.skill);
+ const many=Array.isArray(item?.skills)?skillNames(item.skills):[];
+ return many.length?many:skillNames(item?.skill);
 }
 function withSkills(item,values){
  const skills=skillNames(values);return {...item,skills,skill:skills[0]||null};
