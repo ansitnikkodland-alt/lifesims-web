@@ -11,11 +11,14 @@ const {chromium}=require('playwright-core');
    const finder=window.LifeSimsMealPhoto;
    if(!finder?.productByBarcode)throw Error('Missing product lookup');
    const item=await finder.productByBarcode('3017620422003');
-   return {name:item.title,source:item.source,barcode:item.barcode,kcal:item.per100?.kcal};
+   const results=await finder.searchProducts('Nutella');
+   return {name:item.title,source:item.source,barcode:item.barcode,kcal:item.per100?.kcal,
+    matchingProducts:results.length,first:results[0]?.title||''};
   });
   assert.equal(result.barcode,'3017620422003');
   assert.equal(result.source,'Open Food Facts');
   assert.ok(result.name.length>0);
+  assert.ok(result.matchingProducts>0,'Live text search did not return products');
   console.log('LIVE CATALOG BARCODE FETCH PASS:',JSON.stringify(result));
  }finally{await browser.close()}
 })().catch(e=>{console.error(e);process.exit(1)});
