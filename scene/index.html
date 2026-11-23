@@ -2094,6 +2094,46 @@ function linkExistingActivity(){
  $('objectLinkDialog').close();renderAll();
  toast('✓ '+activity.name+' · привязано к '+(labels[object]||'предмету'));
 }
+function isFinanceTask(a){
+ return a?.kind==='task'&&String(a.name||'').trim().toLocaleLowerCase('ru')==='финансовый контроль';
+}
+function roomPendingTasks(object,date=today()){
+ const pending=a=>a?.kind==='task'&&!a.legacyDone&&!done(a,date)&&
+  (visibleTaskDue(a,date)||(a.repeat==='inbox'&&!a.dueDate));
+ const linked=(state.activities||[]).filter(a=>a?.object===object&&
+  (a.kind==='habit'?due(a,date):pending(a))&&
+  a.id!=='hygiene_antiperspirant'&&!(object==='toilet'&&a.id===POOP_HABIT_ID)&&
+  !(object==='bed'&&a.id==='bed_make')&&!isFinanceTask(a)&&
+  (a.kind==='habit'||!done(a,date)));
+ // The phone is also an entry point to undated, unfinished tasks. This does
+ // not change their schedule or move a task's saved object link.
+ const inbox=object==='phone'?(state.activities||[]).filter(a=>pending(a)&&
+  a.repeat==='inbox'&&!a.dueDate&&!isFinanceTask(a)&&!linked.some(x=>x.id===a.id)):[];
+ return [...linked,...inbox].sort((a,b)=>
+  Number(overdueTask(b,date))-Number(overdueTask(a,date))||
+  (Number(b.priority)||0)-(Number(a.priority)||0)||
+  Number(a.repeat==='inbox')-Number(b.repeat==='inbox')||
+  String(a.name).localeCompare(String(b.name),'ru'));
+}
+function financeQuickStatus(date=today()){
+ const finance=(state.activities||[]).find(a=>isFinanceTask(a)&&!a.legacyDone);
+ const checks=(state.financeChecks||[]).filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x?.date||'')&&x.date<=date);
+ const latest=checks.map(x=>x.date).sort().at(-1)||null;
+ // An explicitly configured task determines the deadline, if present.
+ if(finance){
+  if(done(finance,date))return {status:'done',latest};
+  if(overdueTask(finance,date))return {status:'overdue',latest};
+  if(visibleTaskDue(finance,date)||finance.repeat==='inbox'&&!finance.dueDate)return {status:'today',latest};
+  return {status:'none',latest};
+ }
+ // Fallback for the existing personal weekly finance-control routine: Saturday 19:00.
+ // No new task is generated and previous dated checks remain unchanged.
+ const saturday=plusDays(date,-((asDay(date).getDay()+1)%7));
+ if(latest&&latest>=saturday)return {status:'done',latest};
+ const created=String(state.createdAt||'').slice(0,10);
+ if(created&&saturday<created)return {status:'none',latest};
+ return {status:saturday===date&&new Date().getHours()<19?'today':'overdue',latest};
+}
 function addObjectLinkActions(object){
  if(!Object.prototype.hasOwnProperty.call(labels,object))return;
  const button=document.createElement('button');button.type='button';
@@ -2167,11 +2207,19 @@ if(object==='coffee'){
  $('sheetActions').append(count,drink);
 }
 if(object==='phone'){
- const action=document.createElement('button');action.textContent='💰 Финансовый контроль';
+ const finance=financeQuickStatus();
+ const action=document.createElement('button'),label=document.createElement('span'),status=document.createElement('small');
+ action.type='button';label.textContent='💰 Финансовый контроль';
+ status.textContent=finance.status==='overdue'?'⚠ Просрочено':
+  finance.status==='today'?'Сегодня':finance.status==='done'?'Проверка проведена':'Открыть записи';
+ action.append(label,status);
  action.onclick=()=>openFinanceControl();
  $('sheetActions').append(action);
- const recent=(state.financeChecks||[]).slice().sort((a,b)=>b.date.localeCompare(a.date))[0];
- if(recent){const small=document.createElement('p');small.className='hint';small.textContent='Последняя проверка: '+recent.date;$('sheetActions').append(small)}
+ if(finance.latest){
+  const small=document.createElement('p');small.className='hint';
+  small.textContent='Последняя проверка: '+finance.latest;
+  $('sheetActions').append(small);
+ }
 }
 if(object==='desk'){
  const action=document.createElement('button');
@@ -2212,14 +2260,23 @@ const b=document.createElement('button'),span=document.createElement('span'),sm=
 const a=state.activities.find(x=>x.id===c.id);sm.textContent=c.open?'Открыть':a&&done(a,today())?'✓ Готово':`+${c.xp} XP`;
 b.append(span,sm);b.onclick=()=>{closeSheet();if(c.open){if(c.id==='bed_sleep')openSingleMetric('sleepHours',today());else if(c.open==='state')showNeedsEditor('',today());else openTab(c.open,true);return}if(!a){toast('Действие не найдено');return}complete(a,today())};$('sheetActions').append(b)
 }
-// The phone already has a dedicated financial-control editor.
- // Keep a linked "Финансовый контроль" activity in the planner and its history,
- // but do not repeat its action in the phone's contextual menu.
-for(const a of state.activities.filter(a=>a.object===object&&!a.legacyDone&&visibleTaskDue(a,today())&&a.id!=='hygiene_antiperspirant'&&!(object==='toilet'&&a.id===POOP_HABIT_ID)&&!(object==='bed'&&a.id==='bed_make')&&
- !(object==='phone'&&a.kind==='task'&&String(a.name||'').trim().toLocaleLowerCase('ru')==='финансовый контроль'))){
+// Show only unfinished linked tasks; the phone also includes the open inbox.
+const pending=roomPendingTasks(object,today());
+const VISIBLE_ROOM_ACTIONS=6;
+for(const a of pending.slice(0,VISIBLE_ROOM_ACTIONS)){
  const btn=document.createElement('button'),span=document.createElement('span'),small=document.createElement('small');
- span.textContent=a.name;small.textContent=a.kind==='habit'?'Ещё +1 · '+((a.completions||[]).filter(c=>c.date===today()).length)+' раз':done(a,today())?'✓ Уже сделано':overdueTask(a)?'⚠ Просрочено · действия':'Действия · +'+(a.xp||0)+' XP';
- btn.append(span,small);btn.onclick=()=>{closeSheet();if(a.kind==='task'&&window.LifeSimsTaskActions?.open?.(a.id,today()))return;complete(a,today())};$('sheetActions').append(btn);
+ btn.type='button';span.textContent=a.name;
+ small.textContent=a.kind==='habit'?'Ещё +1 · '+((a.completions||[]).filter(c=>c.date===today()).length)+' раз':
+  overdueTask(a)?'⚠ Просрочено':a.repeat==='inbox'&&!a.dueDate?'Без срока':'Сегодня';
+ btn.append(span,small);
+ btn.onclick=()=>{closeSheet();if(a.kind==='task'&&window.LifeSimsTaskActions?.open?.(a.id,today()))return;complete(a,today())};
+ $('sheetActions').append(btn);
+}
+if(pending.length>VISIBLE_ROOM_ACTIONS){
+ const more=document.createElement('button');more.type='button';
+ more.textContent='📋 Ещё '+(pending.length-VISIBLE_ROOM_ACTIONS)+' дел';
+ more.onclick=()=>{closeSheet();openTab('tasks',true)};
+ $('sheetActions').append(more);
 }
 $('sheetWrap').classList.add('open');$('sheetWrap').setAttribute('aria-hidden','false');
 currentSheetAnchor=anchor||document.querySelector('.touchmap [data-object="'+object+'"]');
