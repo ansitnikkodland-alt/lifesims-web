@@ -2164,16 +2164,18 @@ function financeQuickStatus(date=today()){
  const checks=(state.financeChecks||[]).filter(x=>/^\d{4}-\d{2}-\d{2}$/.test(x?.date||'')&&x.date<=date);
  const latest=checks.map(x=>x.date).sort().at(-1)||null;
  // An explicitly configured task determines the deadline, if present.
- if(finance){
-  if(done(finance,date))return {status:'done',latest};
+ if(finance&&done(finance,date))return {status:'done',latest};
+ if(finance&&(finance.repeat!=='inbox'||finance.dueDate)){
   if(overdueTask(finance,date))return {status:'overdue',latest};
-  if(visibleTaskDue(finance,date)||finance.repeat==='inbox'&&!finance.dueDate)return {status:'today',latest};
+  if(visibleTaskDue(finance,date))return {status:'today',latest};
   return {status:'none',latest};
  }
  // Fallback for the existing personal weekly finance-control routine: Saturday 19:00.
- // No new task is generated and previous dated checks remain unchanged.
+ // An undated finance item does not suppress the recurring check-in.
  const saturday=plusDays(date,-((asDay(date).getDay()+1)%7));
- if(latest&&latest>=saturday)return {status:'done',latest};
+ const latestTaskCompletion=(finance?.completions||[]).map(c=>c.date).filter(Boolean).sort().at(-1);
+ if((latest&&latest>=saturday)||(latestTaskCompletion&&latestTaskCompletion>=saturday))
+  return {status:'done',latest};
  const created=String(state.createdAt||'').slice(0,10);
  if(created&&saturday<created)return {status:'none',latest};
  return {status:saturday===date&&new Date().getHours()<19?'today':'overdue',latest};
@@ -2253,9 +2255,9 @@ if(object==='coffee'){
 if(object==='phone'){
  const finance=financeQuickStatus();
  const action=document.createElement('button'),label=document.createElement('span'),status=document.createElement('small');
- action.type='button';label.textContent='💰 Финансовый контроль';
+ action.type='button';label.textContent=finance.status==='done'?'💰 Финансовые записи':'💰 Финансовый контроль';
  status.textContent=finance.status==='overdue'?'⚠ Просрочено':
-  finance.status==='today'?'Сегодня':finance.status==='done'?'Проверка проведена':'Открыть записи';
+  finance.status==='today'?'Сегодня':finance.status==='done'?'Открыть историю':'Открыть записи';
  action.append(label,status);
  action.onclick=()=>openFinanceControl();
  $('sheetActions').append(action);
