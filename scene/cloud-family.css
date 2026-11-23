@@ -20,3 +20,9 @@
 .cloud-upload{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:12px;border:1px dashed #80aac6;cursor:pointer}
 .cloud-upload input{font-size:13px;max-width:100%}
 @media(max-width:450px){.cloud-dialog{inset:auto 2px 2px;width:calc(100% - 4px);max-height:94dvh;padding:12px}.cloud-tabs button{font-size:12px;padding:7px 4px}#familyOpen{font-size:11px}#cloudDialog .cloud-input{font-size:16px}}
+
+.cloud-delete-section{margin-top:12px;border-top:1px solid #536e8b;padding-top:12px}
+.cloud-delete-section summary,.cloud-card details summary{min-height:44px;cursor:pointer;padding:9px 2px;color:#fbd9e1}
+.cloud-delete{min-height:44px;padding:9px 12px;background:#603342;color:#fff;border:1px solid #b8798a;border-radius:9px}
+.cloud-card details{display:flex;flex-direction:column;gap:8px}
+.cloud-card details[open]>.cloud-input{margin-bottom:8px}
