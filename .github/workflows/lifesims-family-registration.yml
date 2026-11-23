@@ -10,6 +10,7 @@ on:
       - 'family-api/test/**'
       - 'scene/cloud-family.js'
       - 'tests/family-registration-form.cjs'
+      - 'tests/family-login-form.cjs'
       - '.github/workflows/lifesims-family-registration.yml'
   workflow_dispatch:
 jobs:
@@ -42,3 +43,5 @@ jobs:
           sleep 2
       - name: Check registration UI error and duplicate requests
         run: node tests/family-registration-form.cjs
+      - name: Check mobile sign-in clicks, validation and API failures
+        run: node tests/family-login-form.cjs
