@@ -1,0 +1,25 @@
+name: LifeSims family API registration security
+on:
+  push:
+    branches:
+      - main
+      - feature/cloud-family-accounts-20261123
+    paths:
+      - 'family-api/server.mjs'
+      - 'family-api/client-ip.mjs'
+      - 'family-api/test/**'
+      - '.github/workflows/lifesims-family-registration.yml'
+  workflow_dispatch:
+jobs:
+  registration-rate-limit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check API syntax
+        run: node --check family-api/server.mjs
+      - name: Verify real client IP selection and forwarded header protection
+        run: node --test family-api/test/*.test.mjs
