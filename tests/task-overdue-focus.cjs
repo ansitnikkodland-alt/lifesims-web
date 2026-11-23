@@ -76,9 +76,12 @@ const assert=require('node:assert/strict');
   await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
   const rollover=await page.evaluate(()=>{
    const api=window.LifeSimsTaskBridge;
-   return {nextDay:api.today(),due:api.due('reg_phone_overdue',api.today()),
-    original:api.read().activities.find(a=>a.id==='reg_phone_overdue').createdDate};
+   const task=api.read().activities.find(a=>a.id==='reg_phone_overdue');
+   return {nextDay:api.today(),due:api.due('reg_phone_overdue',api.today()),overdue:api.overdue('reg_phone_overdue',api.today()),
+    original:task?.createdDate,repeat:task?.repeat,done:api.done('reg_phone_overdue',api.today()),
+    completions:task?.completions,allCount:api.read().activities.length};
   });
+  console.log('ROLLOVER DIAGNOSTIC:',JSON.stringify(rollover));
   assert.notEqual(rollover.nextDay,ids.now);
   assert.equal(rollover.due,true);
   assert.equal(rollover.original,ids.yesterday);
