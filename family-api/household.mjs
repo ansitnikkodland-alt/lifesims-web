@@ -19,6 +19,8 @@ async function createPets(db,owner){
  await db.query('INSERT INTO house_pet_litter(owner_id) VALUES($1) ON CONFLICT DO NOTHING',[owner]);
 }
 async function createRules(db,owner){
+ const previous=await db.query('SELECT 1 FROM house_rules WHERE owner_id=$1 LIMIT 1',[owner]);
+ if(previous.rowCount)return;
  for(const [id,title,metric,gain,skills,project] of RULES)
  await db.query('INSERT INTO house_rules(owner_id,action_id,title,target_metric,target_gain,actor_skills,project) VALUES($1,$2,$3,$4,$5,$6::jsonb,$7) ON CONFLICT DO NOTHING',
  [owner,id,title,metric,gain,JSON.stringify(skills),project]);
