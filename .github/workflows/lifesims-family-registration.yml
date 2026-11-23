@@ -8,6 +8,8 @@ on:
       - 'family-api/server.mjs'
       - 'family-api/client-ip.mjs'
       - 'family-api/test/**'
+      - 'scene/cloud-family.js'
+      - 'tests/family-registration-form.cjs'
       - '.github/workflows/lifesims-family-registration.yml'
   workflow_dispatch:
 jobs:
@@ -23,3 +25,20 @@ jobs:
         run: node --check family-api/server.mjs
       - name: Verify real client IP selection and forwarded header protection
         run: node --test family-api/test/*.test.mjs
+  registration-form:
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser driver
+        run: npm install --no-save playwright-core@1.56.1
+      - name: Start local site
+        run: |
+          python3 -m http.server 8765 >/tmp/lifesims-family-registration.log 2>&1 &
+          sleep 2
+      - name: Check registration UI error and duplicate requests
+        run: node tests/family-registration-form.cjs
