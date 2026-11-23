@@ -19,8 +19,8 @@ const assert=require('node:assert/strict');
     {...shared,id:'reg_phone_inbox',name:'Без срока телефон',object:'phone',repeat:'inbox',createdDate:yesterday},
     {...shared,id:'reg_phone_english',name:'Найти экзамен по английскому',object:null,repeat:'inbox',createdDate:yesterday,priority:3},
     {...shared,id:'reg_phone_tutor',name:'Написать сафиному репетитору',object:'desk',repeat:'inbox',createdDate:yesterday,priority:3},
-    {...shared,id:'reg_phone_done',name:'Уже выполненное дело',object:'phone',createdDate:yesterday,
-     completions:[{date:yesterday,at:new Date().toISOString()}]},
+    {...shared,id:'reg_phone_done',name:'Уже выполненное дело',object:'phone',repeat:'daily',createdDate:yesterday,
+     completions:[{date:now,at:new Date().toISOString()}]},
     {...shared,id:'reg_desk_report',name:'Написать отчёт',object:'desk',createdDate:yesterday,skills:[],skill:'Астрономия'},
     {...shared,id:'reg_finance',name:'Финансовый контроль',object:null,createdDate:yesterday}
    ];
@@ -44,6 +44,17 @@ const assert=require('node:assert/strict');
    'Написать сафиному репетитору','Финансовый контроль','⚠ Просрочено'])assert.ok(phone.includes(expected),phone);
   for(const unexpected of ['Будущий телефон','Уже выполненное дело'])assert.ok(!phone.includes(unexpected),phone);
   assert.ok(phone.includes('Без срока'),phone);
+  const financeAction=await page.locator('#sheetActions > button').filter({hasText:'Финансовый контроль'}).innerText();
+  assert.ok(financeAction.includes('Просрочено'),financeAction);
+  const rooms=await page.locator('#sheetActions > button').evaluateAll(buttons=>buttons.map(el=>{
+   const r=el.getBoundingClientRect();
+   return {name:el.innerText,x:r.left,y:r.top,w:r.width,h:r.height};
+  }));
+  for(let i=0;i<rooms.length;i++)for(let j=i+1;j<rooms.length;j++){
+   const a=rooms[i],b=rooms[j],w=Math.max(0,Math.min(a.x+a.w,b.x+b.w)-Math.max(a.x,b.x));
+   const h=Math.max(0,Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y));
+   assert.ok(w*h<150,'Overlapping room buttons: '+a.name+' / '+b.name+' · '+w*h);
+  }
   await page.locator('#closeSheet').click();
   await page.locator('.touchmap [data-object="desk"]').dispatchEvent('click');
   assert.ok((await page.locator('#sheetActions').innerText()).includes('Написать отчёт'));
