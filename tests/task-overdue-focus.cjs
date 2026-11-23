@@ -17,9 +17,14 @@ const assert=require('node:assert/strict');
     {...shared,id:'reg_phone_today',name:'Сегодня телефон',object:'phone',createdDate:now},
     {...shared,id:'reg_phone_future',name:'Будущий телефон',object:'phone',createdDate:tomorrow},
     {...shared,id:'reg_phone_inbox',name:'Без срока телефон',object:'phone',repeat:'inbox',createdDate:yesterday},
-    {...shared,id:'reg_desk_report',name:'Написать отчёт',object:'desk',createdDate:yesterday,skills:[],skill:'Астрономия'}
+    {...shared,id:'reg_phone_english',name:'Найти экзамен по английскому',object:null,repeat:'inbox',createdDate:yesterday,priority:3},
+    {...shared,id:'reg_phone_tutor',name:'Написать сафиному репетитору',object:'desk',repeat:'inbox',createdDate:yesterday,priority:3},
+    {...shared,id:'reg_phone_done',name:'Уже выполненное дело',object:'phone',createdDate:yesterday,
+     completions:[{date:yesterday,at:new Date().toISOString()}]},
+    {...shared,id:'reg_desk_report',name:'Написать отчёт',object:'desk',createdDate:yesterday,skills:[],skill:'Астрономия'},
+    {...shared,id:'reg_finance',name:'Финансовый контроль',object:null,createdDate:yesterday}
    ];
-   api.read().activities.push(...entries.map(entry=>({...entry,completions:[]})));
+   api.read().activities.push(...entries.map(entry=>({...entry,completions:[...(entry.completions||[])]})));
    return {now,yesterday,tomorrow};
   });
   const snapshot=await page.evaluate(()=>{
@@ -35,8 +40,10 @@ const assert=require('node:assert/strict');
   await page.locator('#skillDetailClose').click();
   await page.evaluate(()=>document.getElementById('scenePhone').click());
   const phone=await page.locator('#sheetActions').innerText();
-  for(const expected of ['Просроченный телефон','Сегодня телефон'])assert.ok(phone.includes(expected),phone);
-  for(const unexpected of ['Будущий телефон','Без срока телефон'])assert.ok(!phone.includes(unexpected),phone);
+  for(const expected of ['Просроченный телефон','Сегодня телефон','Найти экзамен по английскому',
+   'Написать сафиному репетитору','Финансовый контроль','⚠ Просрочено'])assert.ok(phone.includes(expected),phone);
+  for(const unexpected of ['Будущий телефон','Уже выполненное дело'])assert.ok(!phone.includes(unexpected),phone);
+  assert.ok(phone.includes('Без срока'),phone);
   await page.locator('#closeSheet').click();
   await page.locator('.touchmap [data-object="desk"]').dispatchEvent('click');
   assert.ok((await page.locator('#sheetActions').innerText()).includes('Написать отчёт'));
