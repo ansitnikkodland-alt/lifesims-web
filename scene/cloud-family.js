@@ -13,6 +13,7 @@ function readSession(){
 let session=readSession(),revision=null,remote=null,syncArmed=false,queued=null,saving=false,timer=0,bonus=0,bonusAsOf=0,dialog,section='save',status='',children=[],familyMetrics={},familyAsOf=0;
 const isActive=()=>!!session,activeId=()=>session?.account?.id||null;
 function activeStore(){return session?'lifesims-cloud-'+session.account.id:null}
+function setFamilyEffects(metrics){familyMetrics=metrics&&typeof metrics==='object'?metrics:{};familyAsOf=Date.now();window.LifeSimsCloudBridge?.refresh?.()}
 function metricBonus(metric,day){
  const now=new Date();
  const today=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
@@ -28,7 +29,7 @@ function resourceBonus(d){
  const today=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
  return session&&d===today&&Date.now()-bonusAsOf<600000?bonus:0;
 }
-window.LifeSimsCloud={isActive,activeId,activeStore,resourceBonus,onLocalSave,request,account:()=>session?.account||null,openSection,metricBonus};
+window.LifeSimsCloud={isActive,activeId,activeStore,resourceBonus,onLocalSave,request,account:()=>session?.account||null,openSection,metricBonus,setFamilyEffects};
 async function request(path,method='GET',payload){
  const controller=new AbortController();
  const timeout=setTimeout(()=>controller.abort(),30000);
