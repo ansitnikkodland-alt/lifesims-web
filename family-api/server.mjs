@@ -3,6 +3,7 @@ import {randomBytes, randomUUID, createHash, scrypt as scryptCallback, timingSaf
 import {promisify} from 'node:util';
 import {readFileSync} from 'node:fs';
 import {Pool} from 'pg';
+import {createHouseholdRoute} from './household.mjs';
 
 const scrypt=promisify(scryptCallback);
 const ORIGIN='https://ansitnikkodland-alt.github.io';
@@ -129,6 +130,7 @@ async function route(req,res){
   return send(res,200,{token,account:safeRole(account),emailVerified:false});
  }
  const {user,tokenHash}=await sessionFor(req);
+ if(path.startsWith('/v1/household/'))return householdRoute({req,res,user,path,method});
  if(method==='POST'&&path==='/v1/auth/logout'){
   await pool.query('DELETE FROM family_sessions WHERE token_hash=$1',[tokenHash]);
   return send(res,200,{ok:true});
@@ -301,6 +303,7 @@ async function route(req,res){
  }
  throw new HttpError(404,'Маршрут не найден');
 }
+const householdRoute=createHouseholdRoute({pool,json,send,requireOk,HttpError,hasRate});
 let ready=false;
 const server=http.createServer(async(req,res)=>{
  try{
@@ -316,6 +319,8 @@ const server=http.createServer(async(req,res)=>{
 });
 (async()=>{
  await pool.query(readFileSync(new URL('./schema.sql',import.meta.url),'utf8'));
+ await pool.query(readFileSync(new URL('./household.sql',import.meta.url),'utf8'));
+
  ready=true;
  server.listen(PORT,'0.0.0.0',()=>console.log('LifeSims family test API ready on port '+PORT));
 })().catch(err=>{console.error('Cannot initialize DB schema',err.code||err.message);process.exitCode=1;pool.end()});
