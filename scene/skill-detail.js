@@ -15,7 +15,12 @@
  dialog.innerHTML='<div class="skill-detail-heading"><h3 id="skillDetailTitle"></h3><button id="skillDetailClose" type="button" aria-label="Закрыть">×</button></div><div id="skillDetailBody"></div>';
  document.body.append(dialog);
  let selected=null,linkDraft=null,keepPickerOpen=false;
- const namesOf=obj=>Array.isArray(obj?.skills)?obj.skills.filter(Boolean):obj?.skill?[obj.skill]:[];
+ const namesOf=obj=>{
+  const many=Array.isArray(obj?.skills)?obj.skills.filter(x=>typeof x==='string'&&x.trim()):[];
+  return many.length?many:typeof obj?.skill==='string'&&obj.skill.trim()?[obj.skill]:[];
+ };
+ const skillKey=name=>String(name||'').normalize('NFKC').trim().toLocaleLowerCase('ru');
+ const hasSkill=(obj,name)=>namesOf(obj).some(value=>skillKey(value)===skillKey(name));
  function skillEvents(name,data){
   const activities=new Map(data.activities.filter(a=>a?.id).map(a=>[a.id,a]));
   const defaults=new Map((data.defaults||[]).filter(a=>a?.id).map(a=>[a.id,a]));
@@ -23,7 +28,7 @@
    if(event?.kind!=='complete'||!event.date||event.date>bridge.today?.())return false;
    // Preserve the skill recorded on completion; never rewrite history after editing an activity.
    const names=('skills'in event||'skill'in event)?namesOf(event):namesOf(activities.get(event.activityId)||defaults.get(event.activityId));
-   return names.includes(name);
+   return names.some(value=>skillKey(value)===skillKey(name));
   }).slice().sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.at||'').localeCompare(String(a.at||'')));
  }
  function skillPoints(event){
@@ -41,8 +46,8 @@
   const activities=(data.activities||[]).filter(a=>a?.id&&!a.legacyDone);
   const events=(data.schedule||[]).filter(e=>e?.id);
   if(!linkDraft||linkDraft.skill!==name){
-   linkDraft={skill:name,activityIds:new Set(activities.filter(a=>namesOf(a).includes(name)).map(a=>a.id)),
-    eventIds:new Set(events.filter(e=>namesOf(e).includes(name)).map(e=>e.id)),
+   linkDraft={skill:name,activityIds:new Set(activities.filter(a=>hasSkill(a,name)).map(a=>a.id)),
+    eventIds:new Set(events.filter(e=>hasSkill(e,name)).map(e=>e.id)),
     expectedActivities:Object.fromEntries(activities.map(a=>[a.id,namesOf(a)])),
     expectedEvents:Object.fromEntries(events.map(e=>[e.id,namesOf(e)])),
     query:'',open:keepPickerOpen};
@@ -197,14 +202,14 @@
   const skill=bridge.scores().find(s=>s.name===selected);
   if(!skill){dialog.close();return}
   const data=bridge.read();
-  const actions=data.activities.filter(a=>namesOf(a).includes(selected))
+  const actions=data.activities.filter(a=>hasSkill(a,selected))
    .sort((a,b)=>(a.kind==='habit'?1:0)-(b.kind==='habit'?1:0)||String(a.name).localeCompare(String(b.name),'ru'));
-  const linkedEvents=(data.schedule||[]).filter(e=>namesOf(e).includes(selected)||Object.values(e?.overrides||{}).some(o=>namesOf(o).includes(selected)));
+  const linkedEvents=(data.schedule||[]).filter(e=>hasSkill(e,selected)||Object.values(e?.overrides||{}).some(o=>hasSkill(o,selected)));
   const history=typeof bridge.history==='function'?bridge.history().filter(e=>{
    const activities=new Map(data.activities.filter(a=>a?.id).map(a=>[a.id,a]));
    const defaults=new Map((data.defaults||[]).filter(a=>a?.id).map(a=>[a.id,a]));
    const names=('skills'in e||'skill'in e)?namesOf(e):namesOf(activities.get(e.activityId)||defaults.get(e.activityId));
-   return names.includes(selected);
+   return names.some(value=>skillKey(value)===skillKey(selected));
   }).sort((a,b)=>String(b.date).localeCompare(String(a.date))||String(b.at||'').localeCompare(String(a.at||''))):skillEvents(selected,data);
   $('skillDetailTitle').textContent='↗ Навык: '+selected;
   const body=$('skillDetailBody');body.replaceChildren();
