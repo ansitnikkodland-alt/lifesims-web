@@ -256,6 +256,11 @@
    if(activity.resourceEffect?.target)details.push('влияет на '+activity.resourceEffect.target);
    if(namesOf(activity).length)details.push('навыки: '+namesOf(activity).join(', '));
    info.append(make('small','',details.join(' · ')));
+   if(activity.kind==='task'){
+    info.tabIndex=0;info.setAttribute('role','button');info.setAttribute('aria-label','Действия с делом '+activity.name);
+    info.onclick=()=>{dialog.close();window.LifeSimsTaskActions?.open?.(activity.id)};
+    info.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();info.click()}};
+   }
    const btn=make('button','skill-detail-edit','Изменить');
    btn.type='button';btn.setAttribute('aria-label','Редактировать '+activity.name);
    btn.onclick=()=>{dialog.close();bridge.edit(activity.id)};
