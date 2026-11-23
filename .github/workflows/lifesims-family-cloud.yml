@@ -4,6 +4,8 @@ on:
     paths:
       - 'family-api/**'
       - 'scene/cloud-family.js'
+      - 'scene/household.js'
+      - 'scene/pets.js'
       - 'scene/family.js'
       - 'scene/index.html'
       - 'tests/family-cloud-api.mjs'
@@ -13,6 +15,8 @@ on:
     paths:
       - 'family-api/**'
       - 'scene/cloud-family.js'
+      - 'scene/household.js'
+      - 'scene/pets.js'
       - 'scene/family.js'
       - 'scene/index.html'
       - 'tests/family-cloud-api.mjs'
@@ -45,6 +49,7 @@ jobs:
         run: |
           node --check family-api/server.mjs
           node --check scene/cloud-family.js
+          node --check scene/household.js
           node --check scene/family.js
       - name: Start isolated API
         env:
