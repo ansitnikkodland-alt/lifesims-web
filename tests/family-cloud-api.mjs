@@ -68,4 +68,16 @@ let logout=await req('/v1/auth/logout','POST',{},CT);
 assert.equal(logout.status,200);
 let revoked=await req('/v1/me','GET',undefined,CT);
 assert.equal(revoked.status,401);
-console.log('AUTH INTEGRATION PASS: guardian and child account separation, server saves, conflict 409, care, guardian-approved friendship, revoked session, unsafe image blocked.');
+let strangerReset=await req('/v1/children/password','POST',{
+ childId:CID,newPassword:'AnotherChildPassword_2026',yourPassword:'ExampleLongPassword_2026!'
+},BT);
+assert.equal(strangerReset.status,403);
+let deleteChild=await req('/v1/children','DELETE',{childId:CID,yourPassword:'ExampleLongPassword_2026!'},AT);
+assert.equal(deleteChild.status,200);
+let afterDelete=await req('/v1/auth/login','POST',{login:child.data.child.login,password:'LongChildPassword_2026!'});
+assert.equal(afterDelete.status,401);
+let deleteAdult=await req('/v1/me/account','DELETE',{password:'ExampleLongPassword_2026!'},AT);
+assert.equal(deleteAdult.status,200);
+let revokedAdult=await req('/v1/me','GET',undefined,AT);
+assert.equal(revokedAdult.status,401);
+console.log('AUTH INTEGRATION PASS (including deletions): guardian and child account separation, server saves, conflict 409, care, guardian-approved friendship, revoked session, unsafe image blocked.');
