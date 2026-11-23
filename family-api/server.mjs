@@ -5,6 +5,7 @@ import {readFileSync} from 'node:fs';
 import {Pool} from 'pg';
 import {clientAddress} from './client-ip.mjs';
 import {createHouseholdRoute} from './household.mjs';
+import {createFigurineRoute} from './figurines.mjs';
 
 const scrypt=promisify(scryptCallback);
 const ORIGIN='https://ansitnikkodland-alt.github.io';
@@ -135,6 +136,7 @@ async function route(req,res){
  }
  const {user,tokenHash}=await sessionFor(req);
  if(path.startsWith('/v1/household/'))return householdRoute({req,res,user,path,method});
+ if(path.startsWith('/v1/figurines'))return figurineRoute({req,res,user,path,method});
  if(method==='POST'&&path==='/v1/auth/logout'){
   await pool.query('DELETE FROM family_sessions WHERE token_hash=$1',[tokenHash]);
   return send(res,200,{ok:true});
@@ -308,6 +310,7 @@ async function route(req,res){
  throw new HttpError(404,'Маршрут не найден');
 }
 const householdRoute=createHouseholdRoute({pool,json,send,requireOk,HttpError,hasRate});
+const figurineRoute=createFigurineRoute({pool,json,send,requireOk,HttpError,hasRate});
 let ready=false;
 const server=http.createServer(async(req,res)=>{
  try{
