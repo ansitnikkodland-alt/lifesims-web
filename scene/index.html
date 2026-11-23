@@ -5401,8 +5401,12 @@ window.LifeSimsCloudBridge={
    for(let i=0;i<skills.length;i++){
     const skill=skills[i],name=String(skill?.name||'').trim().slice(0,70),xp=Number(skill?.xp),id='household-'+e.id+'-'+i;
     if(!name||!Number.isFinite(xp)||xp<0||xp>30||existing.has(id))continue;
+    const projectName=String(details.project||'Семья').trim().slice(0,50);
+    state.taskProjects??=[];
+    let project=state.taskProjects.find(x=>x.name===projectName);
+    if(projectName&&!project){project={id:uid(),name:projectName};state.taskProjects.push(project)}
     state.events.push({id,kind:'complete',activityId:'household-'+e.action,name:(details.title||e.action)+' · Семья',date:e.at.slice(0,10),at:e.at,
-      xp,skillXp:xp,skills:[name],skill:name,project:details.project||'Семья',negative:false,automatic:true});
+      xp,skillXp:xp,skills:[name],skill:name,project:projectName,projectId:project?.id||null,negative:false,automatic:true});
     existing.add(id);added++;
    }
   }
