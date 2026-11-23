@@ -1,0 +1,33 @@
+name: LifeSims live registration API deploy check
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/cloud-family-accounts-20261123
+    paths:
+      - 'family-api/server.mjs'
+      - 'family-api/client-ip.mjs'
+      - '.github/workflows/lifesims-family-live-deploy.yml'
+jobs:
+  live-health:
+    runs-on: ubuntu-latest
+    timeout-minutes: 7
+    steps:
+      - name: Verify Render serves this branch commit
+        env:
+          COMMIT: ${{ github.sha }}
+        run: |
+          set -eu
+          expected="${COMMIT:0:12}"
+          for attempt in $(seq 1 18); do
+            body="$(curl --silent --show-error --fail --max-time 60 https://lifesims-family-test-api.onrender.com/health || true)"
+            actual="$(printf '%s' "$body" | node -e "let t='';process.stdin.on('data',c=>t+=c).on('end',()=>{try{console.log(JSON.parse(t).apiCommit||'')}catch(e){console.log('')}})")"
+            echo "Attempt $attempt: expected $expected, deployed ${actual:-unknown}"
+            if [ "$actual" = "$expected" ]; then
+              echo "Live family API matches the updated branch."
+              exit 0
+            fi
+            sleep 15
+          done
+          echo "Render is not yet serving this commit. Check auto-deployment in Render."
+          exit 1
