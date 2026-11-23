@@ -3174,7 +3174,9 @@ window.LifeSimsScreenTimeBridge={
   }
   if(next.length>20000)return {ok:false,error:'Слишком много записей для локального хранилища. Загрузи меньший диапазон.'};
   if(!added&&!updated)return {ok:true,added,updated,unchanged};
-  const ok=transact(()=>{state.screenTime={records:next}});
+  // Retain per-app project rules and per-day choices after every sync.
+  // Replacing the entire object used to silently erase these associations.
+  const ok=transact(()=>{state.screenTime={...(state.screenTime||{}),records:next}});
   return ok?{ok:true,added,updated,unchanged}:{ok:false,error:'Недостаточно места в локальном хранилище. Прежние данные не заменены.'};
  },
  refresh(){renderHistory()},
