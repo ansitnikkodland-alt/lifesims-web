@@ -29,3 +29,6 @@
 .house-chat-form .cloud-input{min-width:0;flex:1}
 .house-chat-form button{min-height:44px}
 @media(max-width:440px){.house-pet-grid{grid-template-columns:1fr}.house-line{font-size:13px}}
+
+.house-pet-sprite{display:block;width:76px;height:72px;margin:0 auto}
+.house-crystal{text-align:center;color:#b8ffee;font-weight:700;font-size:13px}
