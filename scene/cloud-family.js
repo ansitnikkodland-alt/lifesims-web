@@ -17,7 +17,8 @@ function setFamilyEffects(metrics){familyMetrics=metrics&&typeof metrics==='obje
 function metricBonus(metric,day){
  const now=new Date();
  const today=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
- return session&&day===today&&Date.now()-familyAsOf<600000?Math.max(0,Number(familyMetrics[metric])||0):0;
+ const key=metric==='condition'?'physical':metric;
+ return session&&day===today&&Date.now()-familyAsOf<600000?Math.max(0,Number(familyMetrics[key])||0):0;
 }
 function openSection(name){
  section=name||'save';
@@ -27,7 +28,7 @@ function openSection(name){
 function resourceBonus(d){
  const now=new Date();
  const today=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0')+'-'+String(now.getDate()).padStart(2,'0');
- return session&&d===today&&Date.now()-bonusAsOf<600000?bonus:0;
+ return (session&&d===today&&Date.now()-bonusAsOf<600000?bonus:0)+metricBonus('resource',d);
 }
 window.LifeSimsCloud={isActive,activeId,activeStore,resourceBonus,onLocalSave,request,account:()=>session?.account||null,openSection,metricBonus,setFamilyEffects};
 async function request(path,method='GET',payload){
