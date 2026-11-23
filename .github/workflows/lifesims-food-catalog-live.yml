@@ -1,0 +1,24 @@
+name: LifeSims real food catalog browser check
+on:
+  push:
+    paths:
+      - 'tests/food-catalog-live.cjs'
+      - '.github/workflows/lifesims-food-catalog-live.yml'
+  workflow_dispatch:
+jobs:
+  catalog-network:
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright
+        run: npm install --no-save playwright-core@1.56.1
+      - name: Start static LifeSims
+        run: |
+          python3 -m http.server 8765 >/tmp/lifesims-off-catalog.log 2>&1 &
+          sleep 2
+      - name: Lookup public real barcode in Open Food Facts from Chrome
+        run: node tests/food-catalog-live.cjs
