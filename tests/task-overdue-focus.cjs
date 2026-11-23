@@ -34,7 +34,7 @@ const assert=require('node:assert/strict');
   for(const expected of ['Просроченный телефон','Сегодня телефон'])assert.ok(phone.includes(expected),phone);
   for(const unexpected of ['Будущий телефон','Без срока телефон'])assert.ok(!phone.includes(unexpected),phone);
   await page.locator('#closeSheet').click();
-  await page.locator('.touchmap [data-object="desk"]').evaluate(el=>el.click());
+  await page.locator('.touchmap [data-object="desk"]').dispatchEvent('click');
   assert.ok((await page.locator('#sheetActions').innerText()).includes('Написать отчёт'));
   await page.locator('#sheetActions > button').filter({hasText:'Написать отчёт'}).evaluate(el=>el.click());
   assert.equal(await page.locator('#lifeTaskActionsDialog').evaluate(el=>el.open),true);
