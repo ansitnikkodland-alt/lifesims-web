@@ -118,6 +118,16 @@ const assert=require('node:assert/strict');
   assert.notEqual(rollover.nextDay,ids.now);
   assert.equal(rollover.due,true);
   assert.equal(rollover.original,ids.yesterday);
+  // An undated finance task still follows the weekly Saturday check-in.
+  await page.clock.setFixedTime(new Date(Date.now()+8*86400000));
+  await page.evaluate(()=>{
+   const finance=window.LifeSimsTaskBridge.read().activities.find(a=>a.id==='reg_finance');
+   finance.repeat='inbox';delete finance.dueDate;
+   window.dispatchEvent(new Event('focus'));
+   document.getElementById('scenePhone').click();
+  });
+  const financeWithoutDate=await page.locator('#sheetActions > button').filter({hasText:'Финансовый контроль'}).innerText();
+  assert.ok(financeWithoutDate.includes('Просрочено'),financeWithoutDate);
   console.log('TASK OVERDUE AND POMODORO: PASS');
  } finally {await browser.close()}
  if(errors.length)console.warn('Other page errors:',errors.slice(0,4).join(' | '));
