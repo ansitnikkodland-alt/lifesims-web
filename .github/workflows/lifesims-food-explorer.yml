@@ -1,0 +1,36 @@
+name: LifeSims food photo and diary explorer
+on:
+  push:
+    paths:
+      - 'scene/meal-explorer.js'
+      - 'scene/meal-explorer.css'
+      - 'scene/meal-photo.js'
+      - 'scene/meal-chat.js'
+      - 'scene/meal-live-camera.js'
+      - 'scene/index.html'
+      - 'tests/food-explorer-smoke.cjs'
+      - '.github/workflows/lifesims-food-explorer.yml'
+  workflow_dispatch:
+jobs:
+  food-explorer:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Verify JS syntax
+        run: |
+          node --check scene/meal-explorer.js
+          node --check scene/meal-photo.js
+          node --check scene/meal-chat.js
+          node --check scene/meal-live-camera.js
+      - name: Install browser driver
+        run: npm install --no-save playwright-core@1.56.1
+      - name: Start local LifeSims web
+        run: |
+          python3 -m http.server 8765 >/tmp/lifesims-food-explorer.log 2>&1 &
+          sleep 2
+      - name: Test food finder, saved meal and photo capture wiring
+        run: node tests/food-explorer-smoke.cjs
