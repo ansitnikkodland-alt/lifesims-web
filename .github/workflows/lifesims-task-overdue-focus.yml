@@ -1,0 +1,29 @@
+name: LifeSims overdue tasks and Pomodoro regression
+on:
+  push:
+    paths:
+      - 'scene/index.html'
+      - 'scene/task-actions.js'
+      - 'scene/task-premium.js'
+      - 'scene/focus-timer.js'
+      - 'scene/skill-detail.js'
+      - 'tests/task-overdue-focus.cjs'
+      - '.github/workflows/lifesims-task-overdue-focus.yml'
+  workflow_dispatch:
+jobs:
+  task-focus:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser dependency
+        run: npm install --no-save playwright-core@1.56.1
+      - name: Start local site
+        run: |
+          python3 -m http.server 8765 > /tmp/lifesims-task-test.log 2>&1 &
+          sleep 2
+      - name: Check overdue calendar and Pomodoro actions
+        run: node tests/task-overdue-focus.cjs
