@@ -101,7 +101,12 @@
    const reply=create('div','meal-chat-response');
    reply.append(create('strong','',m.kcal!=null?'≈ '+m.kcal+' ккал':'Калории не указаны'));
    reply.append(create('div','meal-chat-macro','Б '+(m.protein??'—')+' г · Ж '+(m.fat??'—')+' г · У '+(m.carbs??'—')+' г'));
-   reply.append(create('div','meal-chat-uncertainty',m.time+' · '+(m.estimate!==false?'Ориентировочная оценка':'Ручные значения')));
+   if(m.barcode&&/^\d{8,14}$/.test(m.barcode)){
+    const ref=create('a','meal-chat-source-link','Смотреть карточку Open Food Facts');
+    ref.href='https://world.openfoodfacts.org/product/'+encodeURIComponent(m.barcode);
+    ref.target='_blank';ref.rel='noopener noreferrer';reply.append(ref);
+   }
+   reply.append(create('div','meal-chat-uncertainty',m.time+' · '+(m.photoSource?'Источник: '+m.photoSource:m.estimate!==false?'Источник: ориентировочный расчёт LifeSims':'Источник: ручные значения')));
    const buttons=create('div','meal-chat-actions');
    const edit=create('button','','Изменить');edit.type='button';edit.onclick=()=>startEdit(m);
    const detail=create('button','','Подробнее');detail.type='button';detail.onclick=()=>openDetailed(currentDate(),m.id);
@@ -305,7 +310,7 @@
     estimate:!fromPackage||photoData.source!=='Open Food Facts',
     method:photoFile?'photo':fromPackage?'catalog':'text',remember:true,templateTitle:canonicalTitle,
     photoThumb:photoFile?photoThumbnail:(existing?.photoThumb??null),
-    photoSource:photoData?.source||(photoFile?'Фото без распознавания':existing?.photoSource||''),
+    photoSource:photoData?.source||(photoFile?'Фото без результата распознавания':usePrevious?'Сохранённая порция LifeSims':existing?.photoSource||'Ориентировочный расчёт LifeSims'),
     barcode:photoData?.barcode||existing?.barcode||null
    });
    $('mealChatInput').value='';editingId=null;const savedFromPhoto=!!photoFile;
@@ -355,5 +360,22 @@
  window.LifeSimsFood={...legacy,open:openChat,close:()=>{
   closeChat();if(typeof originalClose==='function')originalClose();
  },openDetailed};
- window.LifeSimsMealChat={open:openChat,close:closeChat,setProduct:showPhotoResult,recognizeSmartPhoto,acceptLiveFrame};
+ async function recognizeMealPhoto(file){
+  if(!file)return;
+  if(!editingId){$('mealChatInput').value='';renderSuggestions()}
+  await attachPhoto(file);
+  if(photoFile===file)await analyzePhoto('meal');
+ }
+ async function recognizePackagePhoto(file){
+  if(!file)return;
+  if(!editingId){$('mealChatInput').value='';renderSuggestions()}
+  await attachPhoto(file);
+  if(photoFile===file)await analyzePhoto('package');
+ }
+ function draftMeal(text){
+  $('mealChatInput').value=String(text||'').slice(0,850);
+  editingId=null;tabChanged('text');renderSuggestions();
+  status('Проверь название, состав и порцию перед сохранением.');
+ }
+ window.LifeSimsMealChat={open:openChat,close:closeChat,setProduct:showPhotoResult,recognizeSmartPhoto,recognizeMealPhoto,recognizePackagePhoto,acceptLiveFrame,chooseTemplate,draftMeal};
 })();
