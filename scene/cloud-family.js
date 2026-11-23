@@ -151,13 +151,51 @@ function guest(body){
  login.append(el('strong','Войти в LifeSims'));
  const email=input('Email или логин ребёнка');email.autocomplete='username';
  const password=input('Пароль','password');password.autocomplete='current-password';
- const submit=el('button','Войти','primary');submit.type='submit';
- login.append(email,password,submit);
- formSubmit(login,async()=>{
-  const data=await request('/v1/auth/login','POST',{login:email.value,password:password.value});
-  session={token:data.token,account:data.account};
-  sessionStorage.setItem(SESSION,JSON.stringify(session));
-  location.reload();
+ // Explicit click handler keeps the button responsive even with blank fields.
+ email.required=false;password.required=false;
+ const submit=el('button','Войти','primary');submit.type='button';
+ const loginFeedback=el('p',null,'cloud-login-feedback');
+ loginFeedback.setAttribute('role','status');
+ loginFeedback.setAttribute('aria-live','polite');
+ loginFeedback.hidden=true;
+ login.append(email,password,submit,loginFeedback);
+ function loginMessage(message){
+  loginFeedback.hidden=!message;
+  loginFeedback.textContent=message||'';
+ }
+ async function attemptLogin(){
+  if(submit.disabled)return;
+  const username=email.value.trim();
+  if(!username){
+   loginMessage('Укажи email взрослого аккаунта или логин ребёнка.');
+   email.focus();return;
+  }
+  if(!password.value){
+   loginMessage('Введи пароль для входа.');
+   password.focus();return;
+  }
+  submit.disabled=true;submit.textContent='Вход…';
+  loginMessage('Проверяю аккаунт…');
+  try{
+   const data=await request('/v1/auth/login','POST',{login:username,password:password.value});
+   if(!data?.token||!data?.account?.id)throw new Error('Сервер вернул неполные данные входа.');
+   session={token:data.token,account:data.account};
+   sessionStorage.setItem(SESSION,JSON.stringify(session));
+   location.reload();
+  }catch(err){
+   const message=err.status===401?'Неверный логин или пароль. Проверь данные и попробуй снова.':
+    err.status===429?'Слишком много попыток входа. Повтори позднее.':
+    err.name==='AbortError'?'Сервер не ответил за 30 секунд. Проверь интернет.':
+    'Не удалось войти: '+(err.message||'неизвестная ошибка');
+   loginMessage('⚠ '+message);setStatus('⚠ '+message);
+  }finally{
+   submit.disabled=false;submit.textContent='Войти';
+  }
+ }
+ submit.addEventListener('click',attemptLogin);
+ login.addEventListener('submit',ev=>{ev.preventDefault();attemptLogin()});
+ for(const control of [email,password])control.addEventListener('input',()=>{
+  if(!submit.disabled)loginMessage('');
  });
  body.append(login);
  const register=el('form',null,'cloud-card');
