@@ -14,7 +14,7 @@
  function open(id,date=api.today()){
   const task=api.read().activities.find(a=>a?.id===id&&a.kind==='task');
   if(!task)return false;
-  const done=finished(task,date),scheduled=task.repeat==='inbox'||api.due(id,date);
+  const done=typeof api.done==='function'?api.done(id,date):finished(task,date),scheduled=task.repeat==='inbox'||api.due(id,date);
   $('lifeTaskActionsTitle').textContent='☑ '+task.name;
   $('lifeTaskActionsInfo').textContent=done?'Дело уже выполнено.':!scheduled?
    'Дело не запланировано на '+date+'. Можно запустить помодоро или изменить расписание.':
