@@ -20,7 +20,7 @@
   '<div id="mealLiveStatus" role="status" aria-live="polite" class="meal-live-status">Запускаю камеру…</div>',
   '<div id="mealLiveResult" class="meal-live-result" hidden><strong id="mealLiveName"></strong><small id="mealLiveDetails"></small></div>',
   '<div class="meal-live-actions"><button type="button" id="mealLiveUse" disabled>Использовать результат</button>',
-  '<button type="button" id="mealLiveAgain">Искать ещё</button><button type="button" id="mealLiveGallery">Галерея</button></div>',
+  '<button type="button" id="mealLiveFoodPhoto">🍽 Распознать блюдо</button><button type="button" id="mealLiveAgain">Искать ещё</button><button type="button" id="mealLiveGallery">Галерея</button></div>',
   '<small class="meal-live-disclaimer">Автоматически анализируются кадры. Порция не измеряется камерой — проверь вес перед записью.</small>',
   '</section>'
  ].join('');
@@ -55,7 +55,7 @@
   $('mealLiveName').textContent=(result.kind==='package'?'📦 ':'🍽 ')+(result.title||result.candidates?.[0]?.title||'Название не определено');
   $('mealLiveDetails').textContent=(result.gramsEstimate
    ?(result.kind==='package'?'На упаковке: ':'Типичная порция ≈')+result.gramsEstimate+' '+(result.portionUnit||'г')+'. ':'')
-   +'Проверь вес, название и пищевую ценность.';
+   +'Источник: '+(result.source||'неизвестен')+'. Проверь вес и БЖУ.';
   $('mealLiveResult').hidden=false;$('mealLiveUse').disabled=false;
   clearTimeout(frameTimer);clearTimeout(barcodeTimer);
   say('Обнаружено. Используй результат или продолжи сканирование.');
@@ -76,38 +76,63 @@
   }
  }
  async function scanBarcodes(id){
-  if(typeof BarcodeDetector==='undefined')return;
-  let detector;
-  try{
-   const wanted=['ean_13','ean_8','upc_a','upc_e','code_128'];
-   const supported=await BarcodeDetector.getSupportedFormats?.()||wanted;
-   const formats=wanted.filter(v=>supported.includes(v));
-   if(!formats.length)return;
-   detector=new BarcodeDetector({formats});
-  }catch(_){return}
+  let detector=null;
+  if(typeof BarcodeDetector!=='undefined'){
+   try{
+    const wanted=['ean_13','ean_8','upc_a','upc_e','code_128'];
+    const supported=await BarcodeDetector.getSupportedFormats?.()||wanted;
+    const formats=wanted.filter(v=>supported.includes(v));
+    if(formats.length)detector=new BarcodeDetector({formats});
+   }catch(_){}
+  }
+  // Still-image ZXing fallback reuses the active stream instead of opening
+  // a second camera (needed in Android WebViews without BarcodeDetector).
   async function tick(){
    if(modal.hidden||selected||id!==generation)return;
    if(video.readyState>=2)try{
-    const found=(await detector.detect(video)).find(v=>/^\d{8,14}$/.test(v.rawValue));
-    if(found&&!selected&&id===generation){
-     say('Штрихкод найден, получаю данные об упаковке…');
-     const file=await frame(),code=found.rawValue;
+    let code='',snapshot=null;
+    if(detector){
+     const found=(await detector.detect(video)).find(v=>/^\d{8,14}$/.test(v.rawValue));
+     code=found?.rawValue||'';
+    }else if(!frameBusy){
+     snapshot=await frame();code=await photo.barcodeFromPhoto(snapshot)||'';
+    }
+    if(code&&id===generation&&!selected){
+     say('Штрихкод '+code+' найден. Проверяю Open Food Facts…');
+     const file=snapshot||await frame();
      try{
       const result=await photo.productByBarcode(code);
       if(id===generation)present(result,file);
      }catch(_){
-      // Unknown product: reuse the current image for OCR; no false calorie values.
       try{
-       const result=await photo.analyzePackage(file,m=>{if(id===generation&&!selected)say(m)});
+       const result=await photo.analyzePackage(file,message=>{if(id===generation&&!selected)say(message)});
        if(id===generation)present(result,file);
-      }catch(__){if(id===generation&&!selected)say('Товара нет в каталоге. Наведи камеру на его этикетку.')}
+      }catch(__){
+       if(id===generation&&!selected)say('Штрихкод найден, но товара нет в каталоге. Наведи камеру на таблицу БЖУ.');
+      }
      }
     }
    }catch(_){}
-   if(id===generation&&!selected&&!modal.hidden)barcodeTimer=setTimeout(tick,450);
+   if(id===generation&&!selected&&!modal.hidden)barcodeTimer=setTimeout(tick,detector?450:1800);
   }
   tick();
  }
+ async function takeFoodPhoto(){
+  if(modal.hidden||frameBusy)return;
+  const id=generation;
+  $('mealLiveFoodPhoto').disabled=true;
+  say('Снимаю блюдо. Food‑101 впервые загружает около 93 МБ и не измеряет порцию по фото…');
+  try{
+   const file=await frame();
+   const result=await photo.analyzeFood(file,message=>{if(id===generation&&!selected)say(message)});
+   if(id!==generation||selected)return;
+   if(!result.title){say('Название определено неуверенно. Используй поиск или другое фото.');return}
+   present(result,file);
+  }catch(error){
+   if(id===generation&&!selected)say('⚠ '+(error?.message||'Фото не распознано')+'. Можно записать блюдо вручную.');
+  }finally{$('mealLiveFoodPhoto').disabled=false}
+ }
+
  function again(){
   if(modal.hidden)return;
   clearResult();const id=generation;
@@ -132,6 +157,7 @@
  launch.onclick=open;
  $('mealLiveClose').onclick=stop;
  $('mealLiveAgain').onclick=again;
+ $('mealLiveFoodPhoto').onclick=takeFoodPhoto;
  $('mealLiveGallery').onclick=()=>{stop();gallery.click()};
  $('mealLiveUse').onclick=async()=>{
   if(!selected||!selectedFile)return;
