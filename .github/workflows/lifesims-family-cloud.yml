@@ -1,0 +1,59 @@
+name: LifeSims cloud family API integration
+on:
+  push:
+    paths:
+      - 'family-api/**'
+      - 'scene/cloud-family.js'
+      - 'scene/family.js'
+      - 'scene/index.html'
+      - 'tests/family-cloud-api.mjs'
+      - '.github/workflows/lifesims-family-cloud.yml'
+  pull_request:
+    paths:
+      - 'family-api/**'
+      - 'scene/cloud-family.js'
+      - 'scene/family.js'
+      - 'scene/index.html'
+      - 'tests/family-cloud-api.mjs'
+      - '.github/workflows/lifesims-family-cloud.yml'
+  workflow_dispatch:
+jobs:
+  auth-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_DB: lifesims
+          POSTGRES_USER: familytest
+          POSTGRES_PASSWORD: localtestpassword
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U familytest -d lifesims"
+          --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install API dependencies
+        run: npm install --prefix family-api --no-audit --no-fund
+      - name: Syntax check
+        run: |
+          node --check family-api/server.mjs
+          node --check scene/cloud-family.js
+          node --check scene/family.js
+      - name: Start isolated API
+        env:
+          DATABASE_URL: postgresql://familytest:localtestpassword@127.0.0.1:5432/lifesims
+          PORT: '8766'
+        run: |
+          node family-api/server.mjs > /tmp/lifesims_family_api.log 2>&1 &
+          for i in $(seq 1 40); do
+            curl -fsS http://127.0.0.1:8766/health && break
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8766/health
+      - name: Test authentication, family access and version conflicts
+        run: node tests/family-cloud-api.mjs
