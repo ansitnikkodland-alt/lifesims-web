@@ -94,7 +94,7 @@ function pets(host,d){
    host.append(E('p',e.actorName+' · '+verb+' · '+(e.subject==='both'?'оба котика':choosePet(e.subject,e.subject))+' · '+time(e.at),'house-history'));
   }
  }
- petTimer=setInterval(()=>{if(tab==='pets'&&host.isConnected&&document.visibilityState==='visible')populate()},60000);
+ petTimer=setInterval(()=>{if(tab==='pets'&&host.isConnected&&document.visibilityState==='visible')rerender().catch(()=>{})},45000);
 }
 async function petAction(action,pet){
  const result=await api('/v1/household/pets/care','POST',{action,pet,requestId:rid()});
@@ -301,4 +301,7 @@ document.addEventListener('visibilitychange',()=>{
  if(document.visibilityState!=='visible'&&watchId!=null){stopWatch();notice('Передача приостановлена при сворачивании; для возобновления нажми «Начать передачу».')}
 });
 window.LifeSimsHousehold={render,open,refreshEffects,petAction,stopWatch};
+document.addEventListener('DOMContentLoaded',()=>{
+ setInterval(()=>{if(signed()&&document.visibilityState==='visible')refreshEffects().catch(()=>{})},300000);
+});
 })();
