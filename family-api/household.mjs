@@ -138,6 +138,10 @@ export function createHouseholdRoute({pool,json,send,requireOk,HttpError,hasRate
     await client.query('COMMIT');return send(res,201,{ok:true,event:{id,actorId:user.id,recipientId:data.to,action:data.actionId,details,at:new Date().toISOString()}});
    }catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}
   }
+  if(method==='GET'&&path==='/v1/household/history'){
+   const q=await pool.query("SELECT * FROM house_events WHERE actor_id=$1 AND created_at>now()-interval '90 days' ORDER BY created_at DESC LIMIT 500",[user.id]);
+   return send(res,200,{events:q.rows.map(publicEvent)});
+  }
   if(method==='GET'&&path==='/v1/household/effects'){
    const q=await pool.query("SELECT * FROM house_events WHERE (actor_id=$1 OR recipient_id=$1) AND created_at>now()-interval '24 hours' ORDER BY created_at DESC LIMIT 100",[user.id]);
    const metrics={},skills=[],events=[];
