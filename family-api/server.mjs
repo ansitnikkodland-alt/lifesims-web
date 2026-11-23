@@ -104,7 +104,7 @@ async function route(req,res){
  const method=req.method;
  if(method==='GET'&&path==='/health'){
   await pool.query('SELECT 1');
-  return send(res,200,{ok:true,service:'lifesims-family-test',stage:'prototype',persistent:false});
+  return send(res,200,{ok:true,service:'lifesims-family-test',stage:'prototype',persistent:false,apiCommit:process.env.RENDER_GIT_COMMIT?.slice(0,12)||'local'});
  }
  requireOk(path.startsWith('/v1/'),404,'Маршрут не найден');
  if(method==='POST'&&path==='/v1/auth/register'){
