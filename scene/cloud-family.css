@@ -38,3 +38,17 @@
 .cloud-legacy summary{min-height:44px;cursor:pointer;color:#d9e5f5}
 .cloud-legacy button{min-height:44px}
 @media(max-width:390px){.topbar{gap:6px;padding:8px}.topbar .person strong{font-size:14px}.topbar .stats{gap:4px}.topbar .stats .chip{padding:5px 7px;font-size:12px}}
+
+/* v127: inline sign-in feedback remains visible directly under the button. */
+#cloudDialog .cloud-login-feedback{
+ margin:2px 0 0;padding:9px 11px;border-radius:9px;
+ background:#17324b;color:#d9eafa;border:1px solid #6f95b3;
+ font-size:14px;line-height:1.5;overflow-wrap:anywhere;
+}
+#cloudDialog .cloud-login-feedback[hidden]{display:none!important}
+#cloudDialog .cloud-card button[type="button"].primary{
+ cursor:pointer;touch-action:manipulation;pointer-events:auto;
+}
+#cloudDialog .cloud-card button[type="button"].primary:disabled{
+ cursor:progress;opacity:.8;
+}
