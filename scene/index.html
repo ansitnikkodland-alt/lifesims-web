@@ -1417,6 +1417,29 @@ function due(a,d){
  return false;
 }
 function done(a,d){if(a.legacyDone)return true;const cm=Array.isArray(a.completions)?a.completions:[];if(a.repeat==='once'||a.repeat==='inbox')return cm.length>0;if(a.repeat==='weekly')return cm.some(c=>Array.isArray(a.weekdays)&&a.weekdays.length>1?c.date===d:weekKey(c.date)===weekKey(d));return cm.some(c=>c.date===d)}
+/* Overdue tasks roll onto the current day without rewriting stored dates. */
+function overdueTask(a,date=today()){
+ if(!a||a.kind!=='task'||a.legacyDone||date!==today()||done(a,date))return false;
+ const start=a.createdDate||'';
+ if(a.repeat==='inbox')return /^\d{4}-\d{2}-\d{2}$/.test(a.dueDate||'')&&a.dueDate<date;
+ if(a.repeat==='once')return !!start&&start<date;
+ if(a.repeat==='daily')return false;
+ if(a.repeat==='weekly'){
+  if(!start||start>=date)return false;
+  for(let n=1;n<=7;n++){const previous=plusDays(date,-n);
+   if(previous>=start&&due(a,previous)&&!done(a,previous))return true;
+  }
+ }
+ return false;
+}
+function visibleTaskDue(a,date){
+ if(!a||a.legacyDone)return false;
+ if(a.kind==='habit')return due(a,date);
+ if(a.kind!=='task')return false;
+ if(date===today())return due(a,date)||overdueTask(a,date);
+ if(date<today()&&['once','inbox'].includes(a.repeat)&&overdueTask(a,today()))return false;
+ return due(a,date);
+}
 function difficultyOf(a){const n=Number(a?.difficulty);return Number.isInteger(n)&&n>=1&&n<=5?n:3}
 // Skill direction follows the habit's type, independently of the resource XP sign.
 function isNegativeSkillHabit(a){
@@ -1456,7 +1479,7 @@ function showCompletion(a,xp){
 function complete(a,date){
  if(a.id==='coffee_habit')return recordEspresso(date);
  if(a.kind!=='habit'&&done(a,date))return toast('Уже выполнено — XP второй раз не начисляются');
- if(a.repeat!=='inbox'&&!due(a,date))return toast('Дело ещё не запланировано');
+ if(a.repeat!=='inbox'&&!(a.kind==='task'?visibleTaskDue(a,date):due(a,date)))return toast('Дело ещё не запланировано');
  if(isWeightMeasurementTask(a))return openWeightMeasurement(a,date);
  if(window.LifeSimsCloud?.isActive?.()&&['pet_feed_ginger','pet_feed_black'].includes(a.id)){
   window.LifeSimsHousehold?.petAction?.('feed',a.petId||a.id.slice('pet_feed_'.length))
@@ -1496,7 +1519,7 @@ function saveWeightMeasurement(event){
  const id=$('weightMeasurementActivityId').value,date=$('weightMeasurementDate').value;
  const activity=state.activities.find(a=>a.id===id),status=$('weightMeasurementStatus');
  if(!activity||!isWeightMeasurementTask(activity)){status.textContent='Дело не найдено или переименовано. Замеры не сохранены.';return}
- if(date>today()||(activity.repeat!=='inbox'&&!due(activity,date))||done(activity,date)){
+ if(date>today()||(activity.repeat!=='inbox'&&!visibleTaskDue(activity,date))||done(activity,date)){
   status.textContent='Эту запись уже нельзя выполнить за выбранную дату.';return;
  }
  const patch={};
@@ -1523,7 +1546,7 @@ function relevantActivities(date,kind){
  return state.activities.filter(a=>{
   if(!a||a.id==='coffee_habit'||a.legacyDone||(a.kind==='habit'?'habit':'task')!==kind)return false;
   if(a.kind==='habit'&&!a.createdDate&&date<(state.createdAt||'').slice(0,10)&&!(a.completions||[]).some(c=>c.date===date))return false;
-  return due(a,date);
+  return visibleTaskDue(a,date);
  });
 }
 function makeActivityItem(a,date){
@@ -2178,10 +2201,10 @@ b.append(span,sm);b.onclick=()=>{closeSheet();if(c.open){if(c.id==='bed_sleep')o
 // The phone already has a dedicated financial-control editor.
  // Keep a linked "Финансовый контроль" activity in the planner and its history,
  // but do not repeat its action in the phone's contextual menu.
-for(const a of state.activities.filter(a=>a.object===object&&!a.legacyDone&&(a.kind==='task'||due(a,today()))&&a.id!=='hygiene_antiperspirant'&&!(object==='toilet'&&a.id===POOP_HABIT_ID)&&!(object==='bed'&&a.id==='bed_make')&&
+for(const a of state.activities.filter(a=>a.object===object&&!a.legacyDone&&visibleTaskDue(a,today())&&a.id!=='hygiene_antiperspirant'&&!(object==='toilet'&&a.id===POOP_HABIT_ID)&&!(object==='bed'&&a.id==='bed_make')&&
  !(object==='phone'&&a.kind==='task'&&String(a.name||'').trim().toLocaleLowerCase('ru')==='финансовый контроль'))){
  const btn=document.createElement('button'),span=document.createElement('span'),small=document.createElement('small');
- span.textContent=a.name;small.textContent=a.kind==='habit'?'Ещё +1 · '+((a.completions||[]).filter(c=>c.date===today()).length)+' раз':done(a,today())?'✓ Уже сделано':!(a.repeat==='inbox'||due(a,today()))?'Не сегодня · открыть':'Действия · +'+(a.xp||0)+' XP';
+ span.textContent=a.name;small.textContent=a.kind==='habit'?'Ещё +1 · '+((a.completions||[]).filter(c=>c.date===today()).length)+' раз':done(a,today())?'✓ Уже сделано':overdueTask(a)?'⚠ Просрочено · действия':'Действия · +'+(a.xp||0)+' XP';
  btn.append(span,small);btn.onclick=()=>{closeSheet();if(a.kind==='task'&&window.LifeSimsTaskActions?.open?.(a.id,today()))return;complete(a,today())};$('sheetActions').append(btn);
 }
 $('sheetWrap').classList.add('open');$('sheetWrap').setAttribute('aria-hidden','false');
@@ -4153,7 +4176,7 @@ function renderDayAgenda(){
   const d=asDay(date);
   $('agendaTitle').textContent=d.toLocaleDateString('ru-RU',{weekday:'long',day:'numeric',month:'long'});
   const occurrences=scheduleHistoryOccurrences(date,date);
-  const tasks=state.activities.filter(a=>a&&!a.legacyDone&&due(a,date)&&
+  const tasks=state.activities.filter(a=>a&&!a.legacyDone&&visibleTaskDue(a,date)&&
     (a.kind!=='habit'||a.createdDate||date>=(state.createdAt||'').slice(0,10)));
   const completed=(state.events||[]).filter(e=>e.date===date);
   const taskCount=tasks.filter(a=>a.kind!=='habit').length;
@@ -4293,7 +4316,7 @@ function renderHistory(){
     for(let day=start;day<=end;day=plusDays(day,1)){
       const button=document.createElement('button');
       const completed=state.events.some(e=>e.date===day&&['complete','legacy','work_start','work_end'].includes(e.kind))||taskCompletionDates.has(day);
-      const hasTasks=state.activities.some(a=>a&&!a.legacyDone&&due(a,day)&&!done(a,day)&&
+      const hasTasks=state.activities.some(a=>a&&!a.legacyDone&&visibleTaskDue(a,day)&&!done(a,day)&&
         (a.kind!=='habit'||a.createdDate||day>=(state.createdAt||'').slice(0,10)));
       const hasNotes=!!state.days[day]||(state.foodMeals||[]).some(m=>m.date===day);
       const hasScreenTime=window.LifeSimsScreenTime?.hasDay?.(day)||false;
@@ -5097,7 +5120,8 @@ window.LifeSimsTaskBridge={
  create:kind=>openNewCalendarTask(kind==='habit'?'habit':'task'),
  edit:id=>openActivityEditor(id),
  backdate:(id,date)=>openHabitBackdateDialog(id,date),
- due:(id,date)=>{const a=state.activities.find(x=>x.id===id);return !!a&&due(a,date)},
+ due:(id,date)=>{const a=state.activities.find(x=>x.id===id);return !!a&&visibleTaskDue(a,date)},
+ overdue:(id,date=today())=>{const a=state.activities.find(x=>x.id===id);return overdueTask(a,date)},
  done:(id,date)=>{const a=state.activities.find(x=>x.id===id);return !!a&&done(a,date)},
  complete:(id,date)=>{
   const a=state.activities.find(x=>x.id===id);
