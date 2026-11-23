@@ -310,7 +310,8 @@
     estimate:!fromPackage||photoData.source!=='Open Food Facts',
     method:photoFile?'photo':fromPackage?'catalog':'text',remember:true,templateTitle:canonicalTitle,
     photoThumb:photoFile?photoThumbnail:(existing?.photoThumb??null),
-    photoSource:photoData?.source||(photoFile?'Фото без результата распознавания':usePrevious?(match?.photoSource||'Сохранённая порция LifeSims'):existing?.photoSource||'Ориентировочный расчёт LifeSims'),
+    photoSource:photoData?.kind==='meal'?(photoData.source+' — название, БЖУ: ориентировочный расчёт LifeSims'):
+     photoData?.source||(photoFile?'Фото без результата распознавания':usePrevious?(match?.photoSource||'Сохранённая порция LifeSims'):existing?.photoSource||'Ориентировочный расчёт LifeSims'),
     barcode:photoData?.barcode||existing?.barcode||null
    });
    $('mealChatInput').value='';editingId=null;const savedFromPhoto=!!photoFile;
