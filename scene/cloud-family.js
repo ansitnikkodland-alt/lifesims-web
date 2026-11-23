@@ -166,11 +166,35 @@ function guest(body){
  const mail=input('Ваш email','email');mail.autocomplete='email';
  const secret=input('Пароль не менее 12 символов','password');secret.minLength=12;secret.autocomplete='new-password';
  const btnReg=el('button','Зарегистрироваться','primary');btnReg.type='submit';
- register.append(name,mail,secret,btnReg);
- formSubmit(register,async()=>{
-  const data=await request('/v1/auth/register','POST',{displayName:name.value,email:mail.value,password:secret.value});
-  session={token:data.token,account:data.account};
-  sessionStorage.setItem(SESSION,JSON.stringify(session));location.reload();
+ const registerFeedback=el('p',null,'cloud-status');
+ registerFeedback.setAttribute('role','status');
+ registerFeedback.setAttribute('aria-live','polite');
+ register.append(name,mail,secret,btnReg,registerFeedback);
+ register.addEventListener('submit',async event=>{
+  event.preventDefault();
+  if(btnReg.disabled||!register.reportValidity())return;
+  btnReg.disabled=true;btnReg.textContent='Регистрация…';
+  registerFeedback.textContent='Проверяю регистрацию на сервере…';
+  try{
+   const data=await request('/v1/auth/register','POST',{
+    displayName:name.value.trim(),email:mail.value.trim(),password:secret.value
+   });
+   session={token:data.token,account:data.account};
+   sessionStorage.setItem(SESSION,JSON.stringify(session));
+   location.reload();
+  }catch(err){
+   const message=err.status===409?
+    'Аккаунт с этим email уже существует. Попробуй войти через форму выше.':
+    err.status===429?
+    'Сервер временно ограничил попытки регистрации. Повтори позднее; повторные нажатия сейчас не помогут.':
+    err.name==='AbortError'?
+    'Ответ сервера не получен за 30 секунд. Проверь соединение и повтори попытку.':
+    err.message||'Регистрация не завершена. Проверь соединение и повтори попытку.';
+   registerFeedback.textContent='⚠ '+message;
+   setStatus('⚠ '+message);
+  }finally{
+   btnReg.disabled=false;btnReg.textContent='Зарегистрироваться';
+  }
  });
  body.append(register);
  body.append(el('p','Email пока не подтверждается письмом. Это ограничение тестового режима. Не используйте для восстановления пароля или платных подписок.','cloud-muted'));
