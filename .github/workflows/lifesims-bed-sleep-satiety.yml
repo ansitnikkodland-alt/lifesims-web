@@ -1,0 +1,25 @@
+name: LifeSims bed sleep satiety regression
+on:
+  push:
+    paths:
+      - 'scene/index.html'
+      - 'tests/bed-sleep-satiety.cjs'
+      - '.github/workflows/lifesims-bed-sleep-satiety.yml'
+  workflow_dispatch:
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install Playwright driver
+        run: npm install --no-save playwright-core@1.56.1
+      - name: Start local web app
+        run: |
+          python3 -m http.server 8765 > /tmp/lifesims-bed-sleep-satiety.log 2>&1 &
+          sleep 2
+      - name: Verify room, habits, sleep, crystal and satiety
+        run: node tests/bed-sleep-satiety.cjs
