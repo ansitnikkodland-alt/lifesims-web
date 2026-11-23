@@ -311,8 +311,11 @@ window.LifeSimsHousehold={render,open,leave,refreshEffects,petAction,stopWatch};
 document.addEventListener('DOMContentLoaded',()=>{
  const top=document.querySelector('.topbar .stats');
  if(top&&!document.getElementById('houseLocationIndicator')){
-  const indicator=B('📍 Передаю',()=>open('places'),'chip');
-  indicator.id='houseLocationIndicator';indicator.hidden=true;top.prepend(indicator);
+  const indicator=B('📍',()=>open('places'),'chip house-location-live');
+  indicator.id='houseLocationIndicator';indicator.hidden=true;
+  indicator.title='Геолокация передаётся · открыть семейные места';
+  indicator.setAttribute('aria-label','Передаю геолокацию · открыть семейные места');
+  top.prepend(indicator);
  }
  setInterval(()=>{if(signed()&&document.visibilityState==='visible')refreshEffects().catch(()=>{})},300000);
 });
