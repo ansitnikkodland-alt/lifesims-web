@@ -10,7 +10,7 @@ const DEADLINE='23 декабря 2026';
 function readSession(){
  try{const x=JSON.parse(sessionStorage.getItem(SESSION)||'null');if(!x||!x.token||!x.account?.id||!/^[0-9a-f-]{36}$/i.test(x.account.id))return null;return x}catch(_){return null}
 }
-let session=readSession(),revision=null,remote=null,syncArmed=false,queued=null,saving=false,timer=0,bonus=0,bonusAsOf=0,dialog,section='save',status='',children=[],familyMetrics={},familyAsOf=0;
+let session=readSession(),revision=null,remote=null,syncArmed=false,queued=null,saving=false,timer=0,bonus=0,bonusAsOf=0,dialog,section=session?.account?.role==='adult'?'children':'save',status='',children=[],familyMetrics={},familyAsOf=0;
 const isActive=()=>!!session,activeId=()=>session?.account?.id||null;
 function activeStore(){return session?'lifesims-cloud-'+session.account.id:null}
 function setFamilyEffects(metrics){familyMetrics=metrics&&typeof metrics==='object'?metrics:{};familyAsOf=Date.now();window.LifeSimsCloudBridge?.refresh?.()}
@@ -112,9 +112,9 @@ function render(){
  if(!['pets','care','chat','places'].includes(section))window.LifeSimsHousehold?.leave?.();
  if(!session){guest(body);return}
  const me=session.account;
- body.append(el('p','Аккаунт: '+me.displayName+' · '+(me.role==='child'?'детский':'взрослый'),'cloud-muted'));
+ body.append(el('p','Мой персонаж: '+me.displayName+' · '+(me.role==='child'?'детский аккаунт':'взрослый аккаунт'),'cloud-muted'));
  body.append(warning());
- const tabs=[['save','Прогресс'],['children','Дети'],['links','Связи'],['appearance','Фото'],['pets','Котики'],['care','Забота'],['chat','Чат'],['places','Места']];
+ const tabs=[['children','Участники'],['save','Прогресс'],['links','Связи'],['appearance','Фото'],['pets','Котики'],['care','Забота'],['chat','Чат'],['places','Места']];
  for(const [id,label] of tabs){
   if(id==='children'&&me.role!=='adult')continue;
   const b=btn(label,()=>{section=id;render()},section===id?'primary':'secondary');nav.append(b);
@@ -145,7 +145,7 @@ function render(){
  },'cloud-logout'));
 }
 function guest(body){
- body.append(el('p','Облачный вход сохраняет отдельный прогресс для каждого участника семьи. Детям не нужен email: родитель создаёт логин и пароль.','cloud-muted'));
+ body.append(el('p','Один аккаунт — один персонаж. У каждого свой прогресс, фото и комната. Родитель создаёт детям отдельные входы без email.','cloud-muted'));
  body.append(warning());
  const login=el('form',null,'cloud-card');
  login.append(el('strong','Войти в LifeSims'));
@@ -174,6 +174,13 @@ function guest(body){
  });
  body.append(register);
  body.append(el('p','Email пока не подтверждается письмом. Это ограничение тестового режима. Не используйте для восстановления пароля или платных подписок.','cloud-muted'));
+ const legacy=el('details',null,'cloud-legacy'),summary=el('summary','Ранее созданные локальные персонажи');
+ legacy.append(summary,el('p','Локальные персонажи из предыдущих версий сохранены на этом устройстве, но это не облачные аккаунты. Этот раздел оставлен только для работы со старыми данными.','cloud-muted'));
+ legacy.append(btn('Открыть старые локальные персонажи',()=>{
+  dialog.close();
+  window.LifeSimsFamily?.open?.('people');
+ }));
+ body.append(legacy);
 }
 function saveMeta(obj){
  if(!obj)return 'данных нет';
@@ -231,7 +238,10 @@ function progress(body){
  body.append(el('p','При конфликте синхронизация останавливается, пока пользователь не выберет нужную версию. Никакого автоматического объединения дневника, медицинских записей или мероприятий нет.','cloud-muted'));
 }
 async function family(body){
- body.append(el('p','Родитель создаёт детский аккаунт. Ребёнок сможет войти на другом телефоне по своему логину и паролю.','cloud-muted'));
+ body.append(el('p','Каждый участник — отдельный аккаунт и отдельный персонаж, с личным прогрессом и общей семейной жизнью.','cloud-muted'));
+ const own=el('div',null,'cloud-card'),ownHead=el('strong','👤 '+session.account.displayName+' · я');
+ own.append(ownHead,el('p','Этот персонаж связан с текущим аккаунтом. Фото и комната находятся во вкладке «Фото».','cloud-muted'));
+ body.append(own);
  const create=el('form',null,'cloud-card');
  create.append(el('strong','Новый детский аккаунт'));
  const name=input('Имя ребёнка');name.maxLength=60;
@@ -341,7 +351,11 @@ async function photoToJpeg(file,max){
  }finally{URL.revokeObjectURL(url)}
 }
 function appearance(body){
- body.append(el('p','Управление собственным портретом. Фотография загружается в тестовую базу только после явного подтверждения.','cloud-muted'));
+ body.append(el('p','Это фотография персонажа текущего аккаунта. Она загружается в тестовую базу только с твоего подтверждения.','cloud-muted'));
+ body.append(btn('🏠 Моя комната по фото',()=>{
+  dialog.close();
+  window.LifeSimsFamily?.open?.('room');
+ }));
  const label=el('label','📷 Выбрать фотографию персонажа','cloud-upload');
  const file=document.createElement('input');file.type='file';file.accept='image/*';file.setAttribute('aria-label','Фото моего персонажа');
  file.addEventListener('change',async()=>{
@@ -376,11 +390,15 @@ function appearance(body){
 }
 function start(){
  dialog=document.createElement('dialog');dialog.id='cloudDialog';dialog.className='cloud-dialog';
- dialog.innerHTML='<header class="cloud-heading"><strong>☁ LifeSims · Аккаунты</strong><button type="button" id="cloudClose" aria-label="Закрыть">×</button></header><div class="cloud-tabs" id="cloudNav"></div><div id="cloudBody"></div><p class="cloud-status" id="cloudStatus" role="status"></p>';
+ dialog.innerHTML='<header class="cloud-heading"><strong>👨‍👩‍👧 LifeSims · Семья</strong><button type="button" id="cloudClose" aria-label="Закрыть">×</button></header><div class="cloud-tabs" id="cloudNav"></div><div id="cloudBody"></div><p class="cloud-status" id="cloudStatus" role="status"></p>';
  document.body.append(dialog);
  dialog.querySelector('#cloudClose').onclick=()=>dialog.close();
  const top=document.querySelector('.topbar .stats');
- if(top)top.prepend(btn('☁ Аккаунт',open,'chip'));
+ if(top){
+  const single=btn('👨‍👩‍👧 Семья',open,'chip');
+  single.id='familyOpen';single.setAttribute('aria-label','Семья: аккаунт и персонажи');
+  top.prepend(single);
+ }
  updateHeader();render();setStatus(status);
  if(session){load();if(session.account.role==='adult')refreshChildren()}
 }

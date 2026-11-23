@@ -26,3 +26,15 @@
 .cloud-delete{min-height:44px;padding:9px 12px;background:#603342;color:#fff;border:1px solid #b8798a;border-radius:9px}
 .cloud-card details{display:flex;flex-direction:column;gap:8px}
 .cloud-card details[open]>.cloud-input{margin-bottom:8px}
+
+/* v122: a single family entry instead of separate local "Персонажи" and cloud "Аккаунт". */
+.topbar .person{min-width:0;flex:1 1 135px}
+.topbar .person>div{min-width:0}
+.topbar .stats{min-width:0;flex:0 0 auto;gap:5px}
+.topbar .stats .chip{white-space:nowrap;min-height:40px;display:inline-flex;align-items:center;justify-content:center}
+.topbar .stats .house-location-live{padding:5px 8px;min-width:38px;border-color:#60dbaf;color:#c5ffe9}
+.topbar .stats .house-location-live[hidden]{display:none!important}
+.cloud-legacy{margin-top:13px;border-top:1px solid #6682a4;padding-top:9px}
+.cloud-legacy summary{min-height:44px;cursor:pointer;color:#d9e5f5}
+.cloud-legacy button{min-height:44px}
+@media(max-width:390px){.topbar{gap:6px;padding:8px}.topbar .person strong{font-size:14px}.topbar .stats{gap:4px}.topbar .stats .chip{padding:5px 7px;font-size:12px}}

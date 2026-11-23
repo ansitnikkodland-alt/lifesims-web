@@ -288,15 +288,16 @@ function places(host,d){
 function startWatch(){
  if(watchId!=null)navigator.geolocation.clearWatch(watchId);
  sharingStarted=true;
- const indicator=document.getElementById('houseLocationIndicator');if(indicator)indicator.hidden=false;
+ const indicator=document.getElementById('houseLocationIndicator');if(indicator)indicator.hidden=true;
  watchId=navigator.geolocation.watchPosition(async p=>{
   if(!signed()||document.visibilityState!=='visible')return;
   if(Date.now()-lastSent<30000)return;
   lastSent=Date.now();
   try{
    await api('/v1/household/location/position','POST',{lat:p.coords.latitude,lon:p.coords.longitude,accuracy:p.coords.accuracy});
+   const indicator=document.getElementById('houseLocationIndicator');if(indicator)indicator.hidden=false;
    notice('📍 Геопозиция обновлена: '+new Date().toLocaleTimeString('ru-RU')+' · ±'+Math.round(p.coords.accuracy)+' м');
-  }catch(err){notice('Геопозиция: '+err.message)}
+  }catch(err){stopWatch();notice('⚠ Геопозиция не передана: '+err.message)}
  },err=>{notice('Браузер не определил позицию: '+err.message);stopWatch()}, {enableHighAccuracy:true,maximumAge:0,timeout:25000});
 }
 function stopWatch(){
@@ -311,8 +312,11 @@ window.LifeSimsHousehold={render,open,leave,refreshEffects,petAction,stopWatch};
 document.addEventListener('DOMContentLoaded',()=>{
  const top=document.querySelector('.topbar .stats');
  if(top&&!document.getElementById('houseLocationIndicator')){
-  const indicator=B('📍 Передаю',()=>open('places'),'chip');
-  indicator.id='houseLocationIndicator';indicator.hidden=true;top.prepend(indicator);
+  const indicator=B('📍',()=>open('places'),'chip house-location-live');
+  indicator.id='houseLocationIndicator';indicator.hidden=true;
+  indicator.title='Геолокация передаётся · открыть семейные места';
+  indicator.setAttribute('aria-label','Передаю геолокацию · открыть семейные места');
+  top.prepend(indicator);
  }
  setInterval(()=>{if(signed()&&document.visibilityState==='visible')refreshEffects().catch(()=>{})},300000);
 });
