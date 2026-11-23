@@ -24,7 +24,7 @@
  const dialog=el('dialog','pet-dialog');dialog.id='lifePetsDialog';dialog.setAttribute('aria-label','Питомцы');document.body.append(dialog);
  dialog.addEventListener('close',()=>{active=null;notice=''});
  const close=()=>{if(dialog.open)dialog.close()};
- function open(id){if(!ids.includes(id))return;active=id;tab='care';notice='';draw();if(!dialog.open)dialog.showModal()}
+ function open(id){if(!ids.includes(id))return;if(window.LifeSimsCloud?.isActive?.()){window.LifeSimsHousehold?.open?.('pets');return}active=id;tab='care';notice='';draw();if(!dialog.open)dialog.showModal()}
  function avatar(id){const a=el('span','pet-avatar');a.innerHTML=artwork(id);return a}
  function care(parent,pet,s,sc){
   const bar=el('div','pet-crystal-row');
