@@ -288,6 +288,7 @@ function places(host,d){
 function startWatch(){
  if(watchId!=null)navigator.geolocation.clearWatch(watchId);
  sharingStarted=true;
+ const indicator=document.getElementById('houseLocationIndicator');if(indicator)indicator.hidden=false;
  watchId=navigator.geolocation.watchPosition(async p=>{
   if(!signed()||document.visibilityState!=='visible')return;
   if(Date.now()-lastSent<30000)return;
@@ -301,12 +302,18 @@ function startWatch(){
 function stopWatch(){
  if(watchId!=null&&navigator.geolocation)navigator.geolocation.clearWatch(watchId);
  watchId=null;sharingStarted=false;
+ const indicator=document.getElementById('houseLocationIndicator');if(indicator)indicator.hidden=true;
 }
 document.addEventListener('visibilitychange',()=>{
  if(document.visibilityState!=='visible'&&watchId!=null){stopWatch();notice('Передача приостановлена при сворачивании; для возобновления нажми «Начать передачу».')}
 });
 window.LifeSimsHousehold={render,open,leave,refreshEffects,petAction,stopWatch};
 document.addEventListener('DOMContentLoaded',()=>{
+ const top=document.querySelector('.topbar .stats');
+ if(top&&!document.getElementById('houseLocationIndicator')){
+  const indicator=B('📍 Передаю',()=>open('places'),'chip');
+  indicator.id='houseLocationIndicator';indicator.hidden=true;top.prepend(indicator);
+ }
  setInterval(()=>{if(signed()&&document.visibilityState==='visible')refreshEffects().catch(()=>{})},300000);
 });
 })();
