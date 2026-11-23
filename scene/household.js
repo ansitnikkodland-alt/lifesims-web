@@ -288,15 +288,16 @@ function places(host,d){
 function startWatch(){
  if(watchId!=null)navigator.geolocation.clearWatch(watchId);
  sharingStarted=true;
- const indicator=document.getElementById('houseLocationIndicator');if(indicator)indicator.hidden=false;
+ const indicator=document.getElementById('houseLocationIndicator');if(indicator)indicator.hidden=true;
  watchId=navigator.geolocation.watchPosition(async p=>{
   if(!signed()||document.visibilityState!=='visible')return;
   if(Date.now()-lastSent<30000)return;
   lastSent=Date.now();
   try{
    await api('/v1/household/location/position','POST',{lat:p.coords.latitude,lon:p.coords.longitude,accuracy:p.coords.accuracy});
+   const indicator=document.getElementById('houseLocationIndicator');if(indicator)indicator.hidden=false;
    notice('📍 Геопозиция обновлена: '+new Date().toLocaleTimeString('ru-RU')+' · ±'+Math.round(p.coords.accuracy)+' м');
-  }catch(err){notice('Геопозиция: '+err.message)}
+  }catch(err){stopWatch();notice('⚠ Геопозиция не передана: '+err.message)}
  },err=>{notice('Браузер не определил позицию: '+err.message);stopWatch()}, {enableHighAccuracy:true,maximumAge:0,timeout:25000});
 }
 function stopWatch(){
