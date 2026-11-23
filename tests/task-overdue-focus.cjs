@@ -55,7 +55,21 @@ const assert=require('node:assert/strict');
    const h=Math.max(0,Math.min(a.y+a.h,b.y+b.h)-Math.max(a.y,b.y));
    assert.ok(w*h<150,'Overlapping room buttons: '+a.name+' / '+b.name+' · '+w*h);
   }
-  await page.locator('#closeSheet').click();
+  // The same menu must remain readable on a short landscape viewport.
+  await page.setViewportSize({width:891,height:411});
+  await page.waitForFunction(()=>document.getElementById('sheetWrap').classList.contains('list-mode'));
+  const compact=await page.locator('#sheetWrap .sheet').evaluate(el=>{
+   const box=el.getBoundingClientRect(),styles=getComputedStyle(el);
+   return {left:box.left,right:box.right,top:box.top,bottom:box.bottom,
+    overflow:styles.overflowY};
+  });
+  assert.ok(compact.left>=0&&compact.right<=891&&compact.top>=0&&compact.bottom<=411,JSON.stringify(compact));
+  assert.equal(compact.overflow,'auto');
+  const phoneTask=page.locator('#sheetActions > button').filter({hasText:'Найти экзамен по английскому'});
+  await phoneTask.click();
+  assert.equal(await page.locator('#lifeTaskActionsDialog').evaluate(el=>el.open),true);
+  await page.locator('#lifeTaskActionsClose').click();
+  await page.setViewportSize({width:390,height:844});
   await page.locator('.touchmap [data-object="desk"]').dispatchEvent('click');
   assert.ok((await page.locator('#sheetActions').innerText()).includes('Написать отчёт'));
   await page.locator('#sheetActions > button').filter({hasText:'Написать отчёт'}).evaluate(el=>el.click());
