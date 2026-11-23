@@ -188,7 +188,7 @@ async function searchProducts(input){
  if(term.length<2)throw Error('Для поиска введи минимум 2 символа.');
  if(searchCache.has(term.toLowerCase()))return searchCache.get(term.toLowerCase());
  const elapsed=Date.now()-lastSearchTime;
- if(elapsed<6500)throw Error('Чтобы не превышать лимит каталога, повтори поиск через несколько секунд.');
+ if(elapsed<6500)await new Promise(resolve=>setTimeout(resolve,6500-elapsed));
  lastSearchTime=Date.now();
  // Open Food Facts v2 does not provide full-text search; the v1 endpoint does.
  const params=new URLSearchParams({search_terms:term,search_simple:'1',action:'process',json:'1',page_size:'12',fields:PRODUCT_FIELDS});
