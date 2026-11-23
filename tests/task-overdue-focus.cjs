@@ -66,7 +66,7 @@ const assert=require('node:assert/strict');
    return {overdueDay:api.due('reg_phone_overdue',api.today()),oldDay:api.due('reg_phone_overdue',api.dateAdd(api.today(),-2))};
   });
   assert.deepEqual(rolled,{overdueDay:true,oldDay:false});
-  window?.console?.log?.('TASK OVERDUE AND POMODORO: PASS');
+  console.log('TASK OVERDUE AND POMODORO: PASS');
  } finally {await browser.close()}
  if(errors.length)console.warn('Other page errors:',errors.slice(0,4).join(' | '));
 })().catch(error=>{console.error(error);process.exit(1)});
