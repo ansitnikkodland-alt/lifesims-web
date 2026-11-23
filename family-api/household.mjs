@@ -151,6 +151,9 @@ export function createHouseholdRoute({pool,json,send,requireOk,HttpError,hasRate
       metrics[d.targetMetric]=Math.min(60,(metrics[d.targetMetric]||0)+
        Math.round(Number(d.targetGain||0)*Math.max(0,1-hours(x.created_at)/(d.targetMetric==='nutrition'?12:24))));
     if(x.actor_id===user.id){
+     const ownPoints=x.event_type==='pet'?({pet:3,feed:2,litter:1}[x.action]||0):2;
+     metrics.resource=Math.min(18,(metrics.resource||0)+
+       Math.round(ownPoints*Math.max(0,1-hours(x.created_at)/24)));
      for(const a of d.skills||[])skills.push({name:a.name,xp:a.xp,project:d.project,at:x.created_at,eventId:x.id});
      events.push(publicEvent(x));
     }
