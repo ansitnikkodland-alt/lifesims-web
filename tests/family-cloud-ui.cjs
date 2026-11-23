@@ -38,6 +38,15 @@ const assert=require('node:assert/strict');
   await page.waitForFunction(()=>document.querySelector('#cloudStatus')?.textContent.includes('kid_'),null,{timeout:15000});
   const childLogin=(await page.locator('#cloudStatus').innerText()).match(/kid_[0-9a-f]{16}/)?.[0];
   assert.ok(childLogin);
+  // Figurine studio is in the same Family dialog and never starts paid processing without explicit consent.
+  await page.locator('#cloudNav').getByRole('button',{name:'Фигурка'}).click();
+  await page.locator('.figurine-account').waitFor({state:'visible'});
+  assert.equal(await page.locator('.figurine-account option').count(),2,'Parent and child selectable');
+  assert.equal(await page.getByRole('button',{name:'✨ Создать фигурку по фото'}).isDisabled(),true,'AI generation requires owner-side activation');
+  assert.equal(await page.getByRole('button',{name:'📂 Добавить готовую фигурку'}).isDisabled(),false,'Parent can import own prepared figurine');
+  assert.equal(await page.locator('.figurine-consent input').isChecked(),false);
+  await page.locator('.figurine-account').selectOption({index:1});
+  assert.equal(await page.getByRole('button',{name:'📂 Добавить готовую фигурку'}).isDisabled(),true,'Child uploads disabled in temporary database');
   // Parent and child share live cat care; no duplicate per-account pet state.
   await page.locator('#cloudNav').getByRole('button',{name:'Котики'}).click();
   await page.locator('.house-pet-grid').waitFor({state:'visible'});

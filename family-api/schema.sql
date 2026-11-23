@@ -65,3 +65,10 @@ CREATE TABLE IF NOT EXISTS family_care(
  CHECK(from_account <> to_account)
 );
 CREATE INDEX IF NOT EXISTS family_care_time ON family_care(created_at DESC);
+
+-- Only approved finished figurines are persisted. Source photographs are NEVER stored.
+CREATE TABLE IF NOT EXISTS family_figurines(
+ account_id uuid PRIMARY KEY REFERENCES family_accounts(id) ON DELETE CASCADE,
+ image_data text NOT NULL,
+ updated_at timestamptz NOT NULL DEFAULT now()
+);
