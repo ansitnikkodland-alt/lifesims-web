@@ -7,6 +7,7 @@ on:
       - 'scene/family.js'
       - 'scene/index.html'
       - 'tests/family-cloud-api.mjs'
+      - 'tests/family-cloud-ui.cjs'
       - '.github/workflows/lifesims-family-cloud.yml'
   pull_request:
     paths:
@@ -15,6 +16,7 @@ on:
       - 'scene/family.js'
       - 'scene/index.html'
       - 'tests/family-cloud-api.mjs'
+      - 'tests/family-cloud-ui.cjs'
       - '.github/workflows/lifesims-family-cloud.yml'
   workflow_dispatch:
 jobs:
@@ -57,3 +59,11 @@ jobs:
           curl -fsS http://127.0.0.1:8766/health
       - name: Test authentication, family access and version conflicts
         run: node tests/family-cloud-api.mjs
+      - name: Install mobile browser driver
+        run: npm install --no-save playwright-core@1.56.1
+      - name: Start static LifeSims locally
+        run: |
+          python3 -m http.server 8765 > /tmp/lifesims_cloud_ui.log 2>&1 &
+          sleep 2
+      - name: Test parent signup and child login in mobile browser
+        run: node tests/family-cloud-ui.cjs
