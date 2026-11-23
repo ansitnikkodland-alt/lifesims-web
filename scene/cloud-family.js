@@ -33,7 +33,7 @@ function resourceBonus(d){
 window.LifeSimsCloud={isActive,activeId,activeStore,resourceBonus,onLocalSave,request,account:()=>session?.account||null,openSection,metricBonus,setFamilyEffects};
 async function request(path,method='GET',payload){
  const controller=new AbortController();
- const timeout=setTimeout(()=>controller.abort(),30000);
+ const timeout=setTimeout(()=>controller.abort(),path==='/v1/figurines/generate'?145000:30000);
  try{
   const response=await fetch(API+path,{method,headers:{
    ...(payload!==undefined?{'Content-Type':'application/json'}:{}),
@@ -114,13 +114,14 @@ function render(){
  const me=session.account;
  body.append(el('p','Мой персонаж: '+me.displayName+' · '+(me.role==='child'?'детский аккаунт':'взрослый аккаунт'),'cloud-muted'));
  body.append(warning());
- const tabs=[['children','Участники'],['save','Прогресс'],['links','Связи'],['appearance','Фото'],['pets','Котики'],['care','Забота'],['chat','Чат'],['places','Места']];
+ const tabs=[['children','Участники'],['save','Прогресс'],['links','Связи'],['appearance','Фото'],['figurines','Фигурка'],['pets','Котики'],['care','Забота'],['chat','Чат'],['places','Места']];
  for(const [id,label] of tabs){
   if(id==='children'&&me.role!=='adult')continue;
   const b=btn(label,()=>{section=id;render()},section===id?'primary':'secondary');nav.append(b);
  }
  if(section==='save')progress(body);
  if(section==='children'&&me.role==='adult')family(body);
+ if(section==='figurines')window.LifeSimsFigurines?.render?.(body).catch(err=>setStatus('⚠ Фигурка: '+err.message));
  if(section==='links')connections(body);
  if(section==='appearance')appearance(body);
  if(['pets','care','chat','places'].includes(section)){
