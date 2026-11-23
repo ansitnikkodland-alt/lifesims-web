@@ -1,0 +1,83 @@
+import assert from 'node:assert/strict';
+import {randomBytes} from 'node:crypto';
+const API=process.env.FAMILY_API_TEST_URL||'http://127.0.0.1:8766';
+const seed=randomBytes(7).toString('hex');
+async function req(path,method='GET',body,token){
+ const response=await fetch(API+path,{method,headers:{
+  ...(body?{'Content-Type':'application/json'}:{}),
+  ...(token?{Authorization:'Bearer '+token}:{})
+ },body:body?JSON.stringify(body):undefined});
+ const data=await response.json().catch(()=>({}));
+ return {status:response.status,data};
+}
+const payload={schema:2,days:{},activities:[],events:[]};
+let health=await req('/health');assert.equal(health.status,200);
+const register=async n=>req('/v1/auth/register','POST',{email:n+'-'+seed+'@example.net',displayName:n,password:'ExampleLongPassword_2026!'});
+const a=await register('guardian');assert.equal(a.status,201);
+const b=await register('friend');assert.equal(b.status,201);
+const AT=a.data.token,BT=b.data.token;
+let child=await req('/v1/children','POST',{displayName:'Test Child',password:'LongChildPassword_2026!'},AT);
+assert.equal(child.status,201);
+assert.match(child.data.child.login,/^kid_[0-9a-f]{16}$/);
+const CID=child.data.child.id;
+let authKid=await req('/v1/auth/login','POST',{login:child.data.child.login,password:'LongChildPassword_2026!'});
+assert.equal(authKid.status,200);
+const CT=authKid.data.token;
+let kidsA=await req('/v1/children','GET',undefined,AT);
+assert.equal(kidsA.data.children.length,1);
+let kidsB=await req('/v1/children','GET',undefined,BT);
+assert.equal(kidsB.data.children.length,0);
+let kidSelf=await req('/v1/me','GET',undefined,CT);
+assert.equal(kidSelf.data.account.id,CID);
+let zero=await req('/v1/me/save','GET',undefined,CT);
+assert.equal(zero.data.revision,0);
+let updated=await req('/v1/me/save','PUT',{revision:0,payload},CT);
+assert.equal(updated.status,200);
+assert.equal(updated.data.revision,1);
+let conflict=await req('/v1/me/save','PUT',{revision:0,payload},CT);
+assert.equal(conflict.status,409);
+let reread=await req('/v1/me/save','GET',undefined,CT);
+assert.equal(reread.data.revision,1);
+let own=await req('/v1/me/save','GET',undefined,AT);
+assert.equal(own.data.revision,0,'Parent must not automatically see child state');
+let unauthorized=await req('/v1/care','POST',{to:CID,action:'help',requestId:'unauthorized_test123'},BT);
+assert.equal(unauthorized.status,403);
+let cared=await req('/v1/care','POST',{to:CID,action:'support',requestId:'care_abc123xyz'},AT);
+assert.equal(cared.status,201);
+let careAgain=await req('/v1/care','POST',{to:CID,action:'support',requestId:'care_abc123xyz'},AT);
+assert.equal(careAgain.status,200);assert.equal(careAgain.data.duplicate,true);
+let effectAdult=await req('/v1/me/effects','GET',undefined,AT);
+let effectChild=await req('/v1/me/effects','GET',undefined,CT);
+assert.equal(effectAdult.data.resourceBonus,3);
+assert.equal(effectChild.data.resourceBonus,5);
+let childInvite=await req('/v1/invites','POST',{kind:'friend'},CT);
+assert.equal(childInvite.status,403);
+let invite=await req('/v1/invites','POST',{kind:'friend',fromAccountId:CID},AT);
+assert.equal(invite.status,201);
+let acceptance=await req('/v1/invites/accept','POST',{code:invite.data.code},BT);
+assert.equal(acceptance.status,200);
+let acceptedAgain=await req('/v1/invites/accept','POST',{code:invite.data.code},BT);
+assert.equal(acceptedAgain.status,404);
+let friendCare=await req('/v1/care','POST',{to:CID,action:'time',requestId:'friends_test_abc_123'},BT);
+assert.equal(friendCare.status,201);
+let avatar=await req('/v1/me/avatar','PUT',{avatar:'data:image/svg+xml;base64,AAAA'},CT);
+assert.equal(avatar.status,400,'SVG must be rejected');
+let noRead=await req('/v1/me/save','GET');
+assert.equal(noRead.status,401);
+let logout=await req('/v1/auth/logout','POST',{},CT);
+assert.equal(logout.status,200);
+let revoked=await req('/v1/me','GET',undefined,CT);
+assert.equal(revoked.status,401);
+let strangerReset=await req('/v1/children/password','POST',{
+ childId:CID,newPassword:'AnotherChildPassword_2026',yourPassword:'ExampleLongPassword_2026!'
+},BT);
+assert.equal(strangerReset.status,403);
+let deleteChild=await req('/v1/children','DELETE',{childId:CID,yourPassword:'ExampleLongPassword_2026!'},AT);
+assert.equal(deleteChild.status,200);
+let afterDelete=await req('/v1/auth/login','POST',{login:child.data.child.login,password:'LongChildPassword_2026!'});
+assert.equal(afterDelete.status,401);
+let deleteAdult=await req('/v1/me/account','DELETE',{password:'ExampleLongPassword_2026!'},AT);
+assert.equal(deleteAdult.status,200);
+let revokedAdult=await req('/v1/me','GET',undefined,AT);
+assert.equal(revokedAdult.status,401);
+console.log('AUTH INTEGRATION PASS (including deletions): guardian and child account separation, server saves, conflict 409, care, guardian-approved friendship, revoked session, unsafe image blocked.');

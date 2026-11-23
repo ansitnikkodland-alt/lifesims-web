@@ -1,0 +1,28 @@
+.cloud-dialog{position:fixed;inset:auto 8px 8px;z-index:410;box-sizing:border-box;width:min(calc(100% - 16px),600px);max-height:90dvh;overflow:auto;padding:16px;border:1px solid #a6bed8;border-radius:19px;background:linear-gradient(155deg,#303e60,#12223e);color:#f7faff;box-shadow:0 16px 90px #000d}
+.cloud-dialog::backdrop{background:#0c1221d4}
+.cloud-dialog *{box-sizing:border-box}
+.cloud-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:11px}
+.cloud-heading strong{font-size:17px}
+.cloud-heading button{min-width:44px;min-height:44px;border:1px solid #7795b5;background:#314c69;color:#fff;border-radius:10px;font-size:24px}
+.cloud-tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px}
+.cloud-tabs button{min-height:44px;flex:1;padding:8px}
+.cloud-dialog .primary,.cloud-dialog .secondary,.cloud-dialog .cloud-logout{min-height:44px}
+.cloud-dialog button{max-width:100%;white-space:normal}
+.cloud-card{display:flex;flex-direction:column;gap:9px;padding:12px;margin:10px 0;border:1px solid #607e9d;border-radius:13px;background:#223551}
+.cloud-card strong{font-size:15px}
+.cloud-input{width:100%;min-height:46px;padding:10px 12px;border:1px solid #9dc2d6;border-radius:9px;background:#10253f;color:#fff}
+.cloud-muted{font-size:13px;color:#d5e2f0;margin:8px 0;line-height:1.5;overflow-wrap:anywhere}
+.cloud-warning{font-size:13px;color:#ffe1b6;background:#4d3a29;padding:10px;border-radius:9px;border:1px solid #b8935f;line-height:1.55}
+.cloud-status{font-size:13px;line-height:1.4;min-height:26px;margin-top:9px;color:#a9f3dc;overflow-wrap:anywhere}
+.cloud-logout{padding:9px 12px;background:#50334a;color:#ffe3ec;border:1px solid #9e6782;border-radius:9px;margin-top:15px}
+.cloud-result{font-size:13px;color:#a5edd7;overflow-wrap:anywhere}
+.cloud-code{word-break:break-all;font-size:13px;color:#ffe6a2}
+.cloud-upload{display:flex;flex-direction:column;gap:8px;padding:12px;border-radius:12px;border:1px dashed #80aac6;cursor:pointer}
+.cloud-upload input{font-size:13px;max-width:100%}
+@media(max-width:450px){.cloud-dialog{inset:auto 2px 2px;width:calc(100% - 4px);max-height:94dvh;padding:12px}.cloud-tabs button{font-size:12px;padding:7px 4px}#familyOpen{font-size:11px}#cloudDialog .cloud-input{font-size:16px}}
+
+.cloud-delete-section{margin-top:12px;border-top:1px solid #536e8b;padding-top:12px}
+.cloud-delete-section summary,.cloud-card details summary{min-height:44px;cursor:pointer;padding:9px 2px;color:#fbd9e1}
+.cloud-delete{min-height:44px;padding:9px 12px;background:#603342;color:#fff;border:1px solid #b8798a;border-radius:9px}
+.cloud-card details{display:flex;flex-direction:column;gap:8px}
+.cloud-card details[open]>.cloud-input{margin-bottom:8px}

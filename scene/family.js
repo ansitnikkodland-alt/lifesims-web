@@ -4,11 +4,13 @@
  */
 (function(){
 'use strict';
-const ROSTER='lifesims-family-catalog-v1';
-const ACTIVE='lifesims-family-active-v1';
+const CLOUD=!!window.LifeSimsCloud?.isActive?.();
+const CLOUD_UID=CLOUD?window.LifeSimsCloud.activeId():'';
+const ROSTER=CLOUD?'lifesims-family-catalog-cloud-'+CLOUD_UID:'lifesims-family-catalog-v1';
+const ACTIVE=CLOUD?'lifesims-family-active-cloud-'+CLOUD_UID:'lifesims-family-active-v1';
 const PRIMARY='primary';
 const MAIN_STORE='lifesims-visual-v1';
-const ROOM_DB='lifesims-family-room-photos-v1';
+const ROOM_DB=CLOUD?'lifesims-family-room-cloud-'+CLOUD_UID:'lifesims-family-room-photos-v1';
 const ITEMS={sim:'Персонаж',bed:'Кровать',fridge:'Холодильник',shower:'Душ',toilet:'Туалет',sink:'Раковина',desk:'Компьютер',phone:'Телефон',window:'Окно',sofa:'Диван',catLitter:'Лоток котиков'};
 const LIMIT=12*1024*1024;
 const id=()=>('p-'+(self.crypto?.randomUUID?.()||String(Date.now())+'-'+Math.random().toString(36).slice(2)));
@@ -44,7 +46,7 @@ function resourceBonus(day){
  return Math.min(18,total);
 }
 function localDay(d){return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0')}
-window.LifeSimsFamily={activeStore,activeId:current,resourceBonus,storeFor,read:catalog};
+window.LifeSimsFamily={activeStore,activeId:current,resourceBonus,storeFor,read:catalog,open,exportRoom,importRoom};
 let dialog,roomOverlay,placing=null,section='people';
 function field(tag,cls,text){
  const el=document.createElement(tag);if(cls)el.className=cls;if(text!=null)el.textContent=text;return el;
@@ -103,12 +105,36 @@ async function roomData(cid,value){
   });
  }finally{db.close()}
 }
-function open(){if(!dialog)return;section='people';draw();if(!dialog.open)dialog.showModal()}
+async function exportRoom(){
+ const personData=person();
+ const image=await roomData(personData.id).catch(()=>null);
+ if(!image)return null;
+ return {image,markers:personData.markers||{}};
+}
+async function importRoom(data){
+ if(!data?.image||typeof data.image!=='string'||!data.image.startsWith('data:image/jpeg;base64,')||data.image.length>1250000)return false;
+ const newMarkers={};
+ for(const [k,v]of Object.entries(data.markers||{})){
+  if(ITEMS[k]&&Number.isFinite(v?.x)&&Number.isFinite(v?.y)&&v.x>=0&&v.x<=100&&v.y>=0&&v.y<=100)newMarkers[k]={x:v.x,y:v.y};
+ }
+ try{
+  await roomData(person().id,data.image);
+  const all=catalog(),p=all.people.find(x=>x.id===current());
+  p.roomActive=true;p.markers=newMarkers;
+  if(!save(all))return false;
+  await refreshRoom();return true;
+ }catch(_){return false}
+}
+function open(view){
+ if(!dialog)return;
+ section=CLOUD?'room':(view==='room'?'room':'people');
+ draw();if(!dialog.open)dialog.showModal();
+}
 function draw(){
  if(!dialog)return;
- dialog.querySelector('#familyTitle').textContent='Мои персонажи и связи';
+ dialog.querySelector('#familyTitle').textContent=CLOUD?'Фотографическая комната':'Мои персонажи и связи';
  const nav=dialog.querySelector('#familyNav');nav.replaceChildren();
- for(const [key,name] of [['people','Персонажи'],['room','Комната'],['links','Связи']]){
+ for(const [key,name] of (CLOUD?[['room','Комната']]:[['people','Персонажи'],['room','Комната'],['links','Связи']])){
   const b=button(name,()=>{section=key;draw()},section===key?'primary':'secondary');
   nav.append(b);
  }
@@ -286,6 +312,7 @@ function drawLinks(body){
  }
 }
 function updateHeader(){
+ if(CLOUD)return; // Cloud identity owns the account portrait and display name.
  const profile=person(),title=document.querySelector('.topbar .person strong'),portrait=document.getElementById('portraitBtn');
  if(title)title.textContent='LifeSims · '+profile.name;
  if(portrait){
@@ -337,7 +364,7 @@ async function refreshRoom(){
 function start(){
  const stat=document.querySelector('.topbar .stats');
  if(stat&&!document.getElementById('familyOpen')){
-  const b=button('👨‍👩‍👧 Персонажи',open,'chip');b.id='familyOpen';stat.prepend(b)
+  const b=button(CLOUD?'🏠 Моя комната':'👨‍👩‍👧 Персонажи',()=>open(), 'chip');b.id='familyOpen';stat.prepend(b)
  }
  dialog=document.createElement('dialog');dialog.className='family-dialog';dialog.id='familyDialog';
  dialog.innerHTML='<header class="family-heading"><strong id="familyTitle">Персонажи и связи</strong><button type="button" id="familyClose" aria-label="Закрыть">×</button></header><div class="family-nav" id="familyNav"></div><div id="familyBody"></div><p id="familyStatus" role="status" class="family-status"></p>';
