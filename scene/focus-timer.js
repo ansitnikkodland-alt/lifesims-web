@@ -17,6 +17,28 @@
  <label>Длинный перерыв, мин<input id="tpLongDuration" type="number" min="1" max="120" value="15"></label></div>
  <button id="tpFocusSave" type="button" class="tp-minor">Сохранить интервалы</button></details>
  <div id="tpFocusStats" class="tp-focus-stats"></div></div>`;
+ const completionDialog=document.createElement('dialog');
+ completionDialog.id='tpFocusCompleteDialog';
+ completionDialog.setAttribute('aria-labelledby','tpFocusCompleteTitle');
+ completionDialog.innerHTML='<div class="single-metric-head"><h3 id="tpFocusCompleteTitle">Помодоро</h3><button type="button" class="secondary" id="tpFocusCompleteClose" aria-label="Закрыть">×</button></div><p id="tpFocusCompleteText" class="hint"></p><div class="row" style="gap:10px;flex-wrap:wrap"><button type="button" class="primary" id="tpFocusCompleteYes">✓ Отметить выполненным</button><button type="button" class="secondary" id="tpFocusCompleteNo">Пока нет</button></div>';
+ document.body.append(completionDialog);
+ $('tpFocusCompleteClose').onclick=()=>completionDialog.close();
+ $('tpFocusCompleteNo').onclick=()=>completionDialog.close();
+ completionDialog.addEventListener('click',e=>{if(e.target===completionDialog)completionDialog.close()});
+ function offerCompletion(id,reason){
+  if(!id)return;
+  const task=api.read().activities.find(a=>a?.id===id&&a.kind==='task'&&!a.legacyDone);
+  if(!task||api.done(id,api.today()))return;
+  const allowed=task.repeat==='inbox'||api.due(id,api.today());
+  $('tpFocusCompleteTitle').textContent=reason==='reset'?'Помодоро сброшен':'Помодоро завершён';
+  $('tpFocusCompleteText').textContent='Отметить дело «'+task.name+'» выполненным?'+
+   (allowed?'':' Дело не запланировано на сегодня — можно изменить его дату в планировщике.');
+  const yes=$('tpFocusCompleteYes');
+  yes.disabled=!allowed;
+  yes.onclick=()=>{completionDialog.close();api.complete(id,api.today());render()};
+  if(completionDialog.open)completionDialog.close();
+  completionDialog.showModal();
+ }
  const defaultSetting={focus:25,short:5,long:15};
  const duration=(f,settings)=>f.mode==='stopwatch'?0:(Number(settings[f.mode])||25)*60;
  const remaining=(f,now=Date.now())=>{
@@ -26,7 +48,9 @@
  function render(){
   const data=api.read(),f=data.focusTimer||{mode:'focus',remainingSec:1500,running:false},settings={...defaultSetting,...data.focusSettings};
   if(f.running&&f.mode!=='stopwatch'&&f.endAt&&Date.now()>=f.endAt){
-   api.finishFocus();return render();
+   const finished=api.finishFocus();
+   if(finished&&f.mode==='focus')offerCompletion(f.taskId,'finished');
+   return render();
   }
   const now=Date.now(),seconds=Math.ceil(Math.max(0,remaining(f,now)));
   $('tpTime').textContent=String(Math.floor(seconds/60)).padStart(2,'0')+':'+String(seconds%60).padStart(2,'0');
@@ -38,7 +62,8 @@
   const minutes=events.reduce((sum,e)=>sum+(Number(e.durationMin)||25),0);
   $('tpFocusStats').textContent='Сегодня: '+events.length+' завершённых помодоро · '+minutes+' мин работы';
   const select=$('tpFocusTask'),old=select.value;
-  const choices=data.activities.filter(a=>a.kind==='task'&&!a.legacyDone&&!(a.completions||[]).length);
+  const choices=data.activities.filter(a=>a.kind==='task'&&!a.legacyDone&&!
+   (['once','inbox'].includes(a.repeat)&&(a.completions||[]).length));
   if(select.options.length!==choices.length+1||choices.some(a=>![...select.options].some(o=>o.value===a.id))){
    select.replaceChildren();
    const empty=document.createElement('option');empty.value='';empty.textContent='Не привязывать';select.append(empty);
@@ -68,7 +93,17 @@
  }
  root.querySelectorAll('[data-focus-mode]').forEach(b=>b.onclick=()=>setMode(b.dataset.focusMode));
  $('tpFocusToggle').onclick=toggle;
- $('tpFocusReset').onclick=()=>setMode(api.read().focusTimer?.mode||'focus');
+ $('tpFocusReset').onclick=()=>{
+  const f=api.read().focusTimer||{mode:'focus'};
+  const taskId=f.mode==='focus'?f.taskId:null;
+  if(f.running&&f.endAt&&Date.now()>=f.endAt)api.finishFocus();
+  setMode(f.mode||'focus');
+  if(taskId){
+   api.writeFocus({...api.read().focusTimer,taskId});
+   render();
+   offerCompletion(taskId,'reset');
+  }
+ };
  $('tpFocusTask').onchange=()=>api.writeFocus({...api.read().focusTimer,taskId:$('tpFocusTask').value});
  $('tpFocusSave').onclick=()=>{
   const vals={focus:Number($('tpFocusDuration').value),short:Number($('tpShortDuration').value),long:Number($('tpLongDuration').value)};
@@ -77,7 +112,19 @@
  };
  const settings={...defaultSetting,...api.read().focusSettings};
  $('tpFocusDuration').value=settings.focus;$('tpShortDuration').value=settings.short;$('tpLongDuration').value=settings.long;
- window.LifeSimsFocusTimer={render};
+ function selectTask(id){
+  const task=api.read().activities.find(a=>a?.id===id&&a.kind==='task'&&!a.legacyDone);
+  if(!task)return false;
+  const f=api.read().focusTimer||{mode:'focus'};
+  if(f.running&&(f.mode!=='focus'||(f.taskId&&f.taskId!==id))&&
+   !confirm('Другой таймер уже запущен. Остановить его и перейти к делу «'+task.name+'»?'))return false;
+  if(f.mode!=='focus'||(f.taskId&&f.taskId!==id)){
+   setMode('focus');
+  }
+  if(!api.writeFocus({...api.read().focusTimer,taskId:id}))return false;
+  render();return true;
+ }
+ window.LifeSimsFocusTimer={render,selectTask,offerCompletion};
  render();
  window.setInterval(()=>{if(!document.hidden&&api.read().focusTimer?.running)render()},1000);
  window.addEventListener('focus',render);
