@@ -362,10 +362,8 @@ async function refreshRoom(){
  scene.append(root);roomOverlay=root;scene.classList.add('family-room-active');
 }
 function start(){
- const stat=document.querySelector('.topbar .stats');
- if(stat&&!document.getElementById('familyOpen')){
-  const b=button(CLOUD?'🏠 Моя комната':'👨‍👩‍👧 Персонажи',()=>open(), 'chip');b.id='familyOpen';stat.prepend(b)
- }
+ // There is only one account/character entry point in the header: LifeSims Cloud's "Семья".
+ // Preserve legacy local characters and private photo rooms behind that single entry.
  dialog=document.createElement('dialog');dialog.className='family-dialog';dialog.id='familyDialog';
  dialog.innerHTML='<header class="family-heading"><strong id="familyTitle">Персонажи и связи</strong><button type="button" id="familyClose" aria-label="Закрыть">×</button></header><div class="family-nav" id="familyNav"></div><div id="familyBody"></div><p id="familyStatus" role="status" class="family-status"></p>';
  document.body.append(dialog);
