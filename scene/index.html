@@ -1460,7 +1460,15 @@ function complete(a,date){
  if(isWeightMeasurementTask(a))return openWeightMeasurement(a,date);
  if(window.LifeSimsCloud?.isActive?.()&&['pet_feed_ginger','pet_feed_black'].includes(a.id)){
   window.LifeSimsHousehold?.petAction?.('feed',a.petId||a.id.slice('pet_feed_'.length))
-   .then(()=>{let p=0;if(transact(()=>{p=appendActivityCompletion(a,date)}))showCompletion(a,p)})
+   .then(()=>{
+    if(transact(()=>{
+     appendActivityCompletion(a,date);
+     const e=state.events[state.events.length-1],entry=a.completions?.[a.completions.length-1];
+     // The shared family event already credits the care skill; the local habit records only completion.
+     if(e?.activityId===a.id){e.xp=0;e.skillXp=0}
+     if(entry){entry.xp=0;entry.skillXp=0}
+    }))showCompletion(a,0);
+   })
    .catch(error=>toast('Не удалось синхронизировать кормление: '+error.message));
   return;
  }
