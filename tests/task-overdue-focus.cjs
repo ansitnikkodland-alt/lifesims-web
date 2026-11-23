@@ -29,6 +29,10 @@ const assert=require('node:assert/strict');
   assert.deepEqual(snapshot.map(x=>x[1]),[true,true,false,false,true]);
   assert.deepEqual(snapshot.map(x=>x[2]),[true,false,false,false,true]);
 
+  await page.evaluate(()=>window.LifeSimsSkillDetail.open('Астрономия'));
+  const astronomy=await page.locator('#skillDetailBody').innerText();
+  assert.ok(astronomy.includes('Написать отчёт'),'Linked report missing from Astronomy skill');
+  await page.locator('#skillDetailClose').click();
   await page.evaluate(()=>document.getElementById('scenePhone').click());
   const phone=await page.locator('#sheetActions').innerText();
   for(const expected of ['Просроченный телефон','Сегодня телефон'])assert.ok(phone.includes(expected),phone);
@@ -66,6 +70,18 @@ const assert=require('node:assert/strict');
    return {overdueDay:api.due('reg_phone_overdue',api.today()),oldDay:api.due('reg_phone_overdue',api.dateAdd(api.today(),-2))};
   });
   assert.deepEqual(rolled,{overdueDay:true,oldDay:false});
+  // The PWA recalculates the carried task when tomorrow becomes today.
+  await page.clock.install({time:new Date()});
+  await page.clock.setFixedTime(new Date(Date.now()+86400000));
+  await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
+  const rollover=await page.evaluate(()=>{
+   const api=window.LifeSimsTaskBridge;
+   return {nextDay:api.today(),due:api.due('reg_phone_overdue',api.today()),
+    original:api.read().activities.find(a=>a.id==='reg_phone_overdue').createdDate};
+  });
+  assert.notEqual(rollover.nextDay,ids.now);
+  assert.equal(rollover.due,true);
+  assert.equal(rollover.original,ids.yesterday);
   console.log('TASK OVERDUE AND POMODORO: PASS');
  } finally {await browser.close()}
  if(errors.length)console.warn('Other page errors:',errors.slice(0,4).join(' | '));
