@@ -23,7 +23,7 @@ const assert=require('node:assert/strict');
     if(updates.length<80)updates.push(String(message))
    });
    return {kind:output.kind,source:output.source,candidates:output.candidates,updates};
-  },null,{timeout:240000});
+  });
   assert.equal(result.kind,'meal');
   assert.equal(result.candidates.length,5);
   assert.ok(result.candidates[0].score>0);
