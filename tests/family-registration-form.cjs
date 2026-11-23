@@ -16,6 +16,11 @@ const {chromium}=require('playwright-core');
   await register.locator('input[autocomplete="new-password"]').fill('ExamplePassword!2026');
   let count=0;
   await page.route('http://127.0.0.1:8766/v1/auth/register',async route=>{
+   if(route.request().method()==='OPTIONS')return route.fulfill({status:204,headers:{
+    'Access-Control-Allow-Origin':'http://127.0.0.1:8765',
+    'Access-Control-Allow-Methods':'POST, OPTIONS',
+    'Access-Control-Allow-Headers':'Content-Type'
+   }});
    count++;
    await new Promise(resolve=>setTimeout(resolve,300));
    await route.fulfill({
@@ -32,10 +37,13 @@ const {chromium}=require('playwright-core');
   assert.equal(await register.locator('button[type="submit"]').isEnabled(),true,'Button stays blocked');
 
   await page.unroute('http://127.0.0.1:8766/v1/auth/register');
-  await page.route('http://127.0.0.1:8766/v1/auth/register',route=>route.fulfill({
-   status:409,headers:{'Access-Control-Allow-Origin':'http://127.0.0.1:8765','Content-Type':'application/json'},
-   body:JSON.stringify({error:'Этот email уже зарегистрирован'})
-  }));
+  await page.route('http://127.0.0.1:8766/v1/auth/register',route=>
+   route.request().method()==='OPTIONS'?
+    route.fulfill({status:204,headers:{'Access-Control-Allow-Origin':'http://127.0.0.1:8765',
+     'Access-Control-Allow-Methods':'POST, OPTIONS','Access-Control-Allow-Headers':'Content-Type'}}):
+    route.fulfill({status:409,headers:{'Access-Control-Allow-Origin':'http://127.0.0.1:8765','Content-Type':'application/json'},
+     body:JSON.stringify({error:'Этот email уже зарегистрирован'})})
+  );
   await register.getByRole('button',{name:'Зарегистрироваться'}).click();
   await register.locator('p[role="status"]').getByText(/Попробуй войти через форму выше/).waitFor();
   assert.deepEqual(errors,[],'Unhandled browser errors');
