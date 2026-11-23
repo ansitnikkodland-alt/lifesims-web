@@ -109,6 +109,17 @@ function render(){
  if(section==='children'&&me.role==='adult')family(body);
  if(section==='links')connections(body);
  if(section==='appearance')appearance(body);
+ const deletion=el('details',null,'cloud-delete-section');
+ deletion.append(el('summary','Удалить мой облачный аккаунт'));
+ deletion.append(el('p',session.account.role==='adult'?'Удаление взрослого аккаунта также удалит все управляемые детские аккаунты и их облачные записи.':'Удаление уничтожит облачное сохранение и связи этого персонажа.','cloud-warning'));
+ const confirmation=input('Пароль для подтверждения удаления','password');
+ deletion.append(confirmation,btn('Безвозвратно удалить облачный аккаунт',async()=>{
+  if(!confirmation.value)return setStatus('Сначала укажи пароль');
+  if(!confirm('Безвозвратно удалить этот аккаунт, все облачные сохранения и связанные детские аккаунты?'))return;
+  await request('/v1/me/account','DELETE',{password:confirmation.value});
+  sessionStorage.removeItem(SESSION);location.reload();
+ },'cloud-delete'));
+ body.append(deletion);
  body.append(btn('Выйти из аккаунта',async()=>{
   if(queued||saving){if(!confirm('Есть несохранённые в облаке изменения. Локальные данные останутся на устройстве. Выйти?'))return}
   try{await request('/v1/auth/logout','POST',{})}catch(e){setStatus('Выход на сервере не подтверждён: '+e.message)}
@@ -189,6 +200,15 @@ function progress(body){
    }));
   }
  }
+ body.append(btn('⬇ Скачать JSON облачного прогресса',async()=>{
+  const data=await request('/v1/me/save');
+  if(!data.payload)return setStatus('В облаке пока нет сохранения');
+  const blob=new Blob([JSON.stringify(data.payload,null,2)],{type:'application/json'});
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download='LifeSims-cloud-'+session.account.id+'.json';document.body.append(a);a.click();a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+  setStatus('JSON выгружен. В файле могут быть личные сведения — храните его приватно.');
+ }));
  body.append(btn('↻ Проверить облачную версию',load));
  body.append(el('p','При конфликте синхронизация останавливается, пока пользователь не выберет нужную версию. Никакого автоматического объединения дневника, медицинских записей или мероприятий нет.','cloud-muted'));
 }
@@ -213,6 +233,15 @@ async function family(body){
  for(const c of children){
   const card=el('div',null,'cloud-card');card.append(el('strong',c.displayName),el('p','Логин: '+c.login,'cloud-muted'));
   card.append(btn('Копировать логин',()=>navigator.clipboard?.writeText(c.login).then(()=>setStatus('Логин скопирован')).catch(()=>setStatus('Скопируй логин вручную.'))));
+  const deletion=el('details');const summary=el('summary','Удалить аккаунт ребёнка');deletion.append(summary);
+  const pass=input('Пароль родителя для удаления','password');
+  deletion.append(pass,btn('Удалить аккаунт и все сохранения ребёнка',async()=>{
+   if(!pass.value)return setStatus('Укажите пароль родителя');
+   if(!confirm('Безвозвратно удалить аккаунт «'+c.displayName+'» и его облачный прогресс?'))return;
+   await request('/v1/children','DELETE',{childId:c.id,yourPassword:pass.value});
+   setStatus('Аккаунт ребёнка и его облачный прогресс удалены.');await refreshChildren();
+  },'cloud-delete'));
+  card.append(deletion);
   body.append(card);
  }
 }
