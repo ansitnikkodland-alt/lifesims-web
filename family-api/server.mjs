@@ -265,6 +265,28 @@ async function route(req,res){
    await client.query('COMMIT');return send(res,201,{ok:true,recipientBonus:5,caregiverBonus:3});
   }catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}
  }
+ if(method==='DELETE'&&path==='/v1/children'){
+  requireOk(user.role==='adult',403,'Только родитель может удалить детский аккаунт');
+  const data=await json(req);
+  requireOk(typeof data.childId==='string'&&await ownsChild(user,data.childId),403,'Это не ваш детский аккаунт');
+  requireOk(await verifyPass(String(data.yourPassword||''),user.password_hash),401,'Неверный пароль родителя');
+  await pool.query("DELETE FROM family_accounts WHERE id=$1 AND guardian_id=$2 AND role='child'",[data.childId,user.id]);
+  return send(res,200,{ok:true,childRemoved:true});
+ }
+ if(method==='DELETE'&&path==='/v1/me/account'){
+  const data=await json(req);
+  requireOk(await verifyPass(String(data.password||''),user.password_hash),401,'Неверный пароль');
+  const client=await pool.connect();
+  try{
+   await client.query('BEGIN');
+   // A guardian deletion must first erase their dependents and all dependent data.
+   if(user.role==='adult')await client.query("DELETE FROM family_accounts WHERE guardian_id=$1 AND role='child'",[user.id]);
+   const result=await client.query('DELETE FROM family_accounts WHERE id=$1',[user.id]);
+   requireOk(result.rowCount===1,404,'Аккаунт уже удалён');
+   await client.query('COMMIT');
+   return send(res,200,{ok:true,accountRemoved:true});
+  }catch(e){await client.query('ROLLBACK');throw e}finally{client.release()}
+ }
  if(method==='GET'&&path==='/v1/me/effects'){
   const q=await pool.query("SELECT from_account,to_account,created_at FROM family_care WHERE (from_account=$1 OR to_account=$1) AND created_at>now()-interval '24 hours'",[user.id]);
   let n=0;for(const a of q.rows)n+=a.from_account===user.id?3:5;
