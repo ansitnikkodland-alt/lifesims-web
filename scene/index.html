@@ -845,6 +845,41 @@ body{background:#091428}
 #liveEventDialog .live-event-actions{display:flex;flex-wrap:wrap;gap:7px}
 #liveEventDialog button{min-height:39px;padding:7px 10px;border-radius:9px}
 #liveEventDialog .live-event-actions button{flex-grow:1}
+</style><style id="lifesims-v124-compact-actions">
+/* Many actions remain usable on short mobile screens, including landscape. */
+#sheetWrap.sheetwrap.list-mode .sheet{
+ position:fixed!important;inset:auto!important;left:50%!important;top:50%!important;
+ transform:translate(-50%,-50%)!important;width:min(92vw,510px)!important;
+ height:auto!important;max-height:calc(100dvh - 28px)!important;
+ overflow-y:auto!important;overscroll-behavior:contain;
+ display:block!important;padding:13px!important;border:1px solid #7da8d5!important;
+ border-radius:17px!important;background:linear-gradient(145deg,#243d62f7,#182944f7)!important;
+ box-shadow:0 15px 50px #00112aba!important;pointer-events:auto!important;
+}
+#sheetWrap.sheetwrap.list-mode .sheethead{
+ position:sticky!important;left:auto!important;top:0!important;
+ transform:none!important;width:100%!important;max-width:none!important;
+ margin:0 0 10px!important;justify-content:space-between;
+ background:#18385b!important;z-index:8!important;
+}
+#sheetWrap.sheetwrap.list-mode .sheetacts{
+ display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;
+ gap:8px!important;align-items:stretch!important;
+}
+#sheetWrap.sheetwrap.list-mode .sheetacts>button{
+ position:static!important;left:auto!important;top:auto!important;
+ transform:none!important;width:100%!important;max-width:none!important;
+ min-height:50px!important;height:auto!important;overflow-wrap:anywhere;
+ padding:9px!important;
+}
+#sheetWrap.sheetwrap.list-mode .sheetacts>.hint{
+ position:static!important;left:auto!important;top:auto!important;
+ transform:none!important;grid-column:1/-1;max-width:none!important;
+ width:100%!important;min-height:auto!important;margin:3px 0!important;
+}
+@media(max-width:350px){
+ #sheetWrap.sheetwrap.list-mode .sheetacts{grid-template-columns:1fr!important}
+}
 </style></head>
 <body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v123</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
@@ -1695,48 +1730,57 @@ function deleteActivity(id){
 let currentSheetAnchor=null;
 function placeSheet(anchor){
  if(!anchor||!$('sheetWrap').classList.contains('open'))return;
- const rect=anchor.getBoundingClientRect();
- const vw=window.innerWidth,vh=window.innerHeight;
+ const rect=anchor.getBoundingClientRect(),vw=window.innerWidth,vh=window.innerHeight;
  if(rect.bottom < -25 || rect.top > vh+25){closeSheet();return}
- const buttons=[...$('sheetActions').querySelectorAll(':scope > button')];
+ const wrap=$('sheetWrap'),buttons=[...$('sheetActions').querySelectorAll(':scope > button')];
  const notes=[...$('sheetActions').querySelectorAll(':scope > .hint')];
  const count=buttons.length,rows=Math.max(1,Math.ceil(count/2));
  const bw=Math.min(128,Math.max(94,Math.round(vw*.28)));
- const offset=bw/2+75, margin=offset+bw/2+7;
+ // Measure actual button heights; long labels need more than the old 53px.
+ wrap.classList.remove('list-mode');
+ for(const button of buttons){
+  button.style.position='fixed';
+  button.style.width=bw+'px';
+  button.style.transform='translate(-50%,-50%)';
+ }
+ const rowHeights=Array.from({length:rows},(_,row)=>Math.max(44,
+  ...buttons.slice(row*2,row*2+2).map(button=>button.getBoundingClientRect().height)));
+ const gap=11,totalHeight=rowHeights.reduce((a,b)=>a+b,0)+Math.max(0,rows-1)*gap;
+ // On short displays, use a compact, scrollable action panel instead of
+ // forcing fixed radial buttons to overlap or disappear outside the viewport.
+ if(count>=5&&(totalHeight>vh-110||vh<620)){
+  wrap.classList.add('list-mode');
+  for(const button of buttons){
+   button.style.position='';button.style.width='';
+   button.style.left='';button.style.top='';button.style.transform='';
+  }
+  notes.forEach((note,i)=>{note.hidden=i>0});
+  return;
+ }
+ const offset=bw/2+75,margin=offset+bw/2+7;
  const rawX=(rect.left+rect.right)/2,rawY=(rect.top+rect.bottom)/2;
  const limitX=Math.min(margin,vw/2);
- // One or two actions can sit directly beside the clicked item.
- // Larger menus use a centered two-column radial layout to avoid overflow.
  const nearX=rawX+(rawX<vw/2?95:-95);
- const cx=count<=2
-  ?Math.max(bw/2+12,Math.min(vw-bw/2-12,nearX))
-  :Math.max(limitX,Math.min(vw-limitX,rawX));
- const extent=(rows-1)*53/2+32;
- const limitY=Math.min(vh/2,extent+30);
- const cy=count<=2?Math.max(95,Math.min(vh-95,rawY))
-  :Math.max(limitY,Math.min(vh-limitY,rawY));
- const wrap=$('sheetWrap'),header=wrap.querySelector('.sheethead');
+ const cx=count<=2?Math.max(bw/2+12,Math.min(vw-bw/2-12,nearX)):
+  Math.max(limitX,Math.min(vw-limitX,rawX));
+ const centerSpan=count<=2?160:totalHeight;
+ const minCenter=centerSpan/2+20;
+ const cy=Math.max(Math.min(minCenter,vh/2),Math.min(vh-Math.min(minCenter,vh/2),rawY));
+ const header=wrap.querySelector('.sheethead');
  header.style.left=cx+'px';header.style.top=cy+'px';
  wrap.style.setProperty('--radial-x',cx+'px');
  wrap.style.setProperty('--radial-y',cy+'px');
+ let yRow=cy-totalHeight/2;
+ const centers=rowHeights.map((h,row)=>{
+  const middle=yRow+h/2;yRow+=h+gap;return middle;
+ });
  buttons.forEach((button,i)=>{
-  let x,y;
-  if(count<=2){
-   x=cx;
-   const primaryDown=cy<vh-112;
-   y=cy+(i===0?(primaryDown?65:-65):(primaryDown?-65:65));
-  }else{
-   const column=i%2,row=Math.floor(i/2);
-   x=cx+(column===0?-offset:offset);
-   y=cy+(row-(rows-1)/2)*53;
-  }
-  x=Math.max(bw/2+7,Math.min(vw-bw/2-7,x));
+  const column=i%2,row=Math.floor(i/2);
+  const x=count<=2?cx:cx+(column===0?-offset:offset);
+  let y=count<=2?cy+(i===0?(cy<vh-112?65:-65):(cy<vh-112?-65:65)):centers[row];
+  const safeX=Math.max(bw/2+7,Math.min(vw-bw/2-7,x));
   y=Math.max(28,Math.min(vh-28,y));
-  button.style.position='fixed';
-  button.style.left=Math.round(x)+'px';
-  button.style.top=Math.round(y)+'px';
-  button.style.width=bw+'px';
-  button.style.transform='translate(-50%,-50%)';
+  button.style.left=Math.round(safeX)+'px';button.style.top=Math.round(y)+'px';
  });
  notes.forEach((note,i)=>{note.hidden=i>0});
 }
