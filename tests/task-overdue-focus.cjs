@@ -19,7 +19,7 @@ const assert=require('node:assert/strict');
     {...shared,id:'reg_phone_inbox',name:'Без срока телефон',object:'phone',repeat:'inbox',createdDate:yesterday},
     {...shared,id:'reg_desk_report',name:'Написать отчёт',object:'desk',createdDate:yesterday,skills:[],skill:'Астрономия'}
    ];
-   api.read().activities.push(...entries);
+   api.read().activities.push(...entries.map(entry=>({...entry,completions:[]})));
    return {now,yesterday,tomorrow};
   });
   const snapshot=await page.evaluate(()=>{
@@ -81,7 +81,6 @@ const assert=require('node:assert/strict');
     original:task?.createdDate,repeat:task?.repeat,done:api.done('reg_phone_overdue',api.today()),
     completions:task?.completions,allCount:api.read().activities.length};
   });
-  console.log('ROLLOVER DIAGNOSTIC:',JSON.stringify(rollover));
   assert.notEqual(rollover.nextDay,ids.now);
   assert.equal(rollover.due,true);
   assert.equal(rollover.original,ids.yesterday);
