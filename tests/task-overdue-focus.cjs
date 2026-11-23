@@ -57,7 +57,9 @@ const assert=require('node:assert/strict');
   }
   // The same menu must remain readable on a short landscape viewport.
   await page.setViewportSize({width:891,height:411});
-  await page.waitForFunction(()=>document.getElementById('sheetWrap').classList.contains('list-mode'));
+  await page.locator('#scenePhone').scrollIntoViewIfNeeded();
+  await page.locator('#scenePhone').dispatchEvent('click');
+  await page.waitForFunction(()=>document.getElementById('sheetWrap').classList.contains('list-mode'),null,{timeout:7000});
   const compact=await page.locator('#sheetWrap .sheet').evaluate(el=>{
    const box=el.getBoundingClientRect(),styles=getComputedStyle(el);
    return {left:box.left,right:box.right,top:box.top,bottom:box.bottom,
