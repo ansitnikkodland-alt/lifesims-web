@@ -3675,7 +3675,8 @@ function lastRecordedMeal(now=new Date()){
 function renderHungerMeter(){
  const val=$('hungerMeterValue'),track=$('hungerMeterTrack'),note=$('hungerMeterOrigin');
  if(!val||!track||!note)return;
- const calc=satietyAssessment(today()),level=calc.value;
+ const calc=satietyAssessment(today()),familyFood=window.LifeSimsCloud?.metricBonus?.('nutrition',today())||0,
+ level=familyFood?Math.min(100,Math.round((calc.value??0)+familyFood)):calc.value;
  val.textContent=level==null?'—':level+'%';
  track.replaceChildren();
  if(level==null){const empty=document.createElement('div');empty.className='empty';track.append(empty)}
@@ -3692,7 +3693,7 @@ function renderHungerMeter(){
  const minutes=last?Math.floor(((time.getTime()-last.at)%3600000)/60000):null;
  const sinceMeal=last?'С последней еды: '+hours+' ч '+String(minutes).padStart(2,'0')+' мин':'Время последней еды неизвестно';
  note.textContent=sinceMeal+(last?' · '+freshnessLabel(last.date)+' в '+clock(new Date(last.at)):'')+
-  ' · по БЖУ · спад за 16 ч'+
+  ' · по БЖУ · спад за 16 ч'+(familyFood?' · семейная забота +'+familyFood+' п. п. (игровой эффект)':'')+
   (calc.missingMacroCount?' · '+calc.missingMacroCount+' записей без БЖУ не учтено':'')+
   (calc.incompleteMacroCount?' · '+calc.incompleteMacroCount+' с неполными БЖУ':'');
 }
@@ -3713,7 +3714,9 @@ function renderNeeds(){
  const d=today(),r=currentRecord(d),g=$('needsGrid');
  g.replaceChildren();
  const sleep=sleepSnapshot(d),mood=metricSnapshot('mood',d),physical=physicalSnapshot(d);
- const hygiene=hygieneSnapshot(d),steps=stepsSnapshot(d),hunger=satietyAssessment(d);
+ const hygiene=hygieneSnapshot(d),steps=stepsSnapshot(d),hungerRaw=satietyAssessment(d),
+ familyFood=window.LifeSimsCloud?.metricBonus?.('nutrition',d)||0,
+ hunger=familyFood?{...hungerRaw,value:Math.min(100,Math.round((hungerRaw.value??0)+familyFood))}:hungerRaw;
  const ouraScoreDate=latestObserved(q=>Number.isFinite(q?.ouraScores?.activity),d);
  const ouraActivity=ouraScoreDate?{value:state.days[ouraScoreDate].ouraScores.activity,date:ouraScoreDate}:{value:null,date:null};
  metric(g,'💤 Сон',sleep.value,'%',null,'sleepHours',sleep.date,
