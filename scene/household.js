@@ -69,7 +69,11 @@ function pets(host,d){
   items.replaceChildren();
   for(const p of d.pets){
    const c=card(items),v=sat(p.fedAt);
-   c.append(E('div',(p.key==='ginger'?'🧡 ':'🖤 ')+p.name,'house-pet-name'));
+   const sprite=E('span',null,'pet-realistic-sprite pet-realistic-'+p.key+' house-pet-sprite');
+   c.append(sprite,E('div',(p.key==='ginger'?'🧡 ':'🖤 ')+p.name,'house-pet-name'));
+   const petting=Math.max(0,1-H(p.pettedAt)/24),litter=Math.max(0,1-H(d.litterCleanedAt)/48);
+   const crystal=Math.min(100,Math.round(10+v*0.45+25*litter+20*petting));
+   c.append(E('div','💎 Кристалл: '+crystal+'/100','house-crystal'));
    row(c,'Сытость',v+'%');
    const track=E('div',null,'house-progress'),fill=E('div',null,'house-progress-fill');fill.style.width=v+'%';track.append(fill);c.append(track);
    row(c,'Кормление',time(p.fedAt));
