@@ -1,0 +1,24 @@
+name: LifeSims Food-101 real model check
+on:
+  push:
+    paths:
+      - 'tests/food-photo-model-online.cjs'
+      - '.github/workflows/lifesims-food-model-online.yml'
+  workflow_dispatch:
+jobs:
+  actual-photo-inference:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser driver
+        run: npm install --no-save playwright-core@1.56.1
+      - name: Start local LifeSims
+        run: |
+          python3 -m http.server 8765 >/tmp/lifesims-food-model.log 2>&1 &
+          sleep 2
+      - name: Download Food-101 in Chrome and infer a generated test frame
+        run: node tests/food-photo-model-online.cjs
