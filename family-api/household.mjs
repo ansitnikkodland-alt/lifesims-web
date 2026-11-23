@@ -148,7 +148,8 @@ export function createHouseholdRoute({pool,json,send,requireOk,HttpError,hasRate
    for(const x of q.rows){
     const d=x.details||{};
     if(x.recipient_id===user.id&&x.event_type==='member'&&METRICS.includes(d.targetMetric))
-      metrics[d.targetMetric]=Math.min(60,(metrics[d.targetMetric]||0)+Number(d.targetGain||0));
+      metrics[d.targetMetric]=Math.min(60,(metrics[d.targetMetric]||0)+
+       Math.round(Number(d.targetGain||0)*Math.max(0,1-hours(x.created_at)/(d.targetMetric==='nutrition'?12:24))));
     if(x.actor_id===user.id){
      for(const a of d.skills||[])skills.push({name:a.name,xp:a.xp,project:d.project,at:x.created_at,eventId:x.id});
      events.push(publicEvent(x));
