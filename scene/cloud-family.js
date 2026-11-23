@@ -108,6 +108,7 @@ function render(){
  if(!dialog)return;
  const body=dialog.querySelector('#cloudBody'),nav=dialog.querySelector('#cloudNav');
  body.replaceChildren();nav.replaceChildren();
+ if(!['pets','care','chat','places'].includes(section))window.LifeSimsHousehold?.leave?.();
  if(!session){guest(body);return}
  const me=session.account;
  body.append(el('p','Аккаунт: '+me.displayName+' · '+(me.role==='child'?'детский':'взрослый'),'cloud-muted'));
