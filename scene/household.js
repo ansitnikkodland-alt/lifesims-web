@@ -25,9 +25,10 @@ async function fresh(force=false){
 }
 async function refreshEffects(){
  if(!signed())return null;
- effects=await api('/v1/household/effects');
+ const [current,history]=await Promise.all([api('/v1/household/effects'),api('/v1/household/history')]);
+ effects=current;
  cloud()?.setFamilyEffects?.(effects.metrics||{});
- window.LifeSimsCloudBridge?.replayFamilySkills?.(effects.events||[]);
+ window.LifeSimsCloudBridge?.replayFamilySkills?.(history.events||[]);
  return effects;
 }
 function stopTimers(){if(chatTimer){clearInterval(chatTimer);chatTimer=0}if(petTimer){clearInterval(petTimer);petTimer=0}}
@@ -257,10 +258,10 @@ function places(host,d){
  if(account()?.role==='adult'){
   const f=E('form',null,'house-card');
   f.append(E('strong','Добавить семейное место'));
-  const name=F('Название: Дом, Школа');name.maxLength=50;
-  const lat=F('Широта','number');lat.step='any';
-  const lon=F('Долгота','number');lon.step='any';
-  const radius=F('Радиус в метрах','number','150');radius.min='50';radius.max='1000';
+  const name=F('Название: Дом, Школа');name.maxLength=50;name.required=true;
+  const lat=F('Широта','number');lat.step='any';lat.required=true;
+  const lon=F('Долгота','number');lon.step='any';lon.required=true;
+  const radius=F('Радиус в метрах','number','150');radius.min='50';radius.max='1000';radius.required=true;
   f.append(name,lat,lon,radius);
   f.append(B('📍 Подставить мою текущую позицию',()=>new Promise((resolve,reject)=>{
    if(!navigator.geolocation)return reject(Error('Геолокация не поддерживается'));
