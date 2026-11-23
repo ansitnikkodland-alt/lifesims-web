@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#19223d"><title>LifeSims — моя жизнь</title><link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="./meal-chat.css?v=90"><link rel="stylesheet" href="./meal-live-camera.css?v=93"><link rel="stylesheet" href="./health-cycle-medications.css?v=106"><link rel="stylesheet" href="./pets.css?v=111">
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#19223d"><title>LifeSims — моя жизнь</title><link rel="manifest" href="./manifest.webmanifest"><link rel="stylesheet" href="./meal-chat.css?v=90"><link rel="stylesheet" href="./meal-live-camera.css?v=129"><link rel="stylesheet" href="./meal-explorer.css?v=129"><link rel="stylesheet" href="./health-cycle-medications.css?v=106"><link rel="stylesheet" href="./pets.css?v=111">
 <link rel="stylesheet" href="./stayfree-import.css?v=118">
 <link rel="stylesheet" href="./screen-time-report.css?v=118"><link rel="stylesheet" href="./family.css?v=119"><link rel="stylesheet" href="./cloud-family.css?v=127"><link rel="stylesheet" href="./household.css?v=121">
 <style>
@@ -881,7 +881,7 @@ body{background:#091428}
  #sheetWrap.sheetwrap.list-mode .sheetacts{grid-template-columns:1fr!important}
 }
 </style></head>
-<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v128</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
+<body><main class="app"><header class="topbar"><div class="person"><button id="portraitBtn" type="button" class="portrait" aria-label="Действия персонажа"></button><div><strong>LifeSims · Анюта</strong><small>Моя жизнь · v129</small></div></div><div class="stats"><button id="xpChip" type="button" class="chip" title="Открыть историю">★ <span id="xpTop">0 XP</span></button></div></header>
 <div class="scene" id="scene"><img id="sceneImage" class="art" alt="Иллюстрированная комната LifeSims с персонажем, кроватью, красно-бирюзовым ковром, холодильником слева, телефоном на журнальном столике, душем и туалетами" src="./room-illustrated-v42.jpg" decoding="async" fetchpriority="high">
 <img id="sceneRugColor" class="rug-color-layer" alt="" aria-hidden="true">
 <div id="scenePets" class="scene-pets" aria-label="Два питомца на ковре"></div>
@@ -5649,7 +5649,7 @@ window.LifeSims3DBridge={
 };
 window.addEventListener('resize',()=>{if(currentSheetAnchor)placeSheet(currentSheetAnchor)},{passive:true});
 window.addEventListener('scroll',()=>{if(currentSheetAnchor)placeSheet(currentSheetAnchor)},{passive:true});
-if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=128',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
+if('serviceWorker'in navigator && location.protocol==='https:')navigator.serviceWorker.register('./sw.js?v=129',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{});
 window.LifeSimsCalendarBridge={
   getSchedule:()=>JSON.parse(JSON.stringify(state.schedule||[])),
   getHidden:()=>JSON.parse(JSON.stringify(state.googleHidden||[])),
@@ -6837,10 +6837,11 @@ window.LifeSimsFood={render,estimate,open:openNutrition,close:closeNutrition};
 render();
 })();
 </script>
-<script src="./meal-photo.js?v=93"></script>
-<script src="./meal-chat.js?v=93"></script>
+<script src="./meal-photo.js?v=129"></script>
+<script src="./meal-chat.js?v=129"></script>
 <script src="./meal-lookup.js?v=89"></script>
-<script src="./meal-live-camera.js?v=93"></script>
+<script src="./meal-live-camera.js?v=129"></script>
+<script src="./meal-explorer.js?v=129"></script>
 <script>
 /* LifeSims Oura OAuth V2 — browser-only, no client secret. */
 (function(){
