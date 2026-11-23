@@ -208,11 +208,12 @@ export function createHouseholdRoute({pool,json,send,requireOk,HttpError,hasRate
    requireOk(!hasRate('housegeo:'+user.id,720,3600000),429,'Слишком много обновлений');
    const d=await json(req);
    requireOk([d.lat,d.lon,d.accuracy].every(Number.isFinite)&&Math.abs(d.lat)<=90&&Math.abs(d.lon)<=180&&d.accuracy>=0&&d.accuracy<=1500,400,'Неправильные координаты');
-   const allowed=await pool.query('SELECT sharing,guardian_approved FROM house_location_settings WHERE account_id=$1',[user.id]);
-   requireOk(allowed.rows[0]?.sharing&&(user.role==='adult'||allowed.rows[0].guardian_approved),403,'Передача геолокации не разрешена');
    const client=await pool.connect();
    try{
     await client.query('BEGIN');
+    // Lock sharing permission so a concurrent opt-out cannot leave a new GPS point behind.
+    const allowed=await client.query('SELECT sharing,guardian_approved FROM house_location_settings WHERE account_id=$1 FOR UPDATE',[user.id]);
+    requireOk(allowed.rows[0]?.sharing&&(user.role==='adult'||allowed.rows[0].guardian_approved),403,'Передача геолокации не разрешена');
     await client.query('INSERT INTO house_positions(account_id,lat,lon,accuracy_m) VALUES($1,$2,$3,$4) ON CONFLICT(account_id) DO UPDATE SET lat=$2,lon=$3,accuracy_m=$4,received_at=now()',[user.id,d.lat,d.lon,d.accuracy]);
     if(d.accuracy<=100){
      const q=await client.query('SELECT id,name,lat,lon,radius_m FROM house_places WHERE owner_id=$1',[owner]);
