@@ -4,7 +4,7 @@
  */
 (function(){
 'use strict';
-const API='https://lifesims-family-test-api.onrender.com';
+const API=(location.hostname==='127.0.0.1'||location.hostname==='localhost')?'http://127.0.0.1:8766':'https://lifesims-family-test-api.onrender.com';
 const SESSION='lifesims-cloud-auth-v1';
 const DEADLINE='23 декабря 2026';
 function readSession(){
