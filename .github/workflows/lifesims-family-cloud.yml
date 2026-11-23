@@ -48,9 +48,13 @@ jobs:
       - name: Syntax check
         run: |
           node --check family-api/server.mjs
+          node --check family-api/figurines.mjs
+          node --check scene/figurines.js
           node --check scene/cloud-family.js
           node --check scene/household.js
           node --check scene/family.js
+      - name: Figurine safety and API unit tests
+        run: node --test family-api/test/*.test.mjs
       - name: Start isolated API
         env:
           DATABASE_URL: postgresql://familytest:localtestpassword@127.0.0.1:5432/lifesims
