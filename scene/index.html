@@ -1974,22 +1974,37 @@ function isBedMade(){
  if(room.bedMadeOn===null&&Number(state.days?.[day]?.sleepHours)>0)return false;
  return true; // The original, beautiful room artwork shows a made bed.
 }
-function makeBed(){
- if(isBedMade())return toast('Кровать уже заправлена');
+function bedMakingHabits(date=today()){
+ return (state.activities||[]).filter(a=>a?.kind==='habit'&&!a.legacyDone&&due(a,date)&&
+  (a.id==='bed_make'||((a.object==='bed'||a.object==null)&&
+   /^(?:застелить|заправить)\s+кровать[.!]?$/iu.test(String(a.name||'').trim()))));
+}
+function syncMadeBedHabit(date=today()){
+ const room=state.room||{};
+ if(date!==today()||room.bedMadeOn!==date||room.bedHabitSyncOn===date)return;
+ const habits=bedMakingHabits(date);
+ if(!habits.length)return;
  if(!transact(()=>{
-  state.room??={};
-  state.room.bedMadeOn=today();
-  const habit=state.activities.find(a=>a.id==='bed_make');
-  if(habit&&due(habit,today())&&!done(habit,today())){
-   habit.completions??=[];
-   const at=new Date().toISOString();
-   habit.completions.push({date:today(),at,xp:habit.xp||0});
-   state.events.push({id:uid(),kind:'complete',activityId:habit.id,name:habit.name,date:today(),at,xp:habit.xp||0,skill:skillsOf(habit)[0]||null,skills:skillsOf(habit)});
+  for(const habit of habits){
+   if(!(habit.completions||[]).some(c=>c.date===date))appendActivityCompletion(habit,date);
   }
+  state.room??={};state.room.bedHabitSyncOn=date;
+ }))console.warn('Bed habit synchronization could not be saved');
+}
+function makeBed(){
+ if(isBedMade()){
+  syncMadeBedHabit(today());
+  return toast('Кровать уже заправлена');
+ }
+ if(!transact(()=>{
+  state.room??={};state.room.bedMadeOn=today();
+  for(const habit of bedMakingHabits(today())){
+   if(!(habit.completions||[]).some(c=>c.date===today()))appendActivityCompletion(habit,today());
+  }
+  state.room.bedHabitSyncOn=today();
   state.events.push({id:uid(),kind:'bed',name:'Заправила кровать',date:today(),at:new Date().toISOString(),xp:0});
  })){return toast('Не удалось записать заправление кровати')}
- renderAll();
- toast('✓ Кровать заправлена');
+ renderAll();toast('✓ Кровать заправлена');
 }
 function refreshBed(){
  // No decorative bed overlay: the original artwork stays unobstructed.
@@ -3275,7 +3290,7 @@ function metric(el,name,value,suffix='%',displayValue=null,field='',sourceDate=n
  s.append(l,v);
  const bar=document.createElement('div');bar.className='bar';
  if(value==null){const n=document.createElement('div');n.className='empty';bar.append(n)}
- else{const n=document.createElement('b');n.style.setProperty('--val',Math.max(0,Math.min(100,Number(value)))+'%');n.style.setProperty('--meter-color',meterColor(value));bar.append(n)}
+ else{const n=document.createElement('b');n.style.setProperty('--val',Math.max(0,Math.min(100,Number(value)))+'%');const shade=field==='sleepHours'?sleepMeterColor(sleepSnapshot(today()).last):null;n.style.setProperty('--meter-color',shade||meterColor(value));if(shade)v.style.color=shade;bar.append(n)}
  root.append(s,bar);
  if(sourceDate||detail){const foot=document.createElement('small');foot.className='metric-origin';
   foot.textContent=(sourceDate?freshnessLabel(sourceDate):'')+(detail?(sourceDate?' · ':'')+detail:'');
@@ -3421,7 +3436,12 @@ function macroSatietyContribution(meal){
   kind:drink?'drink':'meal',
   incomplete:[protein,fat,carbs].some(x=>x===null)};
 }
-// Game-only satiety fades continuously over 16 hours after actual intake.
+// Gameplay satiety: 100% -> 20% over 4 hours; then to 0% by 16 hours.
+function satietyRetention(elapsedMs){
+ const hours=Math.max(0,elapsedMs/3600000);
+ return hours<=4?Math.max(0,1-0.8*(hours/4)):
+  Math.max(0,0.2*(1-(hours-4)/12));
+}
 // Each timestamp is counted once; editing stored food automatically recalculates
 // the result without adding simulated meals or changing the food records.
 function satietyAssessment(ref=today(),now=new Date()){
@@ -3465,7 +3485,7 @@ function satietyAssessment(ref=today(),now=new Date()){
  let value=null,lastAt=null,drinkSatiety=0;
  for(const event of events){
   if(lastAt!==null){
-   const remaining=Math.max(0,1-(event.at-lastAt)/period);
+   const remaining=satietyRetention(event.at-lastAt);
    value*=remaining;drinkSatiety*=remaining;
   }
   if(event.mode==='set'){value=event.amount;drinkSatiety=0;}
@@ -3477,14 +3497,14 @@ function satietyAssessment(ref=today(),now=new Date()){
   }else value=Math.max(0,Math.min(100,(value==null?(event.kind==='effect'?50:0):value)+event.amount));
   lastAt=event.at;
  }
- if(lastAt!==null)value=Math.max(0,Math.min(100,value*Math.max(0,1-(ms-lastAt)/period)));
+ if(lastAt!==null)value=Math.max(0,Math.min(100,value*satietyRetention(ms-lastAt)));
  else if(sources.length)value=0; // Data exists, but the last event has fully faded.
  const newest=sources.sort((a,b)=>b.at-a.at)[0];
  return {value:value==null?null:Math.round(value),date:newest?.date||null,
   missingMacroCount,incompleteMacroCount,
-  detail:newest?.kind==='effect'?'влияние дела / привычки · спад за 16 ч':
-   newest?.kind==='manual'?'ручная оценка · спад за 16 ч':
-   newest?.kind==='drink'?'напиток · небольшой бонус, спад за 16 ч':'игровая сытость · спад за 16 ч',
+  detail:newest?.kind==='effect'?'влияние дела / привычки · 20% через 4 ч':
+   newest?.kind==='manual'?'ручная оценка · 20% через 4 ч':
+   newest?.kind==='drink'?'напиток · небольшой бонус, 20% через 4 ч':'игровая сытость · 20% через 4 ч',
   sourceAt:newest?.at||null,asOf:ms};
 }
 function resourceSnapshot(ref=today()){
@@ -3751,7 +3771,29 @@ function derivedResource(r,d){
  const simulated=Math.max(0,Math.min(100,Math.round(initial+influence+familySupport-parts.penalty)));
  return actionAdjustedNeed('resource',d,simulated);
 }
-function renderCrystal(){const snapshot=resourceSnapshot(today()),v=snapshot.value;const p=v==null?['#c2e9ff','#76c9ef','#2169b6']:v>65?['#c7fff0','#55dfa5','#0e9874']:v>35?['#fff2b1','#edbf53','#a57a15']:['#ffc2cd','#f4778c','#af405b'];const el=$('plumbob');el.style.setProperty('--gem-light',p[0]);el.style.setProperty('--gem-middle',p[1]);el.style.setProperty('--gem-dark',p[2]);const tint=$('sceneCrystalTint');if(tint)tint.style.setProperty('--crystal-hue',v==null?'0deg':v>65?'-55deg':v>35?'-135deg':'-185deg');el.title=v==null?'Ресурс не записан; нажми, чтобы записать':`Ресурс: ${v}% · ${freshnessLabel(snapshot.date)}`}
+function sleepMeterColor(hours){
+ if(!Number.isFinite(hours))return null;
+ if(hours>=7&&hours<=8)return '#43d68b';
+ if(hours<5)return '#ef6074';
+ if(hours<6)return '#f18e50';
+ if(hours<7)return '#efb954';
+ return '#eab15a';
+}
+function renderCrystal(){
+ const snapshot=resourceSnapshot(today()),v=snapshot.value,lastSleep=sleepSnapshot(today()).last;
+ const shortSleep=Number.isFinite(lastSleep)&&lastSleep<7,severeSleep=shortSleep&&lastSleep<5;
+ const palette=v==null?'unknown':v<=35||severeSleep?'red':v<=65||shortSleep?'yellow':'green';
+ const palettes={unknown:['#c2e9ff','#76c9ef','#2169b6'],green:['#c7fff0','#55dfa5','#0e9874'],
+  yellow:['#fff2b1','#edbf53','#a57a15'],red:['#ffc2cd','#f4778c','#af405b']};
+ const p=palettes[palette],el=$('plumbob');
+ el.style.setProperty('--gem-light',p[0]);el.style.setProperty('--gem-middle',p[1]);el.style.setProperty('--gem-dark',p[2]);
+ const tint=$('sceneCrystalTint');
+ if(tint)tint.style.setProperty('--crystal-hue',
+  {unknown:'0deg',green:'-55deg',yellow:'-135deg',red:'-185deg'}[palette]);
+ el.title=v==null?'Ресурс не записан; нажми, чтобы записать':
+  'Ресурс: '+v+'% · '+freshnessLabel(snapshot.date)+
+  (shortSleep?' · сон '+lastSleep+' ч: кристалл не зелёный':'');
+}
 function sleepAssessment(date){
  const observed=state.days?.[date],hours=Number(observed?.sleepHours);
  const recorded=observed?.sleepHours!=null&&Number.isFinite(hours)&&hours>=0&&hours<=24;
@@ -3841,7 +3883,7 @@ function renderHungerMeter(){
  const minutes=last?Math.floor(((time.getTime()-last.at)%3600000)/60000):null;
  const sinceMeal=last?'С последней еды: '+hours+' ч '+String(minutes).padStart(2,'0')+' мин':'Время последней еды неизвестно';
  note.textContent=sinceMeal+(last?' · '+freshnessLabel(last.date)+' в '+clock(new Date(last.at)):'')+
-  ' · по БЖУ · спад за 16 ч'+(familyFood?' · семейная забота +'+familyFood+' п. п. (игровой эффект)':'')+
+  ' · по БЖУ · 20% через 4 ч · 0% через 16 ч'+(familyFood?' · семейная забота +'+familyFood+' п. п. (игровой эффект)':'')+
   (calc.missingMacroCount?' · '+calc.missingMacroCount+' записей без БЖУ не учтено':'')+
   (calc.incompleteMacroCount?' · '+calc.incompleteMacroCount+' с неполными БЖУ':'');
 }
@@ -3868,7 +3910,7 @@ function renderNeeds(){
  const ouraScoreDate=latestObserved(q=>Number.isFinite(q?.ouraScores?.activity),d);
  const ouraActivity=ouraScoreDate?{value:state.days[ouraScoreDate].ouraScores.activity,date:ouraScoreDate}:{value:null,date:null};
  metric(g,'💤 Сон',sleep.value,'%',null,'sleepHours',sleep.date,
-  '8 часов = 100% · '+(sleep.last==null?'нет данных ночи':'записано '+sleep.last+' ч')+
+  'зелёный при 7–8 ч · 8 часов = 100% · '+(sleep.last==null?'нет данных ночи':'записано '+sleep.last+' ч')+
   ' · долг сна: '+(sleep.debt==null?'недостаточно данных Oura':sleep.debt.toFixed(1)+' ч')+
   ' ('+(sleep.debtSource||'расчёт')+')');
  // The simulated resource is visible only as the crystal over the Sim.
@@ -4962,6 +5004,7 @@ liveEventDialog.addEventListener('click',e=>{
 });
 
 function renderAll(){
+ syncMadeBedHabit(today());
  const jobs=[['Калории за 24 часа',render24CalorieCard],['Сытость',renderHungerMeter],['Календарь',renderSchedule],['Потребности',renderNeeds],['Дела и привычки',renderTopActivities],
   ['История',renderHistory],['Навыки',renderSkills],['Питомцы',()=>window.LifeSimsPets?.render?.()],['Недосып',updateDebt],['Персонаж',renderWork],['Сейчас происходит',renderLiveCalendarEvent]];
  if(typeof renderRoomMess==='function')jobs.push(['Комната',renderRoomMess]);
