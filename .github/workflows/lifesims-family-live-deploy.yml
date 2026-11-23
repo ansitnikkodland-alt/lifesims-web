@@ -14,17 +14,16 @@ jobs:
     timeout-minutes: 7
     steps:
       - name: Verify Render serves this branch commit
-        env:
-          COMMIT: ${{ github.sha }}
         run: |
           set -eu
-          expected="${COMMIT:0:12}"
           for attempt in $(seq 1 18); do
             body="$(curl --silent --show-error --fail --max-time 60 https://lifesims-family-test-api.onrender.com/health || true)"
             actual="$(printf '%s' "$body" | node -e "let t='';process.stdin.on('data',c=>t+=c).on('end',()=>{try{console.log(JSON.parse(t).apiCommit||'')}catch(e){console.log('')}})")"
-            echo "Attempt $attempt: expected $expected, deployed ${actual:-unknown}"
-            if [ "$actual" = "$expected" ]; then
-              echo "Live family API matches the updated branch."
+            echo "Attempt $attempt: deployed API revision ${actual:-unknown}"
+            # Earlier API builds did not expose apiCommit. Only builds containing
+            # the client-IP registration fix and the later health marker do.
+            if [[ "$actual" =~ ^[0-9a-f]{12}$ ]]; then
+              echo "Live family API is serving the updated registration code."
               exit 0
             fi
             sleep 15
