@@ -1545,7 +1545,7 @@ function makeActivityItem(a,date){
    mood:'Настроение',condition:'Физическое состояние',hygiene:'Гигиена',nutrition:'Питание',
    hunger:'Сытость',sleepNeed:'Сон',entropy:'Порядок',activity:'Активность',resource:'Ресурс'
   }[a.resourceEffect.target]||'Показатель')+' '+(a.resourceEffect.mode==='set'?'→ '+a.resourceEffect.amount+'%':(a.resourceEffect.amount>=0?'+':'')+a.resourceEffect.amount+' п. п.'):'');
- text.append(title,description);el.append(mark,text);
+ text.append(title,description);if(a.kind==='task'){text.tabIndex=0;text.setAttribute('role','button');text.setAttribute('aria-label','Действия с делом '+a.name);text.onclick=()=>window.LifeSimsTaskActions?.open?.(a.id,date);text.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();text.click()}};}el.append(mark,text);
  if(a.object){const badge=document.createElement('span');badge.className='pill';badge.textContent='Комната';el.append(badge)}
  const edit=document.createElement('button');edit.className='secondary task-edit';
  edit.type='button';edit.textContent='Изменить';edit.onclick=()=>openActivityEditor(a.id);
@@ -2178,11 +2178,11 @@ b.append(span,sm);b.onclick=()=>{closeSheet();if(c.open){if(c.id==='bed_sleep')o
 // The phone already has a dedicated financial-control editor.
  // Keep a linked "Финансовый контроль" activity in the planner and its history,
  // but do not repeat its action in the phone's contextual menu.
-for(const a of state.activities.filter(a=>a.object===object&&due(a,today())&&a.id!=='hygiene_antiperspirant'&&!(object==='toilet'&&a.id===POOP_HABIT_ID)&&!(object==='bed'&&a.id==='bed_make')&&
+for(const a of state.activities.filter(a=>a.object===object&&!a.legacyDone&&(a.kind==='task'||due(a,today()))&&a.id!=='hygiene_antiperspirant'&&!(object==='toilet'&&a.id===POOP_HABIT_ID)&&!(object==='bed'&&a.id==='bed_make')&&
  !(object==='phone'&&a.kind==='task'&&String(a.name||'').trim().toLocaleLowerCase('ru')==='финансовый контроль'))){
  const btn=document.createElement('button'),span=document.createElement('span'),small=document.createElement('small');
- span.textContent=a.name;small.textContent=a.kind==='habit'?'Ещё +1 · '+((a.completions||[]).filter(c=>c.date===today()).length)+' раз':done(a,today())?'✓ Уже сделано':'+ '+(a.xp||0)+' XP';
- btn.append(span,small);btn.onclick=()=>{closeSheet();complete(a,today())};$('sheetActions').append(btn);
+ span.textContent=a.name;small.textContent=a.kind==='habit'?'Ещё +1 · '+((a.completions||[]).filter(c=>c.date===today()).length)+' раз':done(a,today())?'✓ Уже сделано':!(a.repeat==='inbox'||due(a,today()))?'Не сегодня · открыть':'Действия · +'+(a.xp||0)+' XP';
+ btn.append(span,small);btn.onclick=()=>{closeSheet();if(a.kind==='task'&&window.LifeSimsTaskActions?.open?.(a.id,today()))return;complete(a,today())};$('sheetActions').append(btn);
 }
 $('sheetWrap').classList.add('open');$('sheetWrap').setAttribute('aria-hidden','false');
 currentSheetAnchor=anchor||document.querySelector('.touchmap [data-object="'+object+'"]');
@@ -4211,7 +4211,7 @@ function renderDayAgenda(){
       const meta=document.createElement('div');meta.className='agenda-event-meta';
       meta.textContent=(repeatable?'Привычка · за дату: '+(task.completions||[]).filter(c=>c.date===date).length+' раз':'Дело · '+(finished?'выполнено':'запланировано'))+
        (resourceEffectLabel(task.resourceEffect)?' · '+resourceEffectLabel(task.resourceEffect):'');
-      main.append(name,meta);row.append(check,main);
+      main.append(name,meta);if(task.kind==='task'){main.tabIndex=0;main.setAttribute('role','button');main.setAttribute('aria-label','Действия с делом '+task.name);main.onclick=()=>window.LifeSimsTaskActions?.open?.(task.id,date);main.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();main.click()}};}row.append(check,main);
       const edit=document.createElement('button');edit.className='agenda-edit';edit.type='button';edit.textContent='✎';
       edit.setAttribute('aria-label','Изменить дело '+task.name);
       edit.onclick=()=>{closeDayAgenda();openActivityEditor(task.id)};
@@ -5098,6 +5098,7 @@ window.LifeSimsTaskBridge={
  edit:id=>openActivityEditor(id),
  backdate:(id,date)=>openHabitBackdateDialog(id,date),
  due:(id,date)=>{const a=state.activities.find(x=>x.id===id);return !!a&&due(a,date)},
+ done:(id,date)=>{const a=state.activities.find(x=>x.id===id);return !!a&&done(a,date)},
  complete:(id,date)=>{
   const a=state.activities.find(x=>x.id===id);
   if(!a)return toast('Дело не найдено');
@@ -5734,10 +5735,11 @@ window.LifeSimsFoodBridge={
 };
 })();
 </script>
-<script src="./task-premium.js?v=112"></script>
+<script src="./task-premium.js?v=123"></script>
+<script src="./task-actions.js?v=123"></script>
 <script src="./habit-grid.js?v=112"></script>
-<script src="./skill-detail.js?v=112"></script>
-<script src="./focus-timer.js?v=65"></script>
+<script src="./skill-detail.js?v=123"></script>
+<script src="./focus-timer.js?v=123"></script>
 <script>
 /* LifeSims Google Calendar sync. OAuth tokens remain in memory; no background writes. */
 (function () {
