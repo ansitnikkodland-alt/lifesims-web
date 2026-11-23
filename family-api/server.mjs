@@ -3,6 +3,7 @@ import {randomBytes, randomUUID, createHash, scrypt as scryptCallback, timingSaf
 import {promisify} from 'node:util';
 import {readFileSync} from 'node:fs';
 import {Pool} from 'pg';
+import {clientAddress} from './client-ip.mjs';
 import {createHouseholdRoute} from './household.mjs';
 
 const scrypt=promisify(scryptCallback);
@@ -74,7 +75,7 @@ async function startSession(accountId){
  [sha(token),accountId,new Date(Date.now()+SESSION_MS)]);
  return token;
 }
-function ipOf(req){return String(req.socket.remoteAddress||'unknown')}
+function ipOf(req){return clientAddress(req)}
 function validImage(uri,max){
  if(typeof uri!=='string'||uri.length>max*1.45+50)return false;
  if(!/^data:image\/jpeg;base64,[A-Za-z0-9+/]+={0,2}$/.test(uri))return false;
@@ -107,9 +108,12 @@ async function route(req,res){
  }
  requireOk(path.startsWith('/v1/'),404,'Маршрут не найден');
  if(method==='POST'&&path==='/v1/auth/register'){
-  requireOk(!hasRate('register:'+ipOf(req),5,3600000),429,'Попробуйте зарегистрироваться позже');
+  // The socket address is shared by visitors behind Render's proxy.
+  // Keep an independent per-client guard and a tighter per-email guard.
+  requireOk(!hasRate('register:ip:'+sha(ipOf(req)),20,3600000),429,'Слишком много запросов на регистрацию с этого адреса. Повторите позже.');
   const data=await json(req),email=cleanEmail(data.email),name=cleanName(data.displayName);
   requireOk(validEmail(email)&&validPassword(data.password)&&name.length>=1,400,'Укажите email, имя и пароль от 12 символов');
+  requireOk(!hasRate('register:email:'+sha(email),8,3600000),429,'Слишком много попыток регистрации с этим email. Повторите позже.');
   const id=randomUUID(),pass=await hashPass(data.password);
   let found;
   try{found=await pool.query(
