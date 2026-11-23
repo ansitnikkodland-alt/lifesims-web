@@ -57,7 +57,7 @@
   const description=effect&&resourceNames[effect.target]?
    resourceNames[effect.target]+' '+(effect.mode==='set'?'→ '+displayAmount+'%':(displayAmount>=0?'+':'')+displayAmount+' п. п.'):'';
   const details=[label(a),project,...tags,'Сложность '+difficultyValue(a)+'/5',Number(a.priority)?'Приоритет '+a.priority:'',description].filter(Boolean);
-  info.append(el('small','',details.join(' · ')));row.append(check,info);
+  info.append(el('small','',details.join(' · ')));info.tabIndex=0;info.setAttribute('role','button');info.setAttribute('aria-label','Действия с делом '+a.name);info.onclick=()=>window.LifeSimsTaskActions?.open?.(a.id,api.today());info.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();info.click()}};row.append(check,info);
   if(mat){
    const select=el('select','tp-quadrant-switch');select.setAttribute('aria-label','Переместить '+a.name);
    quadrants.forEach(([index,title],i)=>{const o=el('option','',index+'. '+title);o.value=String(i);select.append(o)});
@@ -246,6 +246,14 @@
  $('tpCreate').onclick=() =>api.create('task');
  $('tpMatrixCreate').onclick=() =>api.create('task');
  manager.addEventListener('click',e=>{if(e.target===manager)manager.close()});
- window.LifeSimsTaskPremium={render,fillForm,readForm};
+ function showFocusForTask(id){
+  if(!window.LifeSimsFocusTimer?.selectTask?.(id))return false;
+  const tab=document.querySelector('.nav [data-tab="tasks"]')||document.querySelector('[data-tab="tasks"]');
+  if(tab)tab.click();
+  view='focus';render();
+  $('tpFocusMount')?.scrollIntoView({behavior:'smooth',block:'start'});
+  return true;
+ }
+ window.LifeSimsTaskPremium={render,fillForm,readForm,showFocusForTask};
  render();
 })();
