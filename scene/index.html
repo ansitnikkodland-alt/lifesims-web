@@ -5866,7 +5866,8 @@ window.LifeSimsFoodBridge={
    map.set(key,{title,ingredients:meal.ingredients||match?.[2]||'',
     grams:meal.grams??null,kcal:meal.kcal??null,protein:meal.protein??null,
     fat:meal.fat??null,carbs:meal.carbs??null,favorite:false,
-    useCount:1,lastUsedAt:meal.updatedAt||meal.createdAt||meal.date+'T'+meal.time+':00'});
+    useCount:1,photoSource:meal.photoSource||'',barcode:meal.barcode||null,
+    lastUsedAt:meal.updatedAt||meal.createdAt||meal.date+'T'+meal.time+':00'});
   }
   return JSON.parse(JSON.stringify([...map.values()]));
  },
@@ -5904,7 +5905,7 @@ window.LifeSimsFoodBridge={
    protein:meal.protein==null?null:Math.round(Number(meal.protein)*10)/10,
    fat:meal.fat==null?null:Math.round(Number(meal.fat)*10)/10,
    carbs:meal.carbs==null?null:Math.round(Number(meal.carbs)*10)/10,
-   estimate:meal.estimate!==false,method:['text','voice','photo','manual'].includes(meal.method)?meal.method:'text',
+   estimate:meal.estimate!==false,method:['text','voice','photo','manual','catalog','ocr'].includes(meal.method)?meal.method:'text',
    photoThumb:meal.photoThumb===null?null:(typeof meal.photoThumb==='string'&&/^data:image\/(jpeg|webp);base64,[A-Za-z0-9+/=]+$/.test(meal.photoThumb)&&meal.photoThumb.length<=22000?meal.photoThumb:(previous?.photoThumb||null)),
    createdAt:previous?.createdAt||new Date().toISOString(),updatedAt:new Date().toISOString()
   };
@@ -5920,6 +5921,7 @@ window.LifeSimsFoodBridge={
     const prior=i>=0?state.foodTemplates[i]:null;
     const saved={...prior,title,ingredients:record.ingredients||prior?.ingredients||'',
      grams:record.grams,kcal:record.kcal,protein:record.protein,fat:record.fat,carbs:record.carbs,
+     photoSource:record.photoSource||prior?.photoSource||'',barcode:record.barcode||prior?.barcode||null,
      favorite:!!prior?.favorite,useCount:(Number(prior?.useCount)||0)+(previous?0:1),
      lastUsedAt:new Date().toISOString(),createdAt:prior?.createdAt||new Date().toISOString()};
     if(i<0)state.foodTemplates.push(saved);else state.foodTemplates[i]=saved;
