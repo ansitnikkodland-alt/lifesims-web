@@ -1436,9 +1436,22 @@ function visibleTaskDue(a,date){
  if(!a||a.legacyDone)return false;
  if(a.kind==='habit')return due(a,date);
  if(a.kind!=='task')return false;
- if(date===today())return due(a,date)||overdueTask(a,date);
- if(date<today()&&['once','inbox'].includes(a.repeat)&&overdueTask(a,today()))return false;
- return due(a,date);
+ const completion=(a.completions||[]).find(c=>/^\d{4}-\d{2}-\d{2}$/.test(c?.date||''));
+ if(a.repeat==='once'){
+  // Only one active calendar placement: planned, rolled forward, or actually completed.
+  if(completion)return date===completion.date;
+  if(a.createdDate&&a.createdDate<today())return date===today();
+  return due(a,date);
+ }
+ if(a.repeat==='inbox'){
+  if(!a.dueDate)return false;
+  if(completion)return date===completion.date;
+  return date===(a.dueDate<today()?today():a.dueDate);
+ }
+ if(due(a,date))return true;
+ if(date===today()&&overdueTask(a,date))return true;
+ // A weekly occurrence completed after its designated day remains in the calendar.
+ return (a.completions||[]).some(c=>c.date===date);
 }
 function difficultyOf(a){const n=Number(a?.difficulty);return Number.isInteger(n)&&n>=1&&n<=5?n:3}
 // Skill direction follows the habit's type, independently of the resource XP sign.
@@ -4233,7 +4246,8 @@ function renderDayAgenda(){
       const name=document.createElement('div');name.className='agenda-event-title';name.textContent=task.name;
       const meta=document.createElement('div');meta.className='agenda-event-meta';
       meta.textContent=(repeatable?'Привычка · за дату: '+(task.completions||[]).filter(c=>c.date===date).length+' раз':'Дело · '+(finished?'выполнено':'запланировано'))+
-       (resourceEffectLabel(task.resourceEffect)?' · '+resourceEffectLabel(task.resourceEffect):'');
+       (resourceEffectLabel(task.resourceEffect)?' · '+resourceEffectLabel(task.resourceEffect):'')+
+        (overdueTask(task,date)?' · ⚠ Перенесено'+(task.repeat==='once'&&task.createdDate?' с '+task.createdDate:' с предыдущей даты'):'');
       main.append(name,meta);if(task.kind==='task'){main.tabIndex=0;main.setAttribute('role','button');main.setAttribute('aria-label','Действия с делом '+task.name);main.onclick=()=>window.LifeSimsTaskActions?.open?.(task.id,date);main.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();main.click()}};}row.append(check,main);
       const edit=document.createElement('button');edit.className='agenda-edit';edit.type='button';edit.textContent='✎';
       edit.setAttribute('aria-label','Изменить дело '+task.name);
