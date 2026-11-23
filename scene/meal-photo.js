@@ -346,29 +346,49 @@ async function foodModel(onStatus){
  if(foodPredictor)return foodPredictor;
  if(!foodPredictorPromise){
   foodPredictorPromise=(async()=>{
-   report(onStatus,'Загружаю локальную модель распознавания еды (около 93 МБ при первом запуске). Желателен Wi‑Fi…');
+   report(onStatus,'Загружаю Food‑101 (93 МБ при первом использовании). Требуется интернет, фото остаётся на устройстве.');
    const {pipeline}=await import(LIB);
-   return pipeline('image-classification',MODEL,{dtype:'q8',device:'wasm'});
+   let lastNotice=0;
+   return pipeline('image-classification',MODEL,{dtype:'q8',device:'wasm',
+    progress_callback:event=>{
+     if(event?.status==='progress'&&Number.isFinite(event.progress)){
+      const percent=Math.min(100,Math.round(event.progress));
+      if(percent>=lastNotice+10){
+       lastNotice=percent;
+       report(onStatus,'Загрузка модели Food‑101: '+percent+'%. Фото не передаётся на сервер.');
+      }
+     }
+    }
+   });
   })().then(x=>(foodPredictor=x)).catch(error=>{foodPredictorPromise=null;throw error});
  }
  return foodPredictorPromise;
 }
 async function analyzeFood(file,onStatus){
- const model=await foodModel(onStatus);
+ let model;
+ try{model=await foodModel(onStatus)}
+ catch(error){
+  throw Error('Не удалось загрузить модель Food‑101 (93 МБ): '+(error?.message||'ошибка памяти или сети')+
+   '. Можно воспользоваться поиском названия или этикеткой.');
+ }
  report(onStatus,'Распознаю блюдо на устройстве…');
  const url=URL.createObjectURL(file);
  try{
-  const results=await model(url,{topk:3});
+  let results;
+  try{results=await model(url,{topk:5})}
+  catch(error){throw Error('Модель не смогла обработать фото: '+(error?.message||'ошибка устройства'))}
   const candidates=(results||[]).filter(x=>typeof x.label==='string'&&Number.isFinite(Number(x.score)))
    .map(x=>({title:RU[x.label.toLowerCase()]||x.label.replace(/_/g,' '),score:Number(x.score)}));
   if(!candidates.length)throw Error('Модель не смогла предложить название блюда.');
   const first=results?.[0]||{},guess=first.score>=.3?typicalPortion(first.label):null;
-  return {kind:'meal',source:'Локальная модель Food-101',title:candidates[0].score>=.3?candidates[0].title:'',
+  return {kind:'meal',source:'Food‑101 (распознавание на устройстве)',
+   title:candidates[0].score>=.3?candidates[0].title:'',
    ingredients:'',candidates,per100:null,gramsEstimate:guess,
    confidence:guess!=null?
-    'Вес '+guess+' г — приблизительная типичная порция для такого блюда, а не измерение по фото. Проверь и исправь':
-    'Название не определено уверенно. Размер порции и калории оцени самостоятельно'};
+    'Вес '+guess+' г — только типичная порция для такого блюда, не измерение по фото. Калории рассчитываются отдельно и приблизительно. Проверь.':
+    'Название определено неуверенно. Размер порции и пищевую ценность проверь вручную'};
  }finally{URL.revokeObjectURL(url)}
 }
+
 window.LifeSimsMealPhoto={compressedThumbnail,barcodeFromPhoto,startBarcodeScanner,productByBarcode,searchProducts,analyzeFood,analyzePackage,analyzeSmart,extractNutrition,typicalPortion,parsePackageSize,parseLabelSize};
 })();
