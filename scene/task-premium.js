@@ -36,9 +36,9 @@
  ];
  const quadrant=a=>a.urgent?(a.important?0:2):(a.important?1:3);
  const completed=a=>a.legacyDone||((a.repeat==='once'||a.repeat==='inbox')&&(a.completions||[]).length>0);
- const label=a=>a.repeat==='inbox'?'Без срока':a.repeat==='daily'?'Ежедневно':a.repeat==='weekly'?'По дням недели':a.dueDate||a.createdDate||'Без срока';
+ const label=a=>a.repeat==='inbox'?'Без даты выполнения':a.repeat==='daily'?'Ежедневно':a.repeat==='weekly'?'По дням недели':a.dueDate||a.createdDate||'Без срока';
  const makeButton=(name,title,handler,cls='tp-minor')=>{const b=el('button',cls,name);b.type='button';b.setAttribute('aria-label',title);b.onclick=handler;return b};
- const sort=arr=>[...arr].sort((a,b)=>Number(completed(a))-Number(completed(b))||quadrant(a)-quadrant(b)||
+ const sort=arr=>[...arr].sort((a,b)=>Number(completed(a))-Number(completed(b))||Number(api.deadlineInfo(b).overdue)-Number(api.deadlineInfo(a).overdue)||quadrant(a)-quadrant(b)||
   (Number(b.priority)||0)-(Number(a.priority)||0)||(a.dueDate||'9999').localeCompare(b.dueDate||'9999')||a.name.localeCompare(b.name,'ru'));
  const collection=(name,entries,empty)=>{
   const select=$(name),last=select.value;select.replaceChildren();
@@ -56,7 +56,8 @@
   const displayAmount=orderEffect?(effect.mode==='set'?100-effect.amount:-effect.amount):effect?.amount;
   const description=effect&&resourceNames[effect.target]?
    resourceNames[effect.target]+' '+(effect.mode==='set'?'→ '+displayAmount+'%':(displayAmount>=0?'+':'')+displayAmount+' п. п.'):'';
-  const details=[label(a),project,...tags,'Сложность '+difficultyValue(a)+'/5',Number(a.priority)?'Приоритет '+a.priority:'',description].filter(Boolean);
+  const deadline=api.deadlineInfo(a),deadlineText=deadline.label?(deadline.overdue?'⚠ Просрочен · ':deadline.today?'Сегодня · ':'')+deadline.label:'';
+  const details=[label(a),deadlineText,project,...tags,'Сложность '+difficultyValue(a)+'/5',Number(a.priority)?'Приоритет '+a.priority:'',description].filter(Boolean);
   info.append(el('small','',details.join(' · ')));info.tabIndex=0;info.setAttribute('role','button');info.setAttribute('aria-label','Действия с делом '+a.name);info.onclick=()=>window.LifeSimsTaskActions?.open?.(a.id,api.today());info.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();info.click()}};row.append(check,info);
   if(mat){
    const select=el('select','tp-quadrant-switch');select.setAttribute('aria-label','Переместить '+a.name);
@@ -78,7 +79,7 @@
    if(scope==='open'&&completed(a)||scope==='completed'&&!completed(a))return false;
    if(scope==='inbox'&&a.repeat!=='inbox')return false;
    if(scope==='today'&&!(a.repeat==='inbox'||api.due(a.id,today)))return false;
-   if(scope==='week'&&!(a.repeat==='inbox'||a.repeat==='daily'||a.repeat==='weekly'||(a.dueDate||a.createdDate||'9999')<=until))return false;
+   if(scope==='week'&&!(a.repeat==='inbox'||a.repeat==='daily'||a.repeat==='weekly'||(a.dueDate||a.createdDate||'9999')<=until||(a.deadlineDate&&a.deadlineDate<=until)))return false;
    return true;
   }));
  }
@@ -160,6 +161,8 @@
   }
   $('tpEditorManageTags').onclick=()=>openManager('tag');
   $('taskKind').addEventListener('change',e=>{
+   $('taskDeadlineFields').hidden=e.target.value==='habit';
+   $('taskDeadlineHint').hidden=e.target.value==='habit';
    panel.hidden=e.target.value==='habit';
    $('tpHabitNature').hidden=e.target.value!=='habit';
    $('tpHabitGoalEditor').hidden=e.target.value!=='habit';
@@ -180,6 +183,8 @@
    const label=el('label','tp-tag-choice'),check=el('input');check.type='checkbox';check.name='tpTagChoice';check.value=x.id;
    check.checked=(a?.tags||[]).includes(x.id);label.append(check,document.createTextNode(' #'+x.name));choices.append(label);
   }
+  $('taskDeadlineFields').hidden=formKind==='habit';
+  $('taskDeadlineHint').hidden=formKind==='habit';
   panel.hidden=formKind==='habit';
   $('tpHabitNature').hidden=formKind!=='habit';
   $('tpHabitGoalEditor').hidden=formKind!=='habit';
