@@ -16,9 +16,12 @@
   if(!task)return false;
   const done=typeof api.done==='function'?api.done(id,date):finished(task,date),scheduled=task.repeat==='inbox'||api.due(id,date);
   $('lifeTaskActionsTitle').textContent='☑ '+task.name;
-  $('lifeTaskActionsInfo').textContent=done?'Дело уже выполнено.':!scheduled?
+  const deadline=api.deadlineInfo?.(task);
+  const baseText=done?'Дело уже выполнено.':!scheduled?
    'Дело не запланировано на '+date+'. Можно запустить помодоро или изменить расписание.':
    'Выбери действие. Помодоро не отмечает дело выполненным автоматически.';
+  $('lifeTaskActionsInfo').textContent=baseText+(deadline?.label?' · '+
+   (deadline.overdue?'⚠ Просрочен · ':'')+deadline.label:'');
   const button=$('lifeTaskActionsDone');
   button.disabled=done||!scheduled||date>api.today();
   $('lifeTaskActionsFocus').onclick=()=>{
