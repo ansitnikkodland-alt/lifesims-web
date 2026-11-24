@@ -5070,9 +5070,26 @@ function refreshLifeCalendarOnNewDay(){
  renderAll();
  if(!$('dayAgendaOverlay').hidden)renderDayAgenda();
 }
-window.setInterval(()=>{if(!document.hidden)refreshLifeCalendarOnNewDay()},60000);
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)refreshLifeCalendarOnNewDay()});
-window.addEventListener('focus',refreshLifeCalendarOnNewDay);
+function deadlineStatusSignature(){
+ return (state.activities||[]).filter(a=>a?.kind==='task'&&!a.legacyDone&&deadlineDateOf(a))
+  .map(a=>{const info=deadlineInfo(a);return a.id+':'+Number(info.overdue)+':'+Number(info.today)}).join('|');
+}
+let lastDeadlineSignature=deadlineStatusSignature();
+function refreshDeadlineStatuses(){
+ const next=deadlineStatusSignature();
+ if(next===lastDeadlineSignature)return;
+ lastDeadlineSignature=next;
+ renderTopActivities();
+ if(!$('dayAgendaOverlay').hidden)renderDayAgenda();
+}
+function refreshCalendarAndDeadlines(){
+ if(document.hidden)return;
+ refreshLifeCalendarOnNewDay();
+ refreshDeadlineStatuses();
+}
+window.setInterval(refreshCalendarAndDeadlines,60000);
+document.addEventListener('visibilitychange',refreshCalendarAndDeadlines);
+window.addEventListener('focus',refreshCalendarAndDeadlines);
 function downloadHTML(){const html='<!doctype html>\n'+document.documentElement.outerHTML,blob=new Blob([html],{type:'text/html;charset=utf-8'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='LifeSims-Анюта.html';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);toast('HTML подготовлен к скачиванию')}function backup(){if(storageBlocked){toast('Экспорт заблокирован: исходные данные повреждены или недоступны. Пустая копия не создаётся. Сохрани прежний JSON-файл и не очищай браузер.');return false}const contents=JSON.stringify(state,null,2),blob=new Blob([contents],{type:'application/json'}),url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='LifeSims-'+today()+'-backup.json';document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),4000);toast('Резервная копия подготовлена к скачиванию')}
 function parseBackup(raw){const inputs=[raw,raw?.state,raw?.data,raw?.backup];for(const obj of inputs){if(!obj||typeof obj!=='object'||Array.isArray(obj))continue;if(obj.schema===VERSION)return normalize(obj);if(Array.isArray(obj.tasks)&&obj.skills&&typeof obj.skills==='object'&&!Array.isArray(obj.skills))return migrate(obj)}throw Error('Неизвестный формат. Нужен JSON из раздела «Сохранения / Данные» LifeSims. HTML-файл не содержит сохранения.')}
 let pendingImport=null;
