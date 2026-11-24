@@ -5074,7 +5074,7 @@ function deadlineStatusSignature(){
  return (state.activities||[]).filter(a=>a?.kind==='task'&&!a.legacyDone&&deadlineDateOf(a))
   .map(a=>{const info=deadlineInfo(a);return a.id+':'+Number(info.overdue)+':'+Number(info.today)}).join('|');
 }
-let lastDeadlineSignature=deadlineStatusSignature();
+let lastDeadlineSignature=null;
 function refreshDeadlineStatuses(){
  const next=deadlineStatusSignature();
  if(next===lastDeadlineSignature)return;
@@ -5176,6 +5176,7 @@ $('taskCancel').onclick=()=>{clearActivityEditor();$('calendarTaskEditor').open=
 $('taskDelete').onclick=()=>deleteActivity($('taskEditId').value);
 // State must be loaded before editors or skill widgets read state.days/activities/events.
 load();
+lastDeadlineSignature=deadlineStatusSignature();
 // One-time, opt-in clean slate for the LifeSims events calendar only.
 // Activated solely by an explicit special link, never by a normal app visit.
 // Do not modify Google Calendar, personal history, tasks, habits, food or measurements.
