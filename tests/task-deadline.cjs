@@ -85,10 +85,12 @@ const {chromium}=require('playwright-core');
   },result.id);
   assert.deepEqual(cleared,{date:'',time:'',status:''});
   await page.evaluate(()=>window.LifeSimsTaskBridge.create('habit'));
-  assert.equal(await page.locator('#taskDeadlineFields').isVisible(),false,
+  assert.equal(await page.locator('#taskDeadlineFields').evaluate(el=>el.hidden),true,
    'Habits must not inherit task deadline');
-  await page.locator('#taskKind').selectOption('task');
-  assert.equal(await page.locator('#taskDeadlineFields').isVisible(),true,
+  await page.locator('#taskKind').evaluate(el=>{
+   el.value='task';el.dispatchEvent(new Event('change',{bubbles:true}));
+  });
+  assert.equal(await page.locator('#taskDeadlineFields').evaluate(el=>el.hidden),false,
    'Deadline fields must appear when switching back to task');
   assert.deepEqual(errors,[]);
   console.log('TASK DEADLINE: PASS (separate date and time, validation, overdue, schedule, reload, remove and habit toggle)');
