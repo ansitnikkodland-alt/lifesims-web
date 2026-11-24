@@ -1,0 +1,27 @@
+name: LifeSims task deadline regression
+on:
+  push:
+    paths:
+      - 'scene/index.html'
+      - 'scene/task-premium.js'
+      - 'scene/task-actions.js'
+      - 'tests/task-deadline.cjs'
+      - '.github/workflows/lifesims-task-deadline.yml'
+  workflow_dispatch:
+jobs:
+  deadline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install browser driver
+        run: npm install --no-save playwright-core@1.56.1
+      - name: Start isolated LifeSims
+        run: |
+          python3 -m http.server 8765 > /tmp/lifesims-deadline.log 2>&1 &
+          sleep 2
+      - name: Check task deadline behaviors
+        run: node tests/task-deadline.cjs
