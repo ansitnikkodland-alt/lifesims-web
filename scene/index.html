@@ -1018,6 +1018,7 @@ body{background:#091428}
 <div class="cols"><label class="field">Тип <select id="taskKind"><option value="task">Дело</option><option value="habit">Привычка</option></select></label>
 <label class="field">Повтор <select id="taskRepeat"><option value="once">Однократно</option><option value="daily">Ежедневно</option><option value="weekly">По дням недели</option></select></label></div>
 <fieldset id="taskWeekdays" hidden><legend>Конкретные дни недели</legend><div class="row"><label><input type="checkbox" name="taskWeekday" value="1"> Пн</label><label><input type="checkbox" name="taskWeekday" value="2"> Вт</label><label><input type="checkbox" name="taskWeekday" value="3"> Ср</label><label><input type="checkbox" name="taskWeekday" value="4"> Чт</label><label><input type="checkbox" name="taskWeekday" value="5"> Пт</label><label><input type="checkbox" name="taskWeekday" value="6"> Сб</label><label><input type="checkbox" name="taskWeekday" value="7"> Вс</label></div></fieldset>
+<div class="cols" id="taskDeadlineFields"><label class="field">⏰ Дедлайн: дата <input id="taskDeadlineDate" type="date" aria-label="Дата дедлайна дела"></label><label class="field">Время (необязательно) <input id="taskDeadlineTime" type="time" aria-label="Время дедлайна дела"></label></div><p class="hint" id="taskDeadlineHint">Крайний срок отдельно от даты начала. Без времени — до конца указанного дня. Пустая дата — без дедлайна.</p>
 <div class="cols"><label class="field">Начало <input id="taskStartDate" type="date" required></label><label class="field">Влияние на навык <select id="taskXP"><option value="-40">−40 XP · сильное снижение</option><option value="-20">−20 XP</option><option value="-15">−15 XP</option><option value="-10">−10 XP</option><option value="-5">−5 XP</option><option value="0">0 XP · без влияния</option><option value="5">+5 XP</option><option value="10" selected>+10 XP</option><option value="15">+15 XP</option><option value="20">+20 XP</option><option value="40">+40 XP</option></select></label></div>
 <label class="field">Связанные навыки <input id="taskSkill" list="skillSuggestions" maxlength="70" autocomplete="off" placeholder="Не повышает навык"><datalist id="skillSuggestions"></datalist><small>Можно добавлять несколько навыков кнопкой «Добавить навык» или Enter.</small></label><label class="field">Связать с предметом в комнате <select id="taskObject"><option value="">Без связи</option><option value="bed">🛏 Кровать</option><option value="books">📚 Книжный шкаф</option><option value="tableBook">📖 Книга на журнальном столике</option><option value="phone">📱 Телефон</option><option value="coffee">☕ Чашка кофе</option><option value="clutter">🧹 Вещи для уборки</option><option value="desk">💻 Рабочий стол</option><option value="sink">🚰 Раковина</option><option value="shower">🚿 Душевая кабина</option><option value="fridge">🧊 Холодильник</option><option value="toilet">🚽 Туалет</option><option value="catLitter">🐈 Туалет котиков</option><option value="sofa">🛋 Диван</option><option value="sim">👤 Персонаж</option><option value="window">🪟 Окно</option></select></label>
 <div class="row"><button class="primary" type="submit" id="taskSave">Сохранить дело/привычку</button><button class="secondary" type="button" id="taskCancel">Отмена</button><button class="secondary" type="button" id="taskDelete" hidden>Удалить</button></div>
@@ -1453,9 +1454,33 @@ function due(a,d){
  return false;
 }
 function done(a,d){if(a.legacyDone)return true;const cm=Array.isArray(a.completions)?a.completions:[];if(a.repeat==='once'||a.repeat==='inbox')return cm.length>0;if(a.repeat==='weekly')return cm.some(c=>Array.isArray(a.weekdays)&&a.weekdays.length>1?c.date===d:weekKey(c.date)===weekKey(d));return cm.some(c=>c.date===d)}
+// An optional deadline is separate from the planned date and recurrence.
+// Date-only deadlines expire at midnight AFTER the selected date.
+function deadlineDateOf(a){
+ const value=String(a?.deadlineDate||'');
+ return /^\d{4}-\d{2}-\d{2}$/.test(value)&&dayStr(asDay(value))===value?value:'';
+}
+function deadlineTimeOf(a){
+ const value=String(a?.deadlineTime||'');
+ return /^([01]\d|2[0-3]):[0-5]\d$/.test(value)?value:'';
+}
+function deadlineInfo(a,at=new Date()){
+ const date=deadlineDateOf(a);
+ if(a?.kind!=='task'||!date)return {date:'',time:'',label:'',overdue:false,today:false};
+ const time=deadlineTimeOf(a),current=dayStr(at);
+ const clock=String(at.getHours()).padStart(2,'0')+':'+String(at.getMinutes()).padStart(2,'0');
+ const overdue=!done(a,current)&&(date<current||(date===current&&!!time&&clock>=time));
+ const label='⏰ Дедлайн '+asDay(date).toLocaleDateString('ru-RU')+(time?' в '+time:'');
+ return {date,time,label,overdue,today:date===current};
+}
+function deadlineDisplay(a,at=new Date()){
+ const info=deadlineInfo(a,at);
+ return info.label?(info.overdue?'⚠ Просрочен · ':info.today?'Сегодня · ':'')+info.label:'';
+}
 /* Overdue tasks roll onto the current day without rewriting stored dates. */
 function overdueTask(a,date=today()){
  if(!a||a.kind!=='task'||a.legacyDone||date!==today()||done(a,date))return false;
+ if(deadlineInfo(a).overdue)return true;
  const start=a.createdDate||'';
  if(a.repeat==='inbox')return /^\d{4}-\d{2}-\d{2}$/.test(a.dueDate||'')&&a.dueDate<date;
  if(a.repeat==='once')return !!start&&start<date;
@@ -1473,6 +1498,7 @@ function visibleTaskDue(a,date){
  if(a.kind==='habit')return due(a,date);
  if(a.kind!=='task')return false;
  const completion=(a.completions||[]).find(c=>/^\d{4}-\d{2}-\d{2}$/.test(c?.date||''));
+ if(deadlineDateOf(a)===date&&!done(a,date))return true;
  if(a.repeat==='once'){
   // Only one active calendar placement: planned, rolled forward, or actually completed.
   if(completion)return date===completion.date;
@@ -1480,9 +1506,10 @@ function visibleTaskDue(a,date){
   return due(a,date);
  }
  if(a.repeat==='inbox'){
-  if(!a.dueDate)return false;
   if(completion)return date===completion.date;
-  return date===(a.dueDate<today()?today():a.dueDate);
+  const plan=a.dueDate||deadlineDateOf(a);
+  if(!plan)return false;
+  return date===(plan<today()?today():plan);
  }
  if(due(a,date))return true;
  if(date===today()&&overdueTask(a,date))return true;
@@ -1617,6 +1644,7 @@ function makeActivityItem(a,date){
    mood:'Настроение',condition:'Физическое состояние',hygiene:'Гигиена',nutrition:'Питание',
    hunger:'Сытость',sleepNeed:'Сон',entropy:'Порядок',activity:'Активность',resource:'Ресурс'
   }[a.resourceEffect.target]||'Показатель')+' '+(a.resourceEffect.mode==='set'?'→ '+a.resourceEffect.amount+'%':(a.resourceEffect.amount>=0?'+':'')+a.resourceEffect.amount+' п. п.'):'');
+ if(a.kind==='task'&&deadlineDateOf(a))description.textContent+=' · '+deadlineDisplay(a);
  text.append(title,description);if(a.kind==='task'){text.tabIndex=0;text.setAttribute('role','button');text.setAttribute('aria-label','Действия с делом '+a.name);text.onclick=()=>window.LifeSimsTaskActions?.open?.(a.id,date);text.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();text.click()}};}el.append(mark,text);
  if(a.object){const badge=document.createElement('span');badge.className='pill';badge.textContent='Комната';el.append(badge)}
  const edit=document.createElement('button');edit.className='secondary task-edit';
@@ -1678,6 +1706,7 @@ function renderTopActivities(){
 function clearActivityEditor(){
  $('taskForm').reset();$('taskEditId').value='';taskSkillsPicker?.set([]);
  $('taskStartDate').value=$('historyDate').value||today();
+ $('taskDeadlineDate').value='';$('taskDeadlineTime').value='';
  refreshSkillSuggestions();$('taskSkill').value='';
  document.querySelectorAll('[name=taskWeekday]').forEach(x=>x.checked=false);
  $('taskWeekdays').hidden=true;$('taskDelete').hidden=true;
@@ -1691,6 +1720,7 @@ function openActivityEditor(id){
  $('taskTitle').value=a.name||'';$('taskKind').value=a.kind==='habit'?'habit':'task';
  $('taskRepeat').value=['inbox','once','daily','weekly'].includes(a.repeat)?a.repeat:'once';
  $('taskStartDate').value=a.createdDate||today();
+ $('taskDeadlineDate').value=deadlineDateOf(a);$('taskDeadlineTime').value=deadlineTimeOf(a);
  $('taskXP').value=String(Number.isFinite(a.xp)?a.xp:0);
  if(!$('taskXP').value)$('taskXP').value='0';
  $('taskObject').value=a.object||'';
@@ -1711,10 +1741,16 @@ function addActivity(e){
  const old=state.activities.find(x=>x.id===id);
  if(id&&!old)return toast('Дело больше не найдено');
  const meta=window.LifeSimsTaskPremium?.readForm?.()||{};
+ const taskMode=$('taskKind').value==='task';
+ const deadlineDate=taskMode?$('taskDeadlineDate').value:'';
+ const deadlineTime=taskMode?$('taskDeadlineTime').value:'';
+ if(taskMode&&deadlineTime&&!deadlineDate)return toast('Сначала укажи дату дедлайна.');
+ if(deadlineDate&&(!/^\d{4}-\d{2}-\d{2}$/.test(deadlineDate)||dayStr(asDay(deadlineDate))!==deadlineDate))
+  return toast('Проверь дату дедлайна.');
  if(meta.habitGoal&&(!['min','max'].includes(meta.habitGoal.type)||!Number.isFinite(meta.habitGoal.value)||meta.habitGoal.value<0||meta.habitGoal.value>100000))return toast('Для нормы укажи неотрицательное число не больше 100000.');
  if(meta.resourceEffect&&!validatedResourceEffect(meta.resourceEffect))return toast('Проверь настройки влияния на показатель: значение должно быть от −100 до +100, а срок — допустимым.');
  if(meta.resourceEffect)meta.resourceEffect=validatedResourceEffect(meta.resourceEffect);
- const act=preserveSkillTimeline(old,{...(old||{}),...meta,id:old?.id||uid(),name,repeat,weekdays:repeat==='weekly'?weekdays:[],createdDate:$('taskStartDate').value||today(),kind:$('taskKind').value==='habit'?'habit':'task',xp:Number($('taskXP').value),...withSkills({},taskSkillsPicker?.get()||[]),object:$('taskObject').value||null,completions:old?.completions||[]},today());
+ const act=preserveSkillTimeline(old,{...(old||{}),...meta,id:old?.id||uid(),name,repeat,weekdays:repeat==='weekly'?weekdays:[],createdDate:$('taskStartDate').value||today(),deadlineDate,deadlineTime,kind:taskMode?'task':'habit',xp:Number($('taskXP').value),...withSkills({},taskSkillsPicker?.get()||[]),object:$('taskObject').value||null,completions:old?.completions||[]},today());
  if(!transact(()=>{const i=state.activities.findIndex(x=>x.id===act.id);if(i<0)state.activities.push(act);else state.activities[i]=act;}))return toast('Не удалось сохранить');
  clearActivityEditor();$('calendarTaskEditor').open=false;
  if($('calendarTaskPopup')?.open)$('calendarTaskPopup').close();
@@ -4395,7 +4431,8 @@ function renderDayAgenda(){
       const meta=document.createElement('div');meta.className='agenda-event-meta';
       meta.textContent=(repeatable?'Привычка · за дату: '+(task.completions||[]).filter(c=>c.date===date).length+' раз':'Дело · '+(finished?'выполнено':'запланировано'))+
        (resourceEffectLabel(task.resourceEffect)?' · '+resourceEffectLabel(task.resourceEffect):'')+
-        (overdueTask(task,date)?' · ⚠ Перенесено'+(task.repeat==='once'&&task.createdDate?' с '+task.createdDate:' с предыдущей даты'):'');
+        (overdueTask(task,date)?' · ⚠ Перенесено'+(task.repeat==='once'&&task.createdDate?' с '+task.createdDate:' с предыдущей даты'):'')+
+        (task.kind==='task'&&deadlineDateOf(task)?' · '+deadlineDisplay(task):'');
       main.append(name,meta);if(task.kind==='task'){main.tabIndex=0;main.setAttribute('role','button');main.setAttribute('aria-label','Действия с делом '+task.name);main.onclick=()=>window.LifeSimsTaskActions?.open?.(task.id,date);main.onkeydown=e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();main.click()}};}row.append(check,main);
       const edit=document.createElement('button');edit.className='agenda-edit';edit.type='button';edit.textContent='✎';
       edit.setAttribute('aria-label','Изменить дело '+task.name);
@@ -5300,6 +5337,7 @@ window.LifeSimsTaskBridge={
  backdate:(id,date)=>openHabitBackdateDialog(id,date),
  due:(id,date)=>{const a=state.activities.find(x=>x.id===id);return !!a&&visibleTaskDue(a,date)},
  overdue:(id,date=today())=>{const a=state.activities.find(x=>x.id===id);return overdueTask(a,date)},
+ deadlineInfo:(task,at=new Date())=>deadlineInfo(task,at),
  done:(id,date)=>{const a=state.activities.find(x=>x.id===id);return !!a&&done(a,date)},
  complete:(id,date)=>{
   const a=state.activities.find(x=>x.id===id);
