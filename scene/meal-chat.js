@@ -35,6 +35,9 @@
  '<button type="button" id="mealChatFindBarcode">Найти товар по штрихкоду</button></div>',
  '</div>',
  '<div id="mealChatSuggestions" class="meal-chat-suggestions" aria-label="Подсказки сохранённых блюд" hidden></div>',
+ '<div class="meal-chat-time-row"><label for="mealChatTime">🕒 Время приёма пищи</label>',
+ '<input id="mealChatTime" type="time" required aria-label="Время приёма пищи">',
+ '<small>Можно указать фактическое время, включая прошлые часы.</small></div>',
  '<form id="mealChatForm" class="meal-chat-composer">',
  '<textarea id="mealChatInput" rows="2" maxlength="850" aria-label="Что ты съела или выпила" placeholder="Что ты съела? Например: Омлет: 2 яйца, молоко, сыр"></textarea>',
  '<button id="mealChatSend" type="submit" aria-label="Отправить и записать еду" title="Записать еду">➤</button></form>',
@@ -56,6 +59,8 @@
  function status(message){
   const el=$('mealChatStatus');el.hidden=!message;el.textContent=message||'';
  }
+ function localClock(){const d=new Date();return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0')}
+ function resetTime(){ $('mealChatTime').value=localClock() }
  function currentDate(){return $('mealChatDate').value||bridge.today()}
  function tabChanged(tab){
   currentTab=tab;
@@ -107,6 +112,10 @@
     ref.target='_blank';ref.rel='noopener noreferrer';reply.append(ref);
    }
    reply.append(create('div','meal-chat-uncertainty',m.time+' · '+(m.photoSource?'Источник: '+m.photoSource:m.estimate!==false?'Источник: ориентировочный расчёт LifeSims':'Источник: ручные значения')));
+   const timeLink=create('button','meal-chat-time-edit','🕒 '+m.time+' · Изменить время');
+   timeLink.type='button';timeLink.setAttribute('aria-label','Изменить время приёма пищи: '+m.title);
+   timeLink.onclick=()=>{startEdit(m);$('mealChatTime').focus({preventScroll:true})};
+   reply.append(timeLink);
    const buttons=create('div','meal-chat-actions');
    const edit=create('button','','Изменить');edit.type='button';edit.onclick=()=>startEdit(m);
    const detail=create('button','','Подробнее');detail.type='button';detail.onclick=()=>openDetailed(currentDate(),m.id);
@@ -165,6 +174,7 @@
  }
  function startEdit(meal){
   resetPhoto();editingId=meal.id;$('mealChatInput').value=meal.title+(meal.ingredients?': '+meal.ingredients:'');
+  $('mealChatTime').value=meal.time||localClock();
   tabChanged('text');renderSuggestions();
   status('Редактируется запись от '+meal.date+' · '+meal.time+'. Отправка сохранит изменения без дубликата.');
   $('mealChatInput').focus();
@@ -282,6 +292,22 @@
   if(!parsed.title){status('Укажи название блюда.');return}
   const existing=editingId?bridge.list().find(m=>m.id===editingId):null;
   if(editingId&&!existing){status('⚠ Редактируемая запись больше не существует.');return}
+  const time=$('mealChatTime').value;
+  if(!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(time)){
+   status('⚠ Укажи время в формате ЧЧ:ММ (00:00–23:59).');$('mealChatTime').focus();return
+  }
+  // Changing only the clock must preserve the exact saved nutrition, source,
+  // barcode, photo, and ID. Do not run a new estimation for an unchanged meal.
+  const originalText=existing?(existing.title+(existing.ingredients?': '+existing.ingredients:'')):'';
+  if(existing&&!photoFile&&!photoData&&input===originalText){
+   try{
+    bridge.upsert({...existing,date:currentDate(),time});
+    editingId=null;$('mealChatInput').value='';resetPhoto();resetTime();
+    tabChanged('text');renderSuggestions();legacy.render?.();
+    status('✓ Время приёма «'+existing.title+'» изменено на '+time+'. Калории и БЖУ не изменились.');
+   }catch(e){status('⚠ '+e.message)}
+   return;
+  }
   const match=templates().find(t=>norm(t.title)===norm(parsed.title));
   const hasNewIngredients=!!parsed.ingredients;
   const ingredientText=hasNewIngredients?parsed.ingredients:
@@ -298,7 +324,6 @@
   const nutrition=fromPackage?Object.fromEntries(['kcal','protein','fat','carbs'].map(k=>[
    k,photoData.per100?.[k]==null?null:Math.round(photoData.per100[k]*gramsFromPhoto/100*10)/10
   ])):(usePrevious?match:estimate);
-  const now=new Date(),time=existing?.time||String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
   try{
    bridge.upsert({
     id:existing?.id,date:currentDate(),time,title:canonicalTitle,ingredients:ingredientText,
@@ -316,7 +341,7 @@
    });
    $('mealChatInput').value='';editingId=null;const savedFromPhoto=!!photoFile;
    const source=photoData?.source||'ручная подпись к фото';
-   resetPhoto();tabChanged('text');renderSuggestions();
+   resetPhoto();resetTime();tabChanged('text');renderSuggestions();
    status('✓ '+canonicalTitle+' сохранено за '+currentDate()+'. '+
     (savedFromPhoto?'Фото: '+source+'. Проверь ориентировочные калории.':
     usePrevious?'Использована сохранённая порция.':estimate.confidence+'.'));
@@ -335,14 +360,14 @@
   if(typeof originalClose==='function')originalClose();
   lastFocus=document.activeElement;bodyScrollBefore=document.body.style.overflow;document.body.style.overflow='hidden';
   $('mealChatDate').value=/^\d{4}-\d{2}-\d{2}$/.test(String(date))?date:bridge.today();
-  editingId=null;resetPhoto();$('mealChatInput').value='';status('');node.hidden=false;tabChanged('text');
+  editingId=null;resetPhoto();resetTime();$('mealChatInput').value='';status('');node.hidden=false;tabChanged('text');
   const meal=mealId?bridge.list().find(m=>m.id===mealId):null;
   if(meal)startEdit(meal);else $('mealChatInput').focus({preventScroll:true});
  }
  node.addEventListener('click',e=>{if(e.target===node)closeChat()});
  $('mealChatBack').onclick=closeChat;
  $('mealChatDetailed').onclick=()=>openDetailed(currentDate(),editingId);
- $('mealChatDate').addEventListener('change',()=>{editingId=null;resetPhoto();$('mealChatInput').value='';status('');tabChanged('text')});
+ $('mealChatDate').addEventListener('change',()=>{editingId=null;resetPhoto();resetTime();$('mealChatInput').value='';status('');tabChanged('text')});
  $('mealChatCamera').onclick=()=>$('mealChatCameraInput').click();
  $('mealChatGallery').onclick=()=>$('mealChatGalleryInput').click();
  $('mealChatCameraInput').onchange=()=>attachPhoto($('mealChatCameraInput').files?.[0]);
