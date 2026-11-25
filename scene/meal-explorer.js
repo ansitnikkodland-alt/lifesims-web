@@ -185,8 +185,8 @@
   const generation=++searchVersion,normalized=norm(query);
   resultCache=[];fatSecretResults=[];lastSearch=normalized;
   setStatus('Ищу «'+query+'» в Open Food Facts и FatSecret (США)…');
-  const numeric=query.replace(/\\D/g,'');
-  const barcode=numeric===query&&/^\\d{8,14}$/.test(numeric);
+  const numeric=query.replace(/\D/g,'');
+  const barcode=numeric===query&&/^\d{8,14}$/.test(numeric);
   // Search only name queries in FatSecret Basic; paid barcode scanning is
   // deliberately not used. Open Food Facts handles barcode lookups.
   const requests=[
