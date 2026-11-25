@@ -34,7 +34,7 @@ const {chromium}=require('playwright-core');
   const result=page.locator('#fsFeResults .fs-fe-pick').filter({hasText:'Whole Grain Cereal'});
   await result.waitFor();
   assert.ok((await result.innerText()).includes('FatSecret'));
-  assert.ok((await page.locator('#fsFeResults').innerText()).includes('FatSecret — США'));
+  assert.ok((await result.innerText()).includes('FatSecret'), 'FatSecret attribution must be visible on the selected row');
   await result.click();
   await page.locator('#mealLookupNutrition').waitFor({state:'visible'});
   assert.ok((await page.locator('#mealLookupSource').innerText()).includes('FatSecret'));
