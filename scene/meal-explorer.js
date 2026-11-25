@@ -29,6 +29,7 @@
   '<div id="fsFeResults" class="fs-fe-results"></div>',
   '<details class="fs-fe-provenance"><summary>Откуда берутся калории и БЖУ?</summary>',
   '<p>🔎 <strong>Open Food Facts</strong> — открытая пользовательская база продуктов по названию и штрихкоду. Карточки могут содержать ошибки — сравни с этикеткой.</p>',
+  '<p>🥗 <strong>FatSecret</strong> — официальная платформа пищевых данных. В бесплатном API доступен каталог США. Результаты показываются временно; проверь порцию и БЖУ перед записью.</p>',
   '<p>📋 <strong>OCR этикетки</strong> — чтение текста на устройстве, а не проверка производителем. Проверь цифры.</p>',
   '<p>📸 <strong>Food‑101</strong> — локальная модель, предполагает название блюда из 101 категории; не измеряет порцию и не знает БЖУ.</p>',
   '<p>✎ <strong>LifeSims</strong> — ориентировочный расчёт по введённому названию, не справка изготовителя.</p>',
@@ -42,11 +43,26 @@
   '<input id="fsFeLabelInput" type="file" accept="image/*" capture="environment" hidden>'
  ].join('');
  shell.append(explorer);
- const statuses={search:'Ищи продукты по названию или штрихкоду в Open Food Facts.',
+ const statuses={search:'Поиск по Open Food Facts и FatSecret (каталог США).',
   recent:'Продукты, которые ты уже записывала. Хранятся в LifeSims.',
   most:'Самые часто записываемые блюда из твоего дневника.',
   saved:'Сохранённые тобой любимые продукты и блюда.'};
- let view='search',lastSearch='',resultCache=[],searchVersion=0,busy=false;
+ let view='search',lastSearch='',resultCache=[],fatSecretResults=[],searchVersion=0,busy=false;
+ const API='https://lifesims-family-test-api.onrender.com/v1/food/fatsecret';
+ async function fatSecretRequest(path,params={}){
+  const url=API+'/'+path+'?'+new URLSearchParams(params);
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),72000);
+  try{
+   const response=await fetch(url,{method:'GET',headers:{Accept:'application/json'},
+    signal:controller.signal,cache:'no-store',credentials:'omit'});
+   const body=await response.json().catch(()=>({}));
+   if(!response.ok)throw Error(String(body.error||'HTTP '+response.status).slice(0,180));
+   return body;
+  }catch(error){
+   if(error?.name==='AbortError')throw Error('Сервер FatSecret не ответил (Render Free может долго просыпаться)');
+   throw error;
+  }finally{clearTimeout(timer)}
+ }
  function setStatus(text){$('fsFeStatus').textContent=text||''}
  function toEntry(){
   explorer.hidden=true;
@@ -86,6 +102,7 @@
   const title=el('strong','',item.title||'Без названия');
   const detail=el('small','',type==='catalog'
    ?formatMacros(item,true)+' · Open Food Facts, пользовательская база'
+   :type==='fatsecret'?item.description+' · FatSecret (США)'
    :formatMacros(item)+(item.grams?' · '+item.grams+' г':'')+' · Дневник LifeSims');
   pick.append(title,detail);
   if(type==='catalog'){
@@ -95,6 +112,25 @@
     chat.setProduct(item);
     toEntry();
     $('mealChatPhotoPanel')?.scrollIntoView({block:'nearest'});
+   };
+  }else if(type==='fatsecret'){
+   const cite=el('small','fs-fe-source','Источник: FatSecret Platform API · США · ID '+item.foodId);
+   pick.append(cite);
+   pick.onclick=async()=>{
+    pick.disabled=true;setStatus('Получаю порции из FatSecret…');
+    try{
+     const response=await fatSecretRequest('item',{foodId:item.foodId});
+     const food=response.food;
+     if(!food||!food.per100){
+      setStatus('FatSecret не предоставил порцию в граммах. Выбери другой продукт или введи БЖУ по упаковке вручную.');
+      pick.disabled=false;return;
+     }
+     chat.setProduct({kind:'package',source:'FatSecret (каталог США)',title:food.title,
+      per100:food.per100,gramsEstimate:food.gramsEstimate,portionUnit:food.portionUnit,
+      confidence:food.confidence,ingredients:'',details:food.servings?.[0]?.serving||''});
+     toEntry();
+    }catch(error){setStatus('⚠ FatSecret: '+error.message)}
+    finally{pick.disabled=false}
    };
   }else{
    pick.onclick=()=>{chat.chooseTemplate(item);toEntry()};
@@ -122,11 +158,15 @@
     locals.forEach(x=>box.append(foodRow(x)));
    }
    if(resultCache.length&&lastSearch===term){
-    box.append(el('h3','','Найдено в Open Food Facts'));
+    box.append(el('h3','','Open Food Facts — разные страны'));
     resultCache.forEach(p=>box.append(foodRow(p,'catalog')));
    }
-   if(!locals.length&&!(resultCache.length&&lastSearch===term))
-    box.append(el('p','fs-fe-empty',term?'Нажми «Найти», чтобы искать в Open Food Facts.':'Введи название продукта, бренд или штрихкод.'));
+   if(fatSecretResults.length&&lastSearch===term){
+    box.append(el('h3','','FatSecret — США'));
+    fatSecretResults.forEach(p=>box.append(foodRow(p,'fatsecret')));
+   }
+   if(!locals.length&&!(resultCache.length&&lastSearch===term)&&!(fatSecretResults.length&&lastSearch===term))
+    box.append(el('p','fs-fe-empty',term?'Нажми «Найти», чтобы искать в обеих базах.':'Введи название продукта, бренд или штрихкод.'));
    return;
   }
   const templates=listTemplates();
@@ -143,17 +183,40 @@
   if(query.length<2){setStatus('Введи минимум два символа или штрихкод.');return}
   busy=true;$('fsFeFind').disabled=true;
   const generation=++searchVersion,normalized=norm(query);
-  setStatus('Ищу «'+query+'» в Open Food Facts…');
-  try{
-   const numeric=query.replace(/\D/g,'');
-   const barcode=numeric===query&&/^\d{8,14}$/.test(numeric);
-   const data=barcode?[await photo.productByBarcode(numeric)]:await photo.searchProducts(query);
-   if(generation!==searchVersion||explorer.hidden)return;
-   resultCache=data.filter(Boolean);lastSearch=normalized;render();
-   setStatus(resultCache.length?'Найдено: '+resultCache.length+'. Выбери карточку и проверь этикетку.':'Совпадений в Open Food Facts нет. Попробуй другое название.');
-  }catch(error){
-   if(generation===searchVersion)setStatus('⚠ '+(error?.message||'Каталог сейчас недоступен.')+' Можно использовать ранее сохранённую еду.');
-  }finally{busy=false;$('fsFeFind').disabled=false}
+  resultCache=[];fatSecretResults=[];lastSearch=normalized;
+  setStatus('Ищу «'+query+'» в Open Food Facts и FatSecret (США)…');
+  const numeric=query.replace(/\\D/g,'');
+  const barcode=numeric===query&&/^\\d{8,14}$/.test(numeric);
+  // Search only name queries in FatSecret Basic; paid barcode scanning is
+  // deliberately not used. Open Food Facts handles barcode lookups.
+  const requests=[
+   (async()=>{
+    const data=barcode?[await photo.productByBarcode(numeric)]:await photo.searchProducts(query);
+    if(generation===searchVersion&&!explorer.hidden){
+     resultCache=data.filter(Boolean);render();
+     setStatus('Open Food Facts: '+resultCache.length+' результатов. '+(barcode?'Штрихкод ищется только здесь.':'Ожидаю FatSecret…'));
+    }
+    return true;
+   })()
+  ];
+  if(!barcode)requests.push((async()=>{
+   const data=await fatSecretRequest('search',{query});
+   if(generation===searchVersion&&!explorer.hidden){
+    fatSecretResults=Array.isArray(data.foods)?data.foods:[];
+    render();
+    setStatus('Open Food Facts: '+resultCache.length+' · FatSecret США: '+fatSecretResults.length+
+     '. Выбери продукт и проверь порцию. Источники указаны отдельно.');
+   }
+   return true;
+  })());
+  const settled=await Promise.allSettled(requests);
+  if(generation===searchVersion&&!explorer.hidden){
+   const failures=settled.filter(x=>x.status==='rejected').map(x=>String(x.reason?.message||'Ошибка каталога'));
+   if(failures.length)setStatus('Найдено: Open Food Facts '+resultCache.length+
+    ', FatSecret '+fatSecretResults.length+'. '+failures.join(' · '));
+   else if(!resultCache.length&&!fatSecretResults.length)setStatus('Совпадений нет. Попробуй другое название, бренд или язык.');
+  }
+  busy=false;$('fsFeFind').disabled=false;
  }
  async function selectedPhoto(event,kind){
   const file=event.target.files?.[0];event.target.value='';
@@ -166,7 +229,7 @@
  $('fsFeToEntry').onclick=toEntry;
  opener.onclick=()=>open('search');
  for(const tab of $('fsFeTabs').querySelectorAll('button'))tab.onclick=()=>switchView(tab.dataset.view);
- $('fsFeSearch').addEventListener('input',()=>{if(norm($('fsFeSearch').value)!==lastSearch)resultCache=[];render()});
+ $('fsFeSearch').addEventListener('input',()=>{if(norm($('fsFeSearch').value)!==lastSearch){resultCache=[];fatSecretResults=[]}render()});
  $('fsFeSearch').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();search()}});
  $('fsFeFind').onclick=search;
  $('fsFePhoto').onclick=()=>$('fsFePhotoInput').click();
