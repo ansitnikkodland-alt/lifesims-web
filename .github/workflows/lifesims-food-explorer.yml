@@ -9,6 +9,7 @@ on:
       - 'scene/meal-live-camera.js'
       - 'scene/index.html'
       - 'tests/food-explorer-smoke.cjs'
+      - 'tests/fatsecret-food-explorer.cjs'
       - '.github/workflows/lifesims-food-explorer.yml'
   workflow_dispatch:
 jobs:
@@ -34,3 +35,5 @@ jobs:
           sleep 2
       - name: Test food finder, saved meal and photo capture wiring
         run: node tests/food-explorer-smoke.cjs
+      - name: Test FatSecret server-backed catalog and portion choices
+        run: node tests/fatsecret-food-explorer.cjs
