@@ -127,7 +127,7 @@ async function route(req,res){
     return send(res,200,{provider:'FatSecret',region:'US',foods});
    }
    const foodId=url.searchParams.get('foodId')||'';
-   requireOk(/^\\d{1,20}$/.test(foodId),400,'Неверный ID продукта');
+   requireOk(/^\d{1,20}$/.test(foodId),400,'Неверный ID продукта');
    const food=await fatSecretFood(foodId);
    return send(res,200,{provider:'FatSecret',region:'US',food});
   }catch(e){
