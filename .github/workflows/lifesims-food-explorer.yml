@@ -10,6 +10,7 @@ on:
       - 'scene/index.html'
       - 'tests/food-explorer-smoke.cjs'
       - 'tests/fatsecret-food-explorer.cjs'
+      - 'tests/meal-time-editor.cjs'
       - '.github/workflows/lifesims-food-explorer.yml'
   workflow_dispatch:
 jobs:
@@ -37,3 +38,5 @@ jobs:
         run: node tests/food-explorer-smoke.cjs
       - name: Test FatSecret server-backed catalog and portion choices
         run: node tests/fatsecret-food-explorer.cjs
+      - name: Test editing recorded meal times and preserving nutrition
+        run: node tests/meal-time-editor.cjs
