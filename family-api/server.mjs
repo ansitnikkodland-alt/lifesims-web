@@ -4,6 +4,7 @@ import {promisify} from 'node:util';
 import {readFileSync} from 'node:fs';
 import {Pool} from 'pg';
 import {clientAddress} from './client-ip.mjs';
+import {fatSecretConfigured, fatSecretSearch, fatSecretFood, FatSecretError} from './fatsecret.mjs';
 import {createHouseholdRoute} from './household.mjs';
 
 const scrypt=promisify(scryptCallback);
@@ -107,6 +108,35 @@ async function route(req,res){
   return send(res,200,{ok:true,service:'lifesims-family-test',stage:'prototype',persistent:false,apiCommit:process.env.RENDER_GIT_COMMIT?.slice(0,12)||'local'});
  }
  requireOk(path.startsWith('/v1/'),404,'Маршрут не найден');
+
+ // Read-only FatSecret bridge. Never expose credentials, never cache provider
+ // food records on this server. Public routes are IP/global rate limited.
+ if(method==='GET'&&path==='/v1/food/fatsecret/status'){
+  return send(res,200,{provider:'FatSecret',configured:fatSecretConfigured(),
+   auth:'OAuth 1.0',region:'US',regionAvailable:'US',persistProviderResults:false});
+ }
+ if(method==='GET'&&(path==='/v1/food/fatsecret/search'||path==='/v1/food/fatsecret/item')){
+  requireOk(fatSecretConfigured(),503,'Подключение FatSecret ожидает ключи в Environment');
+  requireOk(!hasRate('fatsecret:ip:'+sha(ipOf(req)),12,60000),429,'Слишком частые запросы к FatSecret — повторите позднее');
+  requireOk(!hasRate('fatsecret:global',350,86400000),429,'Суточный лимит FatSecret в LifeSims достигнут');
+  try{
+   if(path==='/v1/food/fatsecret/search'){
+    const query=url.searchParams.get('query')||'';
+    requireOk(query.length>=2&&query.length<=80,400,'Введите название продукта длиной 2–80 символов');
+    const foods=await fatSecretSearch(query);
+    return send(res,200,{provider:'FatSecret',region:'US',foods});
+   }
+   const foodId=url.searchParams.get('foodId')||'';
+   requireOk(/^\\d{1,20}$/.test(foodId),400,'Неверный ID продукта');
+   const food=await fatSecretFood(foodId);
+   return send(res,200,{provider:'FatSecret',region:'US',food});
+  }catch(e){
+   if(e instanceof FatSecretError)throw new HttpError(e.code==='query'||e.code==='id'?400:
+     e.code==='11'||e.code==='http_429'?429:502,e.message);
+   throw e;
+  }
+ }
+
  if(method==='POST'&&path==='/v1/auth/register'){
   // The socket address is shared by visitors behind Render's proxy.
   // Keep an independent per-client guard and a tighter per-email guard.
