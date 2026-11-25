@@ -293,7 +293,7 @@
   const existing=editingId?bridge.list().find(m=>m.id===editingId):null;
   if(editingId&&!existing){status('⚠ Редактируемая запись больше не существует.');return}
   const time=$('mealChatTime').value;
-  if(!/^([01]\\d|2[0-3]):[0-5]\\d$/.test(time)){
+  if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(time)){
    status('⚠ Укажи время в формате ЧЧ:ММ (00:00–23:59).');$('mealChatTime').focus();return
   }
   // Changing only the clock must preserve the exact saved nutrition, source,
