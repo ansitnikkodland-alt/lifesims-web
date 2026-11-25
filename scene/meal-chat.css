@@ -154,3 +154,33 @@
 #singleMetricContent .satiety-food-item-right small{font-size:11px;font-weight:400;color:#bde2ef}
 #singleMetricContent .satiety-food-thumb{width:51px;height:54px;object-fit:cover;border-radius:8px;flex:none}
 #singleMetricContent .satiety-food-more{width:100%;min-height:44px;margin-top:3px}
+
+/* v134: explicit, editable time for every meal. */
+.meal-chat-time-row{
+ display:flex;align-items:center;gap:9px;flex-wrap:wrap;
+ margin:3px 0 10px;padding:8px 11px;background:#2b353d;
+ border:1px solid #596a77;border-radius:13px
+}
+.meal-chat-time-row label{
+ font:600 13px/1.35 system-ui;color:#e2f1f0;white-space:nowrap
+}
+.meal-chat-time-row input[type="time"]{
+ font:600 16px system-ui;min-width:112px;min-height:44px;
+ border:1px solid #89abb0;border-radius:10px;background:#152a38;
+ color:#f3fbff;padding:7px 9px;color-scheme:dark
+}
+.meal-chat-time-row small{
+ flex:1 1 180px;font-size:11px;color:#c9d5db
+}
+.meal-chat-response .meal-chat-time-edit{
+ margin-top:8px;min-height:44px;padding:7px 12px;
+ border:1px solid #7199a3;background:#263c47;color:#d7f6f1;
+ border-radius:12px;font-size:12px
+}
+.meal-chat-time-row input:focus-visible,.meal-chat-response .meal-chat-time-edit:focus-visible{
+ outline:3px solid #72e8c5;outline-offset:2px
+}
+@media(max-width:390px){
+ .meal-chat-time-row{gap:6px;padding:6px 9px}
+ .meal-chat-time-row small{flex-basis:100%}
+}
